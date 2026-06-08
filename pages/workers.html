@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ServiceWorker и WebWorker — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>SW + WebWorker</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>ServiceWorker и WebWorker</h1>
+      <p class="page-desc">Два совершенно разных фоновых скрипта с похожим названием:
+        <strong>ServiceWorker</strong> проксирует сеть для кэширования и работы офлайн, а
+        <strong>WebWorker</strong> выносит ресурсоёмкие вычисления (RSI, MACD) из потока UI. Ни тот, ни
+        другой не имеют доступа к DOM.</p>
+      <button class="btn-done" data-page="workers" onclick="markDone('workers')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== COMPARISON TABLE ===================== -->
+    <section data-searchable>
+      <h2 id="comparison">ServiceWorker против WebWorker — сравнение</h2>
+      <p>Оба выполняются в потоке, отдельном от основного UI, и оба пишутся на TypeScript, но решают
+        противоположные задачи. Понимание того, какой из них выбрать, — частый признак senior-уровня.</p>
+
+      <p class="definition"><strong>ServiceWorker</strong> — фоновый скрипт, который находится между
+        приложением и сетью, перехватывая запросы <code>fetch</code>, чтобы отдавать кэшированные ответы,
+        обеспечивать офлайн-режим и доставлять push-уведомления.</p>
+      <p class="definition"><strong>WebWorker</strong> — фоновый скрипт, выполняющий JavaScript в собственном
+        потоке исключительно ради вычислений и общающийся со страницей через передачу сообщений. У него нет
+        роли сетевого прокси.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>ServiceWorker</th><th>WebWorker</th></tr></thead>
+          <tbody>
+            <tr><td>Назначение</td><td>Сетевой прокси / кэширование</td><td>Ресурсоёмкие вычисления</td></tr>
+            <tr><td>Доступ к DOM</td><td>❌</td><td>❌</td></tr>
+            <tr><td>Жизненный цикл</td><td>Независим от страницы</td><td>Привязан к странице</td></tr>
+            <tr><td>Применение в трейдинге</td><td>Кэш данных инструментов, офлайн</td><td>Расчёт RSI/MACD</td></tr>
+            <tr><td>Интеграция с Angular</td><td><code>@angular/service-worker</code></td><td><code>new Worker()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Мнемоника:</strong> <em>Service</em>Worker <em>обслуживает</em> сеть;
+        <em>Web</em>Worker <em>работает</em> с CPU. Один переживает перезагрузку страницы, чтобы обеспечить
+        офлайн-режим; другой умирает вместе со своей вкладкой.</p></div>
+    </section>
+
+    <!-- ===================== SERVICEWORKER IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="service-worker">ServiceWorker в Angular</h2>
+      <p class="definition"><strong>Angular ServiceWorker (<code>ngsw</code>)</strong> — готовый service
+        worker от Angular (<code>ngsw-worker.js</code>), превращающий приложение в устанавливаемое PWA. Он
+        управляется декларативно через файл <code>ngsw-config.json</code>, а не написанными вручную
+        обработчиками <code>fetch</code>, кэшируя ассеты и данные API и беря на себя управление обновлениями
+        версий.</p>
+
+      <h3 id="sw-setup">Обзор настройки</h3>
+      <p>Добавьте PWA-пакет через CLI, который сгенерирует <code>ngsw-config.json</code>, манифест и вызов
+        регистрации. В standalone-приложении регистрация выполняется через
+        <code>provideServiceWorker</code>; в NgModule-приложении используется
+        <code>ServiceWorkerModule.register('ngsw-worker.js')</code>. Регистрация отключена в режиме разработки
+        и включена в production-сборках.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// Scaffold everything (adds @angular/service-worker + ngsw-config.json)
+//   ng add @angular/pwa
+
+// --- Standalone bootstrap: main.ts ---
+import { bootstrapApplication } from '@angular/platform-browser';
+import { provideServiceWorker } from '@angular/service-worker';
+import { isDevMode } from '@angular/core';
+import { AppComponent } from './app/app.component';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),            // only in production builds
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
+  ],
+});</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// --- Legacy NgModule equivalent: app.module.ts ---
+import { ServiceWorkerModule } from '@angular/service-worker';
+import { isDevMode, NgModule } from '@angular/core';
+
+@NgModule({
+  imports: [
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: !isDevMode(),
+    }),
+  ],
+})
+export class AppModule {}</code></pre>
+      </div>
+
+      <h3 id="ngsw-config">Стратегии кэширования в <code>ngsw-config.json</code></h3>
+      <p class="definition"><strong>performance (cache-first)</strong> — отдавать из кэша и пропускать сеть,
+        пока в кэше есть свежая копия. Быстро и удобно для офлайна; идеально для метаданных инструментов,
+        которые меняются редко.</p>
+      <p class="definition"><strong>freshness (network-first)</strong> — сначала пробовать сеть и обращаться к
+        кэшу только при сбое или таймауте. Лучший выбор для данных, которые должны быть актуальными,
+        например живых котировок, при этом сохраняя плавную деградацию в офлайне.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-json">{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app-shell",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/*.css", "/*.js"]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "instruments-api",
+      "urls": ["/api/instruments/**"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 200,
+        "maxAge": "7d",
+        "timeout": "2s"
+      }
+    },
+    {
+      "name": "quotes-api",
+      "urls": ["/api/quotes/**"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "10s",
+        "timeout": "1s"
+      }
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <div class="tip"><p><strong>Вывод для трейдинга:</strong> кэшируйте медленно меняющийся каталог
+        <code>/api/instruments</code> со стратегией <code>performance</code>, чтобы список символов работал
+        офлайн, но держите <code>/api/quotes</code> на <code>freshness</code>, чтобы трейдеры никогда не
+        видели устаревшую цену, пока сеть доступна.</p></div>
+
+      <h3 id="sw-update">Поток обновлений с <code>SwUpdate</code></h3>
+      <p class="definition"><strong>SwUpdate</strong> — сервис Angular для управления жизненным циклом service
+        worker. Он предоставляет <code>versionUpdates</code> (Observable событий версий),
+        <code>checkForUpdate()</code> для проверки по запросу и <code>activateUpdate()</code> для переключения
+        на свежескачанную версию.</p>
+      <p class="definition"><strong>Событие VersionReady</strong> — событие <code>versionUpdates</code>, чей
+        <code>type</code> равен <code>'VERSION_READY'</code>, сигнализирующее, что новая сборка полностью
+        скачана и готова к активации. Именно в этот момент вы предлагаете пользователю перезагрузиться.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Injectable, inject } from '@angular/core';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class AppUpdateService {
+  private readonly swUpdate = inject(SwUpdate);
+
+  init(): void {
+    if (!this.swUpdate.isEnabled) {
+      return;                              // no SW in dev or unsupported browser
+    }
+
+    // 1. React when a new version has finished downloading.
+    this.swUpdate.versionUpdates
+      .pipe(filter((e): e is VersionReadyEvent =&gt; e.type === 'VERSION_READY'))
+      .subscribe((event: VersionReadyEvent) =&gt; {
+        console.log('Update ready', event.latestVersion.hash);
+        const reload = confirm('A new version is available. Reload now?');
+        if (reload) {
+          this.swUpdate.activateUpdate().then(() =&gt; document.location.reload());
+        }
+      });
+  }
+
+  // 2. Manually poll for updates (e.g. every few minutes).
+  async checkForUpdate(): Promise&lt;boolean&gt; {
+    return this.swUpdate.checkForUpdate();
+  }
+}</code></pre>
+      </div>
+
+      <div class="warn"><p><strong>Подводный камень:</strong> никогда не перезагружайте страницу
+        автоматически в разгар торговли. В FinTech-приложении неожиданная перезагрузка может прервать
+        отправку незавершённого <code>Order</code> — всегда спрашивайте и позволяйте трейдеру самому выбрать
+        момент активации новой версии.</p></div>
+    </section>
+
+    <!-- ===================== WEBWORKER IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="web-worker">WebWorker в Angular</h2>
+      <p class="definition"><strong>WebWorker</strong> — отдельный контекст JavaScript в собственном
+        OS-потоке без доступа к DOM, <code>window</code> или инжектору Angular. Он общается со страницей
+        только через передачу сериализуемых сообщений с помощью <code>postMessage</code> и
+        <code>onmessage</code>, что делает его идеальным для того, чтобы держать ресурсоёмкие расчёты
+        индикаторов вне потока рендеринга.</p>
+
+      <p class="definition"><strong>postMessage(data)</strong> — отправляет structured-cloneable сообщение на
+        другую сторону канала (воркер → страница или страница → воркер).</p>
+      <p class="definition"><strong>onmessage / событие <code>message</code></strong> — срабатывает на
+        принимающей стороне, а данные лежат в <code>event.data</code>.</p>
+
+      <h3 id="ww-generate">Генерация воркера</h3>
+      <p>CLI настроит конфигурацию TypeScript и создаст для вас файл-образец воркера:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// ng generate web-worker rsi
+// → creates src/app/rsi.worker.ts and updates tsconfig.worker.json</code></pre>
+      </div>
+
+      <h3 id="ww-types">Общие типы для трейдинга</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// models/trading.ts — shared by component and worker
+export interface Instrument {
+  readonly symbol: string;
+  readonly exchange: string;
+  readonly tickSize: number;
+}
+
+export interface Quote {
+  readonly symbol: string;
+  readonly bid: number;
+  readonly ask: number;
+  readonly timestamp: number;
+}
+
+// Messages exchanged with the worker (must be structured-cloneable)
+export interface RsiRequest {
+  readonly symbol: string;
+  readonly prices: readonly number[];
+  readonly period: number;
+}
+
+export interface RsiResponse {
+  readonly symbol: string;
+  readonly rsi: number;
+}</code></pre>
+      </div>
+
+      <h3 id="ww-file">Файл воркера — расчёт RSI</h3>
+      <p>Воркер ждёт сообщение, выполняет тяжёлый цикл и отправляет результат обратно. Директива
+        <code>/// &lt;reference&gt;</code> подключает к нему корректные типы библиотеки
+        <code>WebWorker</code>.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">/// &lt;reference lib="webworker" /&gt;
+import { RsiRequest, RsiResponse } from './models/trading';
+
+function calculateRsi(prices: readonly number[], period: number): number {
+  if (prices.length &lt;= period) {
+    return 0;
+  }
+  let gains = 0;
+  let losses = 0;
+  for (let i = 1; i &lt;= period; i++) {
+    const delta = prices[i] - prices[i - 1];
+    if (delta &gt;= 0) {
+      gains += delta;
+    } else {
+      losses -= delta;
+    }
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+
+  for (let i = period + 1; i &lt; prices.length; i++) {
+    const delta = prices[i] - prices[i - 1];
+    const gain = delta &gt; 0 ? delta : 0;
+    const loss = delta &lt; 0 ? -delta : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+  }
+
+  if (avgLoss === 0) {
+    return 100;
+  }
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+addEventListener('message', ({ data }: MessageEvent&lt;RsiRequest&gt;) =&gt; {
+  const rsi = calculateRsi(data.prices, data.period);
+  const response: RsiResponse = { symbol: data.symbol, rsi };
+  postMessage(response);
+});</code></pre>
+      </div>
+
+      <h3 id="ww-component">Сторона компонента</h3>
+      <p>Создайте воркер в форме с <code>import.meta.url</code> (единственной, которую Angular CLI собирает
+        корректно), отправьте запрос, обработайте типизированный результат, ловите ошибки через
+        <code>onerror</code> и всегда вызывайте <code>terminate()</code> при уничтожении, чтобы освободить
+        поток.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, OnDestroy, signal } from '@angular/core';
+import { RsiRequest, RsiResponse } from './models/trading';
+
+@Component({
+  selector: 'app-rsi-panel',
+  standalone: true,
+  template: `&lt;p&gt;RSI: {{ rsi() ?? '—' }}&lt;/p&gt;`,
+})
+export class RsiPanelComponent implements OnDestroy {
+  readonly rsi = signal&lt;number | null&gt;(null);
+  private worker?: Worker;
+
+  compute(symbol: string, prices: readonly number[]): void {
+    if (typeof Worker === 'undefined') {
+      return;                              // SSR / unsupported environment
+    }
+
+    // import.meta.url lets the CLI resolve & bundle the worker.
+    this.worker = new Worker(new URL('./rsi.worker', import.meta.url));
+
+    this.worker.onmessage = ({ data }: MessageEvent&lt;RsiResponse&gt;) =&gt; {
+      this.rsi.set(data.rsi);
+    };
+
+    this.worker.onerror = (err: ErrorEvent) =&gt; {
+      console.error('RSI worker failed:', err.message);
+      this.rsi.set(null);
+    };
+
+    const request: RsiRequest = { symbol, prices, period: 14 };
+    this.worker.postMessage(request);
+  }
+
+  ngOnDestroy(): void {
+    this.worker?.terminate();              // kill the thread, avoid leaks
+  }
+}</code></pre>
+      </div>
+
+      <div class="card">
+        <div class="success"><p><strong>Правильно:</strong> тяжёлые циклы RSI/MACD выполняются в воркере,
+          поэтому быстрый поток обновлений <code>Quote</code> никогда не блокирует прокрутку или отрисовку
+          графика в потоке UI.</p></div>
+        <div class="danger"><p><strong>Неправильно:</strong> запуск того же цикла прямо в методе компонента
+          замораживает обнаружение изменений — бэктест на 50 тыс. баров заблокирует вкладку до завершения.</p></div>
+      </div>
+
+      <div class="warn"><p><strong>Подводный камень:</strong> сообщения <em>копируются по structured clone</em>,
+        а не разделяются. Нельзя передать экземпляр класса с методами, DOM-узел или функцию — только простые
+        данные. Для огромных буферов цен <code>Float64Array</code> передавайте сам
+        <code>ArrayBuffer</code>, чтобы избежать копирования.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Вопросы с собеседований</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В чём ключевое различие между ServiceWorker и WebWorker?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Они используют одну модель потоков, но решают разные задачи.
+          <strong>ServiceWorker</strong> — сетевой прокси: он перехватывает запросы <code>fetch</code>, чтобы
+          кэшировать ответы, обеспечивать офлайн-режим и обрабатывать push — он живёт независимо от любой
+          страницы и переживает перезагрузки. <strong>WebWorker</strong> — поток чистых вычислений: вы
+          отправляете ему данные, он выполняет ресурсоёмкую работу (например, RSI/MACD по истории цен) и
+          отправляет результат обратно, и он привязан к создавшей его странице. Ни один из них не имеет
+          доступа к DOM. В Angular для первого используется <code>@angular/service-worker</code>, а для
+          второго — <code>new Worker()</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Когда выбирать <code>performance</code>, а когда <code>freshness</code> в <code>ngsw-config.json</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>performance</code> — cache-first: отдавать из кэша и пропускать сеть,
+          пока копия свежая — идеально для редко меняющихся данных вроде каталога <code>Instrument</code>, что
+          даёт мгновенную загрузку и поддержку офлайна. <code>freshness</code> — network-first: пробовать сеть
+          (в пределах таймаута) и обращаться к кэшу только при сбое — правильный выбор для живых данных
+          <code>Quote</code>, где показ устаревшей цены недопустим, при этом сохраняя плавную деградацию в
+          офлайне.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Как безопасно уведомить пользователей о новой версии приложения?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Внедрите <code>SwUpdate</code> и подпишитесь на
+          <code>versionUpdates</code>, отфильтровав событие <code>VERSION_READY</code>, которое срабатывает,
+          как только новая сборка полностью скачана. Затем предложите пользователю обновиться; при
+          подтверждении вызовите <code>activateUpdate()</code> и перезагрузите страницу. Никогда не
+          перезагружайте автоматически — в торговом приложении принудительная перезагрузка может прервать
+          незавершённый <code>Order</code>, поэтому момент должен выбирать трейдер. Всегда проверяйте
+          <code>swUpdate.isEnabled</code>, поскольку SW отключён в dev и неподдерживаемых браузерах.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Почему нужно вызывать <code>terminate()</code> у WebWorker и какие данные ему можно передавать?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>WebWorker — это настоящий OS-поток, который продолжает работать, пока вы не
+          вызовете <code>terminate()</code> (или он сам не завершится). Забыв сделать это в
+          <code>ngOnDestroy</code>, вы будете утекать потоки при каждом пересоздании компонента. Сообщения
+          <strong>копируются по structured clone</strong>, поэтому передавать можно только сериализуемые
+          данные — простые объекты, массивы, типизированные массивы, <code>Map</code>, <code>Set</code>,
+          <code>Date</code> — но не экземпляры классов с методами, DOM-узлы или функции. Для больших буферов
+          цен можно передать <code>ArrayBuffer</code>, чтобы перенести владение и избежать копирования.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Квиз</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какая задача относится к <strong>WebWorker</strong>, а не к ServiceWorker?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Кэширование каталога инструментов для работы офлайн</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Расчёт RSI/MACD по тысячам ценовых баров</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Перехват запросов fetch для отдачи кэшированных котировок</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Доставка push-уведомлений</button>
+        <div class="quiz-explain">WebWorker выполняет ресурсоёмкие вычисления вне потока UI. Кэширование, перехват fetch и push — всё это обязанности ServiceWorker.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Какая стратегия кэширования лучше всего подходит для живых данных <code>Quote</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">performance (cache-first)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">freshness (network-first)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">prefetch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">lazy</button>
+        <div class="quiz-explain">Живые котировки должны быть актуальными, поэтому freshness сначала пробует сеть и обращается к кэшу только при сбое. performance (cache-first) рисковал бы отдать устаревшую цену.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Какое событие <code>SwUpdate.versionUpdates</code> сигнализирует, что скачанная сборка готова к активации?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NO_NEW_VERSION_DETECTED</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">VERSION_DETECTED</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">VERSION_READY</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">VERSION_INSTALLATION_FAILED</button>
+        <div class="quiz-explain">VERSION_READY означает, что новая сборка полностью скачана и может быть активирована — момент, чтобы предложить пользователю перезагрузиться. VERSION_DETECTED означает лишь то, что новая сборка обнаружена.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="canvas.html" class="btn-nav">← Canvas</a>
+      <a href="http.html" class="btn-nav">HTTP и интерцепторы →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

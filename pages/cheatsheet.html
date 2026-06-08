@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Шпаргалка — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    /* Extra-compact cheatsheet layout */
+    .cheat .comparison-table td,
+    .cheat .comparison-table th { padding: 4px 8px; font-size: 0.85rem; line-height: 1.35; }
+    .cheat section { margin-bottom: 1.4rem; }
+    .cheat h2 { margin-bottom: 0.5rem; }
+    .cheat ul { margin: 0.3rem 0; padding-left: 1.2rem; }
+    .cheat li { margin: 0.15rem 0; line-height: 1.4; }
+    .cheat .qa-line { margin: 0.25rem 0; line-height: 1.4; font-size: 0.88rem; }
+    .cheat .two-col { columns: 2; column-gap: 1.5rem; }
+    .cheat .two-col ul { margin-top: 0; }
+    @media (max-width: 700px) { .cheat .two-col { columns: 1; } }
+    .cheat code { white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content cheat">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Шпаргалка</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Шпаргалка</h1>
+      <p class="page-desc">Плотный, одностраничный, готовый к печати краткий справочник. Только факты — повторение
+        перед собеседованием по JS, TypeScript, Angular, RxJS и инженерным принципам. Распечатайте (боковая панель скроется автоматически).</p>
+      <button class="btn-done" data-page="cheatsheet" onclick="markDone('cheatsheet')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== 1. ARRAY METHODS ===================== -->
+    <section data-searchable>
+      <h2 id="array-methods">1. Методы массивов — мутирующие и чистые</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>❌ МУТИРУЮТ оригинал</th><th>✅ ЧИСТЫЕ / возвращают новый</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>push</code>, <code>pop</code>, <code>shift</code>, <code>unshift</code>, <code>splice</code>, <code>sort</code>, <code>reverse</code>, <code>fill</code>, <code>copyWithin</code></td>
+              <td><code>map</code>, <code>filter</code>, <code>slice</code>, <code>concat</code>, <code>flat</code>, <code>flatMap</code>, <code>reduce</code>, <code>find</code>, <code>findIndex</code>, <code>some</code>, <code>every</code>, <code>includes</code>, <code>indexOf</code>, <code>join</code>, <code>at</code>, <code>toSorted</code>, <code>toReversed</code>, <code>toSpliced</code>, <code>with</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><code>sort</code> по умолчанию = лексикографическое сравнение строк; передайте <code>(a,b)=&gt;a-b</code> для чисел.</li>
+        <li>Иммутабельные аналоги (ES2023): <code>toSorted</code>, <code>toReversed</code>, <code>toSpliced</code>, <code>with</code>.</li>
+        <li>OnPush / NgRx требуют <strong>новую ссылку</strong> → никогда не мутируйте, используйте spread.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 2. RXJS OPERATORS ===================== -->
+    <section data-searchable>
+      <h2 id="rxjs-operators">2. Быстрая таблица операторов RxJS</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Оператор</th><th>Описание</th></tr></thead>
+          <tbody>
+            <tr><td><code>of</code></td><td>Синхронно эмитит перечисленные значения, затем завершается.</td></tr>
+            <tr><td><code>from</code></td><td>Преобразует массив / Promise / итерируемое / Observable в поток.</td></tr>
+            <tr><td><code>map</code></td><td>Преобразует каждое эмитированное значение.</td></tr>
+            <tr><td><code>switchMap</code></td><td>Мапит во внутренний Observable; отменяет предыдущий при новом значении.</td></tr>
+            <tr><td><code>mergeMap</code></td><td>Мапит во внутренний Observable; запускает все параллельно.</td></tr>
+            <tr><td><code>concatMap</code></td><td>Мапит во внутренний Observable; очередь, по одному, по порядку.</td></tr>
+            <tr><td><code>exhaustMap</code></td><td>Мапит во внутренний Observable; игнорирует новые значения, пока активен текущий.</td></tr>
+            <tr><td><code>filter</code></td><td>Пропускает только значения, удовлетворяющие предикату.</td></tr>
+            <tr><td><code>debounceTime</code></td><td>Эмитит только после паузы тишины в N мс (ждёт затишья).</td></tr>
+            <tr><td><code>throttleTime</code></td><td>Эмитит первое значение, затем игнорирует на N мс.</td></tr>
+            <tr><td><code>distinctUntilChanged</code></td><td>Пропускает подряд идущие повторяющиеся значения.</td></tr>
+            <tr><td><code>take</code></td><td>Эмитит первые N значений, затем завершается.</td></tr>
+            <tr><td><code>takeUntil</code></td><td>Эмитит, пока не сработает Observable-нотификатор; затем завершается.</td></tr>
+            <tr><td><code>takeUntilDestroyed</code></td><td>Авто-отписка при уничтожении контекста внедрения / компонента.</td></tr>
+            <tr><td><code>combineLatest</code></td><td>Эмитит массив последних значений при эмите любого источника.</td></tr>
+            <tr><td><code>forkJoin</code></td><td>Ждёт завершения всех источников, один раз эмитит их последние значения.</td></tr>
+            <tr><td><code>withLatestFrom</code></td><td>При эмите источника добавляет последние значения других потоков.</td></tr>
+            <tr><td><code>startWith</code></td><td>Эмитит начальное значение до старта источника.</td></tr>
+            <tr><td><code>scan</code></td><td>Свёртка во времени с эмитом каждого промежуточного аккумулятора.</td></tr>
+            <tr><td><code>catchError</code></td><td>Обрабатывает ошибку; возвращает запасной / восстановительный Observable.</td></tr>
+            <tr><td><code>retry</code></td><td>Переподписывается на источник N раз при ошибке.</td></tr>
+            <tr><td><code>tap</code></td><td>Выполняет побочные эффекты, не изменяя поток.</td></tr>
+            <tr><td><code>finalize</code></td><td>Выполняет очистку при завершении или ошибке (напр. скрыть спиннер).</td></tr>
+            <tr><td><code>shareReplay</code></td><td>Мультикаст и повтор последних N эмитов поздним подписчикам.</td></tr>
+            <tr><td><code>mergeAll</code></td><td>Разворачивает Observable высшего порядка, подписываясь на все внутренние.</td></tr>
+            <tr><td><code>delay</code></td><td>Сдвигает все эмиты во времени на N мс.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 3. FLATTENING OPERATORS ===================== -->
+    <section data-searchable>
+      <h2 id="flattening">3. switchMap vs mergeMap vs concatMap vs exhaustMap</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Оператор</th><th>Поведение</th><th>Типичное применение</th></tr></thead>
+          <tbody>
+            <tr><td><code>switchMap</code></td><td>Отменяет предыдущий внутренний при поступлении нового значения.</td><td>Автодополнение / поиск при вводе, побеждает последний.</td></tr>
+            <tr><td><code>mergeMap</code></td><td>Запускает все внутренние Observable параллельно, без порядка.</td><td>Независимые параллельные запросы.</td></tr>
+            <tr><td><code>concatMap</code></td><td>Ставит внутренние в очередь, выполняет строго по одному по порядку.</td><td>Последовательные записи / упорядоченные сохранения.</td></tr>
+            <tr><td><code>exhaustMap</code></td><td>Игнорирует новые значения, пока выполняется внутренний.</td><td>Кнопка входа / защита от двойной отправки.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 4. SUBJECT TYPES ===================== -->
+    <section data-searchable>
+      <h2 id="subjects">4. Типы Subject</h2>
+      <ul>
+        <li><code>Subject</code> — мультикаст, без начального значения; подписчики получают значения, эмитированные только <em>после</em> подписки.</li>
+        <li><code>BehaviorSubject</code> — требует начальное значение, повторяет последнее значение каждому новому подписчику.</li>
+        <li><code>ReplaySubject</code> — повторяет последние N (или все, в пределах временного окна) значений новым подписчикам.</li>
+        <li><code>AsyncSubject</code> — эмитит только финальное значение и только после завершения источника.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 5. LIFECYCLE HOOKS ===================== -->
+    <section data-searchable>
+      <h2 id="lifecycle">5. Хуки жизненного цикла (по порядку)</h2>
+      <ol>
+        <li><code>ngOnChanges</code> — изменился input.</li>
+        <li><code>ngOnInit</code> — инициализация.</li>
+        <li><code>ngDoCheck</code> — кастомное обнаружение.</li>
+        <li><code>ngAfterContentInit</code> — проекция готова.</li>
+        <li><code>ngAfterContentChecked</code> — проекция проверена.</li>
+        <li><code>ngAfterViewInit</code> — представление готово.</li>
+        <li><code>ngAfterViewChecked</code> — представление проверено.</li>
+        <li><code>ngOnDestroy</code> — очистка.</li>
+      </ol>
+      <p class="qa-line">Современные альтернативы: <code>afterNextRender</code>, <code>afterRender</code> (работа с DOM только в браузере).</p>
+    </section>
+
+    <!-- ===================== 6. ONPUSH TRIGGERS ===================== -->
+    <section data-searchable>
+      <h2 id="onpush">6. Триггеры обнаружения изменений OnPush</h2>
+      <ul>
+        <li>Меняется ссылка <code>@Input()</code> (новый объект/массив, не мутация).</li>
+        <li>Срабатывает DOM-событие от компонента или его шаблона.</li>
+        <li>Пайп <code>async</code> (или сигнал), привязанный в шаблоне, эмитит новое значение.</li>
+        <li>Обнаружение изменений запускается вручную через <code>ChangeDetectorRef.markForCheck()</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 7. SIGNALS API ===================== -->
+    <section data-searchable>
+      <h2 id="signals">7. Signals API</h2>
+      <ul>
+        <li><code>signal(v)</code> — записываемое реактивное значение; читается через <code>s()</code>, обновляется через <code>set</code> / <code>update</code>.</li>
+        <li><code>computed(fn)</code> — производный, мемоизированный, доступный только для чтения сигнал, пересчитывается лениво.</li>
+        <li><code>effect(fn)</code> — выполняет побочный эффект при изменении любого читаемого сигнала.</li>
+        <li><code>toSignal(obs$)</code> — преобразует Observable в сигнал (авто-отписка).</li>
+        <li><code>toObservable(sig)</code> — преобразует сигнал в Observable.</li>
+        <li><code>input()</code> — input компонента на основе сигналов (<code>input.required&lt;T&gt;()</code> для обязательного).</li>
+        <li><code>model()</code> — двусторонне связываемый сигнал-input (<code>[(value)]</code>).</li>
+        <li><code>linkedSignal()</code> — записываемый сигнал, сбрасывающийся из вычисляемого источника.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 8. DI PROVIDERS ===================== -->
+    <section data-searchable>
+      <h2 id="di-providers">8. Типы провайдеров DI</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Провайдер</th><th>Значение</th></tr></thead>
+          <tbody>
+            <tr><td><code>useClass</code></td><td>Создаёт экземпляр заданного класса для токена.</td></tr>
+            <tr><td><code>useValue</code></td><td>Предоставляет готовое константное / объектное значение.</td></tr>
+            <tr><td><code>useFactory</code></td><td>Вызывает фабричную функцию (с <code>deps</code>) для создания значения.</td></tr>
+            <tr><td><code>useExisting</code></td><td>Делает один токен псевдонимом другого уже зарегистрированного токена.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 9. SOLID ===================== -->
+    <section data-searchable>
+      <h2 id="solid">9. SOLID</h2>
+      <ul>
+        <li><strong>S</strong> — Единственная ответственность: у класса/модуля должна быть одна причина для изменения.</li>
+        <li><strong>O</strong> — Открытость/закрытость: открыт для расширения, закрыт для модификации.</li>
+        <li><strong>L</strong> — Подстановка Лисков: подтипы должны быть применимы там, где ожидается базовый тип.</li>
+        <li><strong>I</strong> — Разделение интерфейсов: лучше много мелких интерфейсов, чем один большой.</li>
+        <li><strong>D</strong> — Инверсия зависимостей: зависьте от абстракций, а не от реализаций.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 10. COMMON Q&A ===================== -->
+    <section data-searchable>
+      <h2 id="qa">10. Частые вопросы на собеседовании</h2>
+      <p class="qa-line"><strong>В1.</strong> <code>==</code> vs <code>===</code>? <strong>О:</strong> <code>===</code> сравнивает значение+тип без приведения; <code>==</code> сначала приводит — всегда используйте <code>===</code>.</p>
+      <p class="qa-line"><strong>В2.</strong> <code>null</code> vs <code>undefined</code>? <strong>О:</strong> <code>undefined</code> = не присвоено; <code>null</code> = намеренно пустое значение.</p>
+      <p class="qa-line"><strong>В3.</strong> Что такое замыкание? <strong>О:</strong> Функция, сохраняющая доступ к своей внешней лексической области даже после её завершения.</p>
+      <p class="qa-line"><strong>В4.</strong> <code>let</code> vs <code>var</code>? <strong>О:</strong> <code>let</code> имеет блочную область и TDZ; <code>var</code> имеет функциональную область и поднимается как <code>undefined</code>.</p>
+      <p class="qa-line"><strong>В5.</strong> Микрозадача vs макрозадача? <strong>О:</strong> Promise = микрозадачи (обрабатываются первыми); <code>setTimeout</code> = макрозадачи (по одной за тик цикла).</p>
+      <p class="qa-line"><strong>В6.</strong> Стрелочная vs обычная функция? <strong>О:</strong> У стрелочных нет собственного <code>this</code>/<code>arguments</code>; они связывают <code>this</code> лексически.</p>
+      <p class="qa-line"><strong>В7.</strong> <code>interface</code> vs <code>type</code>? <strong>О:</strong> Интерфейсы сливаются и расширяются (объекты); типы делают объединения/пересечения/примитивы.</p>
+      <p class="qa-line"><strong>В8.</strong> <code>any</code> vs <code>unknown</code>? <strong>О:</strong> <code>any</code> отключает проверки; <code>unknown</code> безопасен — нужно сузить перед использованием.</p>
+      <p class="qa-line"><strong>В9.</strong> <code>readonly</code> vs <code>const</code>? <strong>О:</strong> <code>const</code> фиксирует привязку; <code>readonly</code> фиксирует свойство на этапе компиляции.</p>
+      <p class="qa-line"><strong>В10.</strong> Компонент vs Директива? <strong>О:</strong> У компонента есть шаблон; директива добавляет поведение существующему элементу.</p>
+      <p class="qa-line"><strong>В11.</strong> Standalone vs NgModule? <strong>О:</strong> Standalone-компоненты объявляют свои <code>imports</code>, модуль не нужен (по умолчанию в v17+).</p>
+      <p class="qa-line"><strong>В12.</strong> Конструктор vs <code>ngOnInit</code>? <strong>О:</strong> Конструктор = настройка DI; <code>ngOnInit</code> = инициализация после установки input'ов.</p>
+      <p class="qa-line"><strong>В13.</strong> <code>ViewChild</code> vs <code>ContentChild</code>? <strong>О:</strong> <code>ViewChild</code> запрашивает собственный шаблон; <code>ContentChild</code> запрашивает проецируемый контент.</p>
+      <p class="qa-line"><strong>В14.</strong> Шаблонные vs реактивные формы? <strong>О:</strong> Шаблонные = на директивах в HTML; реактивные = явная модель в TS (тестируемые, масштабируемые).</p>
+      <p class="qa-line"><strong>В15.</strong> <code>Subject</code> vs <code>BehaviorSubject</code>? <strong>О:</strong> <code>BehaviorSubject</code> требует начальное значение и повторяет последнее новым подписчикам.</p>
+      <p class="qa-line"><strong>В16.</strong> Холодный vs горячий Observable? <strong>О:</strong> Холодный перезапускается для каждого подписчика (HTTP); горячий общий/мультикаст (Subject, события).</p>
+      <p class="qa-line"><strong>В17.</strong> Как избежать утечек памяти? <strong>О:</strong> Отписывайтесь через <code>takeUntilDestroyed</code>, пайп <code>async</code> или <code>take(1)</code>.</p>
+      <p class="qa-line"><strong>В18.</strong> <code>switchMap</code> vs <code>mergeMap</code>? <strong>О:</strong> <code>switchMap</code> отменяет предыдущий внутренний; <code>mergeMap</code> запускает все параллельно.</p>
+      <p class="qa-line"><strong>В19.</strong> Что такое обнаружение изменений? <strong>О:</strong> Проверка Angular привязок для синхронизации модели с DOM (Zone.js или сигналы).</p>
+      <p class="qa-line"><strong>В20.</strong> Ленивая загрузка? <strong>О:</strong> Загрузка бандлов маршрутов по требованию через <code>loadComponent</code> / <code>loadChildren</code> для уменьшения начального бандла.</p>
+    </section>
+
+    <!-- ===================== 11. HTTP METHODS ===================== -->
+    <section data-searchable>
+      <h2 id="http-methods">11. HTTP-методы</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Метод</th><th>Идемпотентный</th><th>Безопасный</th><th>Тело</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>POST</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>PUT</code></td><td>✅</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>PATCH</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>DELETE</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td><code>HEAD</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>OPTIONS</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="qa-line"><strong>Безопасный</strong> = только чтение, без изменения состояния сервера. <strong>Идемпотентный</strong> = повтор запроса даёт тот же результат.</p>
+    </section>
+
+    <!-- ===================== 12. GUARD TYPES ===================== -->
+    <section data-searchable>
+      <h2 id="guards">12. Типы guard'ов маршрутизатора</h2>
+      <ul>
+        <li><code>canActivate</code> — разрешает/запрещает переход <em>в</em> маршрут.</li>
+        <li><code>canActivateChild</code> — разрешает/запрещает переход в <em>дочерние</em> маршруты.</li>
+        <li><code>canDeactivate</code> — разрешает/запрещает <em>выход</em> из маршрута (напр. предупреждение о несохранённых изменениях).</li>
+        <li><code>canMatch</code> — решает, подходит ли определение маршрута вообще (заменяет <code>canLoad</code>; контролирует ленивые бандлы).</li>
+        <li><code>resolve</code> — предзагрузка данных до активации маршрута.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 13. CONTROL FLOW ===================== -->
+    <section data-searchable>
+      <h2 id="control-flow">13. Управление потоком в Angular 17+</h2>
+      <ul>
+        <li><code>@if (cond) { } @else if () { } @else { }</code> — условный рендеринг (заменяет <code>*ngIf</code>).</li>
+        <li><code>@for (item of items; track item.id) { }</code> — цикл; <code>track</code> обязателен (заменяет <code>*ngFor</code>).</li>
+        <li><code>@empty { }</code> — запасной блок, показываемый когда коллекция <code>@for</code> пуста.</li>
+        <li><code>@switch (val) { @case (x) {} @default {} }</code> — множественное ветвление (заменяет <code>*ngSwitch</code>).</li>
+        <li><code>@defer (on viewport) { } @placeholder { } @loading { } @error { }</code> — ленивая загрузка блока шаблона.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 14. GOF PATTERNS ===================== -->
+    <section data-searchable>
+      <h2 id="patterns">14. Паттерны GoF в Angular</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Паттерн</th><th>В Angular</th></tr></thead>
+          <tbody>
+            <tr><td>Наблюдатель (Observer)</td><td>RxJS Observable / Subject, передающие значения подписчикам.</td></tr>
+            <tr><td>Фабрика (Factory)</td><td>Провайдеры <code>useFactory</code>, создающие зависимости.</td></tr>
+            <tr><td>Декоратор (Decorator)</td><td>Декораторы метаданных <code>@Component</code>, <code>@Injectable</code>, <code>@Input</code>.</td></tr>
+            <tr><td>Стратегия (Strategy)</td><td>Взаимозаменяемые алгоритмы, внедряемые через токены (напр. валидаторы, стратегия CD).</td></tr>
+            <tr><td>Команда (Command)</td><td>Действия NgRx / диспатчируемые эффекты, инкапсулирующие запрос.</td></tr>
+            <tr><td>Прокси (Proxy)</td><td>HTTP-интерцепторы, оборачивающие и перехватывающие запросы.</td></tr>
+            <tr><td>Цепочка обязанностей (Chain of Responsibility)</td><td>Цепочки интерцепторов и guard'ов, передающие управление дальше.</td></tr>
+            <tr><td>Одиночка (Singleton)</td><td>Сервисы <code>providedIn: 'root'</code> — один экземпляр на приложение.</td></tr>
+            <tr><td>Шаблонный метод (Template Method)</td><td>Хуки жизненного цикла, вызываемые фреймворком в фиксированной последовательности.</td></tr>
+            <tr><td>Фасад (Facade)</td><td>Сервис, предоставляющий простой API поверх сложной логики store/состояния.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15. OOP PRINCIPLES ===================== -->
+    <section data-searchable>
+      <h2 id="oop">15. Принципы ООП</h2>
+      <ul>
+        <li><strong>Инкапсуляция</strong> — объединяет состояние и поведение, скрывает внутренности за публичным API (<code>#private</code>).</li>
+        <li><strong>Абстракция</strong> — показывает, <em>что</em> объект делает, скрывает, <em>как</em> он это делает.</li>
+        <li><strong>Наследование</strong> — порождает класс от другого для переиспользования и расширения поведения (<code>extends</code>).</li>
+        <li><strong>Полиморфизм</strong> — один интерфейс, много реализаций; поведение определяется в момент вызова.</li>
+      </ul>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="communication.html" class="btn-nav">← Общение с клиентом</a>
+      <a href="../index.html" class="btn-nav">Главная →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

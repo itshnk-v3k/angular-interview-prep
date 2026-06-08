@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Формы в Angular — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Формы</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Формы в Angular</h1>
+      <p class="page-desc">Две стратегии работы с формами, которые разбирают на собеседованиях для senior: template-driven и reactive.
+        Подробный разбор реактивных форм — <code>FormControl</code>, <code>FormGroup</code>, <code>FormArray</code>,
+        <code>FormBuilder</code>, встроенные и кастомные валидаторы, межполевая валидация и динамические формы.</p>
+      <button class="btn-done" data-page="forms" onclick="markDone('forms')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============== TEMPLATE-DRIVEN VS REACTIVE ============== -->
+    <section data-searchable>
+      <h2 id="td-vs-reactive">Template-driven против Reactive</h2>
+      <p>Angular предлагает два способа построения форм. Оба пригодны для продакшена, но они по-разному определяют, <em>где
+        находится источник истины</em>: в шаблоне (template-driven) или в классе компонента (reactive).</p>
+
+      <p class="definition"><strong>Template-driven формы</strong> — модель формы строится неявно директивами
+        (<code>ngModel</code>, <code>ngForm</code>), размещёнными в шаблоне. Angular выводит структуру из DOM.
+        Подходят для простых, преимущественно статичных форм.</p>
+      <p class="definition"><strong>Reactive формы</strong> — модель формы задаётся явно в классе как дерево объектов
+        <code>FormControl</code>/<code>FormGroup</code>/<code>FormArray</code>. Шаблон привязывается к этой модели.
+        Подходят для сложных, динамических и тщательно валидируемых форм.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>Template-driven</th><th>Reactive</th></tr></thead>
+          <tbody>
+            <tr><td>Настройка</td><td>Неявно через <code>ngModel</code></td><td>Явный <code>FormGroup</code> в классе</td></tr>
+            <tr><td>Валидация</td><td>Атрибуты в шаблоне</td><td>Массив <code>Validators</code> в классе</td></tr>
+            <tr><td>Тестирование</td><td>Сложнее — нужен DOM</td><td>Проще — чистый TS</td></tr>
+            <tr><td>Масштабируемость</td><td>Простые формы</td><td>Сложные динамические формы</td></tr>
+            <tr><td>Sync/Async</td><td>Требуется async-тик</td><td>Синхронно</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h4>Пример template-driven</h4>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;form #f="ngForm" (ngSubmit)="submit(f.value)"&gt;
+  &lt;input name="symbol" ngModel required /&gt;
+  &lt;input name="quantity" type="number" ngModel min="1" /&gt;
+  &lt;button [disabled]="f.invalid"&gt;Place&lt;/button&gt;
+&lt;/form&gt;</code></pre></div>
+        <p>Требует <code>FormsModule</code>. Модель живёт в локальной для шаблона ссылке <code>#f</code>.</p>
+      </div>
+
+      <div class="card">
+        <h4>Пример reactive</h4>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { Component } from '@angular/core';
+import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-ticket',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './ticket.component.html',
+})
+export class TicketComponent {
+  readonly form = new FormGroup({
+    symbol: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    quantity: new FormControl(0, { nonNullable: true, validators: [Validators.min(1)] }),
+  });
+}</code></pre></div>
+        <p>Требует <code>ReactiveFormsModule</code>. Модель — это явное поле <code>form</code>.</p>
+      </div>
+
+      <div class="tip"><p><strong>Правило для senior:</strong> в FinTech-приложении — ордерные тикеты, многоногие
+        стратегии, динамические сетки позиций — выбирайте <strong>reactive формы</strong>. Template-driven годится для
+        формы входа или фильтра с одним полем.</p></div>
+    </section>
+
+    <!-- ============== REACTIVE FORMS — BUILDING BLOCKS ============== -->
+    <section data-searchable>
+      <h2 id="reactive-blocks">Reactive формы — строительные блоки</h2>
+      <p>Реактивные формы — это дерево из трёх классов контролов, все наследуются от <code>AbstractControl</code>. Знание
+        точной роли каждого — гарантированный вопрос на собеседовании.</p>
+
+      <div class="card">
+        <p class="definition"><strong>FormControl</strong> — отслеживает значение и валидность <em>одного</em> поля
+          (один input, чекбокс или select). Атомарная единица реактивной формы.</p>
+        <p class="definition"><strong>FormGroup</strong> — группа контролов по именам, представляющая своё значение как
+          единый <em>объект</em>. Валидность — это логическое И его потомков. Моделирует форму фиксированной формы.</p>
+        <p class="definition"><strong>FormArray</strong> — упорядоченный список контролов, представляющий своё значение как
+          <em>массив</em>. Контролы можно добавлять/удалять во время выполнения — основа динамических полей.</p>
+        <p class="definition"><strong>FormBuilder</strong> — внедряемый сервис-сокращение, который конструирует
+          вышеперечисленное с меньшим количеством шаблонного кода (<code>fb.group(...)</code>, <code>fb.array(...)</code>, <code>fb.control(...)</code>).</p>
+        <p class="definition"><strong>AbstractControl</strong> — общий базовый класс для всех трёх. Кастомные валидаторы
+          получают <code>AbstractControl</code>, поэтому работают на любом уровне дерева.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { FormControl, FormGroup, FormArray } from '@angular/forms';
+
+// Single field
+const symbol = new FormControl&lt;string&gt;('EURUSD', { nonNullable: true });
+
+// A fixed-shape group → value is an object
+const order = new FormGroup({
+  symbol: new FormControl('EURUSD', { nonNullable: true }),
+  quantity: new FormControl(100, { nonNullable: true }),
+});
+// order.value === { symbol: 'EURUSD', quantity: 100 }
+
+// A dynamic list → value is an array
+const legs = new FormArray([
+  new FormControl('EURUSD', { nonNullable: true }),
+  new FormControl('GBPUSD', { nonNullable: true }),
+]);
+// legs.value === ['EURUSD', 'GBPUSD']</code></pre></div>
+
+      <h3 id="formbuilder">FormBuilder — сокращённая запись</h3>
+      <p>Внедрение <code>FormBuilder</code> (или типизированного <code>NonNullableFormBuilder</code>) убирает повторяющийся
+        шум вида <code>new FormControl(...)</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { inject } from '@angular/core';
+import { FormBuilder, Validators } from '@angular/forms';
+
+const fb = inject(FormBuilder);
+
+const form = fb.group({
+  symbol: ['EURUSD', [Validators.required]],
+  quantity: [100, [Validators.required, Validators.min(1)]],
+});</code></pre></div>
+      <div class="tip"><p>Предпочитайте <code>fb.nonNullable.group(...)</code>, чтобы <code>reset()</code> восстанавливал
+        исходное значение вместо <code>null</code>, а выводимые типы были non-nullable.</p></div>
+    </section>
+
+    <!-- ============== METHODS ============== -->
+    <section data-searchable>
+      <h2 id="control-methods">Чтение и запись значений</h2>
+      <p>Четыре метода покрывают почти любое взаимодействие со значением контрола или группы. Путаница между ними — классический баг.</p>
+
+      <div class="card">
+        <p class="definition"><strong>setValue(obj)</strong> — устанавливает <em>ВСЕ</em> поля сразу. Нужно передать
+          <em>полный</em> объект, точно соответствующий форме — отсутствующий или лишний ключ выбросит ошибку.</p>
+        <p class="definition"><strong>patchValue(partial)</strong> — устанавливает <em>НЕКОТОРЫЕ</em> поля. Неуказанные ключи
+          остаются без изменений; неизвестные ключи молча игнорируются. Безопаснее всего для частичных обновлений (например, предзаполнение с сервера).</p>
+        <p class="definition"><strong>getRawValue()</strong> — возвращает значение, <em>включая отключённые</em> контролы.
+          Обычное <code>.value</code> пропускает отключённые контролы — частый источник багов «моё поле пропало».</p>
+        <p class="definition"><strong>reset(value?)</strong> — сбрасывает значение (к переданному значению или к исходному),
+          очищает <code>dirty</code>/<code>touched</code> и заново запускает валидацию.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// setValue — ALL fields required, complete object
+form.setValue({ symbol: 'GBPUSD', quantity: 250 });
+
+// patchValue — SOME fields, the rest untouched
+form.patchValue({ quantity: 250 });
+
+// disabled controls are excluded from .value but kept by getRawValue()
+form.controls.symbol.disable();
+form.value;          // { quantity: 250 }            ← symbol missing
+form.getRawValue();  // { symbol: 'GBPUSD', quantity: 250 }
+
+// reset back to the initial (non-nullable) values
+form.reset();</code></pre></div>
+
+      <div class="warn"><p><strong>Ловушка:</strong> вызов <code>setValue</code> с частичным объектом выбрасывает
+        <code>Must supply a value for form control with name: '...'</code>. Для частичных данных используйте <code>patchValue</code>.</p></div>
+    </section>
+
+    <!-- ============== BUILT-IN VALIDATORS ============== -->
+    <section data-searchable>
+      <h2 id="builtin-validators">Встроенные валидаторы</h2>
+      <p>Валидаторы — это чистые функции типа <code>(control: AbstractControl) =&gt; ValidationErrors | null</code>.
+        Возврат <code>null</code> означает «валидно»; возврат объекта ошибок означает «невалидно». Angular поставляет их
+        из коробки в классе <code>Validators</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Validators.required</strong> — значение должно быть непустым (не
+          <code>null</code>/<code>undefined</code>/<code>''</code>/пустой массив). Ключ ошибки: <code>required</code>.</p>
+        <p class="definition"><strong>Validators.minLength(n)</strong> — длина строки/массива ≥ <code>n</code>. Ключ ошибки: <code>minlength</code>.</p>
+        <p class="definition"><strong>Validators.maxLength(n)</strong> — длина строки/массива ≤ <code>n</code>. Ключ ошибки: <code>maxlength</code>.</p>
+        <p class="definition"><strong>Validators.min(n)</strong> — числовое значение ≥ <code>n</code>. Ключ ошибки: <code>min</code>.</p>
+        <p class="definition"><strong>Validators.max(n)</strong> — числовое значение ≤ <code>n</code>. Ключ ошибки: <code>max</code>.</p>
+        <p class="definition"><strong>Validators.email</strong> — значение соответствует шаблону email. Ключ ошибки: <code>email</code>.</p>
+        <p class="definition"><strong>Validators.pattern(regex)</strong> — значение соответствует заданному <code>RegExp</code> или строковому шаблону. Ключ ошибки: <code>pattern</code>.</p>
+        <p class="definition"><strong>Validators.requiredTrue</strong> — значение должно быть строго <code>true</code> (для чекбоксов «Я принимаю условия»). Ключ ошибки: <code>required</code>.</p>
+        <p class="definition"><strong>Validators.nullValidator</strong> — пустышка, всегда возвращающая <code>null</code>. Полезна как заглушка/значение по умолчанию.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { FormControl, Validators } from '@angular/forms';
+
+const quantity = new FormControl(0, {
+  nonNullable: true,
+  validators: [Validators.required, Validators.min(1), Validators.max(1_000_000)],
+});
+
+const symbol = new FormControl('', {
+  nonNullable: true,
+  validators: [Validators.required, Validators.pattern(/^[A-Z]{6}$/)],
+});
+
+quantity.setValue(0);
+quantity.errors; // { min: { min: 1, actual: 0 } }
+quantity.valid;  // false</code></pre></div>
+
+      <div class="tip"><p>Проверяйте <code>control.errors</code> в шаблоне для отрисовки сообщений:
+        <code>&#64;if (form.controls.quantity.hasError('min')) { ... }</code>.</p></div>
+    </section>
+
+    <!-- ============== CUSTOM VALIDATORS ============== -->
+    <section data-searchable>
+      <h2 id="custom-validators">Кастомные валидаторы</h2>
+      <p class="definition"><strong>Синхронный валидатор</strong> — функция
+        <code>(control: AbstractControl) =&gt; ValidationErrors | null</code>, которая выполняется немедленно при каждом изменении значения.</p>
+      <p class="definition"><strong>Асинхронный валидатор</strong> — функция, возвращающая <code>Promise</code> или
+        <code>Observable</code> с <code>ValidationErrors | null</code>, используется когда валидация требует обращения к серверу.
+        Пока она выполняется, статус контрола — <code>PENDING</code>.</p>
+
+      <h3 id="sync-custom">Синхронный пример — положительное число</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { AbstractControl, ValidationErrors } from '@angular/forms';
+
+export function positiveNumber(control: AbstractControl): ValidationErrors | null {
+  return control.value &gt; 0 ? null : { notPositive: true };
+}
+
+// usage
+const price = new FormControl(0, { nonNullable: true, validators: [positiveNumber] });
+price.errors; // { notPositive: true }</code></pre></div>
+
+      <h3 id="async-custom">Асинхронный пример — уникальный email</h3>
+      <p>Фабрика async-валидатора захватывает сервис, ничего здесь не дебаунсит (тайминг берёт на себя планировщик формы)
+        и преобразует ответ сервера в объект ошибок. Всегда делайте <code>catchError</code> в <code>of(null)</code>, чтобы
+        сбой сети не пометил поле невалидным навсегда.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
+interface AccountService {
+  checkEmail(email: string): Observable&lt;boolean&gt;; // true === already taken
+}
+
+export function uniqueEmail(service: AccountService): AsyncValidatorFn {
+  return (control: AbstractControl): Observable&lt;ValidationErrors | null&gt; =&gt;
+    service.checkEmail(control.value).pipe(
+      map(taken =&gt; (taken ? { emailTaken: true } : null)),
+      catchError(() =&gt; of(null)),
+    );
+}
+
+// usage — async validators go in the 3rd position / asyncValidators option
+const email = new FormControl('', {
+  nonNullable: true,
+  validators: [Validators.required, Validators.email],
+  asyncValidators: [uniqueEmail(accountService)],
+});</code></pre></div>
+      <div class="warn"><p>Пока async-валидатор выполняется, <code>control.status === 'PENDING'</code>, а
+        <code>control.valid</code> равно <code>false</code> — блокируйте кнопку отправки по
+        <code>form.pending || form.invalid</code>.</p></div>
+    </section>
+
+    <!-- ============== valueChanges / statusChanges ============== -->
+    <section data-searchable>
+      <h2 id="changes-observables">valueChanges и statusChanges</h2>
+      <p>Каждый <code>AbstractControl</code> предоставляет два реактивных потока. Это мост между формами и RxJS.</p>
+
+      <p class="definition"><strong>valueChanges</strong> — <code>Observable</code>, который эмитит новое значение контрола
+        при <em>каждом изменении значения</em> (пользовательский ввод или программный, если не передано <code>{ emitEvent: false }</code>).</p>
+      <p class="definition"><strong>statusChanges</strong> — <code>Observable</code>, который эмитит
+        <em>статус</em> контрола при каждом его изменении: <code>'VALID'</code>, <code>'INVALID'</code>, <code>'PENDING'</code> или
+        <code>'DISABLED'</code>.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+
+// React to the symbol field → fetch a live quote
+this.form.controls.symbol.valueChanges
+  .pipe(
+    debounceTime(200),
+    distinctUntilChanged(),
+    switchMap((symbol: string) =&gt; this.quotes.stream(symbol)),
+    takeUntilDestroyed(this.destroyRef),
+  )
+  .subscribe((quote: Quote) =&gt; this.lastQuote.set(quote));
+
+// React to overall form status
+this.form.statusChanges.subscribe((status) =&gt; {
+  this.canSubmit.set(status === 'VALID');
+});</code></pre></div>
+
+      <div class="tip"><p>Всегда отписывайтесь — используйте <code>takeUntilDestroyed()</code> или пайп <code>async</code>.
+        Утёкшая подписка на <code>valueChanges</code> удерживает компонент живым и срабатывает после навигации.</p></div>
+    </section>
+
+    <!-- ============== CROSS-FIELD VALIDATION ============== -->
+    <section data-searchable>
+      <h2 id="cross-field">Межполевая валидация</h2>
+      <p class="definition"><strong>Межполевой (групповой) валидатор</strong> — валидатор, прикреплённый к
+        <code>FormGroup</code>, а не к одному контролу, чтобы он мог сравнивать <em>соседние</em> контролы (например, пароль
+        и подтверждение пароля или стоп-лосс и лимитную цену).</p>
+
+      <p>Поскольку он живёт на группе, он получает группу как свой <code>AbstractControl</code> и читает потомков через
+        <code>control.get('name')</code>. Ошибка сообщается на группе, а не на отдельных полях.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { AbstractControl, ValidationErrors, FormGroup, FormControl, Validators } from '@angular/forms';
+
+// Group validator: the two passwords must match
+export function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const password = group.get('password')?.value;
+  const confirm = group.get('confirm')?.value;
+  return password === confirm ? null : { passwordMismatch: true };
+}
+
+const credentials = new FormGroup(
+  {
+    password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
+    confirm: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+  },
+  { validators: [passwordsMatch] }, // ← attached to the GROUP
+);
+
+credentials.setValue({ password: 'hunter22!', confirm: 'typo' });
+credentials.errors; // { passwordMismatch: true }   (on the group)</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;!-- read the group-level error in the template --&gt;
+&#64;if (credentials.hasError('passwordMismatch') &amp;&amp; credentials.get('confirm')?.touched) {
+  &lt;p class="error"&gt;Passwords do not match&lt;/p&gt;
+}</code></pre></div>
+    </section>
+
+    <!-- ============== DYNAMIC FORMARRAY ============== -->
+    <section data-searchable>
+      <h2 id="dynamic-formarray">Динамические формы с FormArray</h2>
+      <p><code>FormArray</code> позволяет добавлять и удалять контролы во время выполнения — именно то, что нужно для
+        многоногого ордера или редактируемого списка позиций. Вы изменяете массив через его методы (<code>push</code>, <code>removeAt</code>,
+        <code>insert</code>, <code>clear</code>), а Angular держит представление в синхронизации.</p>
+
+      <p class="definition"><strong>FormArray.push(control)</strong> — добавляет контрол в конец.</p>
+      <p class="definition"><strong>FormArray.removeAt(index)</strong> — удаляет контрол по заданному индексу.</p>
+      <p class="definition"><strong>FormArray.at(index)</strong> — возвращает контрол по индексу для привязки.</p>
+      <p class="definition"><strong>FormArray.clear()</strong> — удаляет все контролы.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { inject } from '@angular/core';
+import { FormArray, FormGroup, FormControl, FormBuilder, Validators } from '@angular/forms';
+
+interface OrderLine {
+  symbol: string;
+  quantity: number;
+}
+
+export class BasketComponent {
+  private readonly fb = inject(FormBuilder);
+
+  readonly form = this.fb.nonNullable.group({
+    account: ['ACC-001', [Validators.required]],
+    lines: this.fb.array&lt;FormGroup&gt;([]), // dynamic list of order lines
+  });
+
+  get lines(): FormArray {
+    return this.form.controls.lines;
+  }
+
+  private createLine(line?: Partial&lt;OrderLine&gt;): FormGroup {
+    return this.fb.nonNullable.group({
+      symbol: [line?.symbol ?? '', [Validators.required, Validators.pattern(/^[A-Z]{6}$/)]],
+      quantity: [line?.quantity ?? 1, [Validators.required, Validators.min(1)]],
+    });
+  }
+
+  addOrderLine(line?: Partial&lt;OrderLine&gt;): void {
+    this.lines.push(this.createLine(line));
+  }
+
+  removeOrderLine(index: number): void {
+    this.lines.removeAt(index);
+  }
+}</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;form [formGroup]="form"&gt;
+  &lt;input formControlName="account" /&gt;
+
+  &lt;div formArrayName="lines"&gt;
+    &#64;for (line of lines.controls; track $index) {
+      &lt;div [formGroupName]="$index"&gt;
+        &lt;input formControlName="symbol" placeholder="EURUSD" /&gt;
+        &lt;input formControlName="quantity" type="number" /&gt;
+        &lt;button type="button" (click)="removeOrderLine($index)"&gt;✕&lt;/button&gt;
+      &lt;/div&gt;
+    }
+  &lt;/div&gt;
+
+  &lt;button type="button" (click)="addOrderLine()"&gt;+ Add line&lt;/button&gt;
+&lt;/form&gt;</code></pre></div>
+
+      <div class="warn"><p><strong>Ловушка:</strong> привязывайте каждую строку через <code>[formGroupName]="$index"</code> (число),
+        а не строку. Забытая обёртка <code>formArrayName</code> — причина №1, по которой динамические строки не регистрируются.</p></div>
+    </section>
+
+    <!-- ============== FULL EXAMPLE — ORDER TICKET ============== -->
+    <section data-searchable>
+      <h2 id="order-ticket">Полный пример — ордерный тикет</h2>
+      <p>Реалистичная FinTech-реактивная форма: одноногий ордерный тикет с <code>symbol</code>, <code>side</code>,
+        <code>quantity</code> и <code>price</code>, построенный с <code>FormBuilder</code>, типизированный против доменных моделей
+        и подключённый к живому потоку статуса. Без <code>any</code>.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// ---- domain models ----
+type Side = 'BUY' | 'SELL';
+
+interface Instrument {
+  symbol: string;
+  tickSize: number;
+}
+
+interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+}
+
+interface Order {
+  symbol: string;
+  side: Side;
+  quantity: number;
+  price: number;
+}
+
+interface Position {
+  symbol: string;
+  netQuantity: number;
+  avgPrice: number;
+}</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DestroyRef } from '@angular/core';
+
+@Component({
+  selector: 'app-order-ticket',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './order-ticket.component.html',
+})
+export class OrderTicketComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly submitting = signal(false);
+
+  readonly form = this.fb.nonNullable.group({
+    symbol: ['', [Validators.required, Validators.pattern(/^[A-Z]{6}$/)]],
+    side: ['BUY' as Side, [Validators.required]],
+    quantity: [1, [Validators.required, Validators.min(1), Validators.max(1_000_000)]],
+    price: [0, [Validators.required, Validators.min(0.0001)]],
+  });
+
+  constructor() {
+    // Disable submit while async checks run or the form is invalid
+    this.form.statusChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) =&gt; console.log('status:', status));
+  }
+
+  submit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    // getRawValue → includes disabled fields, fully typed as Order
+    const order: Order = this.form.getRawValue();
+    this.submitting.set(true);
+    // this.orders.place(order)...
+  }
+
+  reset(): void {
+    this.form.reset(); // restores '', 'BUY', 1, 0 thanks to nonNullable
+  }
+}</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;form [formGroup]="form" (ngSubmit)="submit()"&gt;
+  &lt;label&gt;
+    Symbol
+    &lt;input formControlName="symbol" placeholder="EURUSD" /&gt;
+  &lt;/label&gt;
+  &#64;if (form.controls.symbol.hasError('pattern') &amp;&amp; form.controls.symbol.touched) {
+    &lt;p class="error"&gt;Symbol must be 6 uppercase letters&lt;/p&gt;
+  }
+
+  &lt;label&gt;
+    Side
+    &lt;select formControlName="side"&gt;
+      &lt;option value="BUY"&gt;Buy&lt;/option&gt;
+      &lt;option value="SELL"&gt;Sell&lt;/option&gt;
+    &lt;/select&gt;
+  &lt;/label&gt;
+
+  &lt;label&gt;Quantity &lt;input type="number" formControlName="quantity" /&gt;&lt;/label&gt;
+  &lt;label&gt;Price &lt;input type="number" formControlName="price" /&gt;&lt;/label&gt;
+
+  &lt;button type="submit" [disabled]="form.invalid || submitting()"&gt;Place order&lt;/button&gt;
+  &lt;button type="button" (click)="reset()"&gt;Reset&lt;/button&gt;
+&lt;/form&gt;</code></pre></div>
+
+      <div class="success"><p><strong>Почему это уровень собеседования:</strong> типизированная non-nullable форма,
+        <code>getRawValue()</code> возвращает полностью типизированный <code>Order</code>, <code>statusChanges</code> управляет кнопкой
+        отправки, <code>markAllAsTouched()</code> показывает ошибки при отправке, а подписка снимается через
+        <code>takeUntilDestroyed</code>.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — вопросы с собеседований</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Когда вы выберете reactive формы вместо template-driven?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Reactive формы, когда форма сложная, динамическая или тщательно валидируемая — модель
+          явно живёт в классе, синхронна, легко тестируется юнит-тестами на чистом TS и масштабируется до динамических
+          полей <code>FormArray</code> и межполевых валидаторов. Template-driven годится для простых, преимущественно
+          статичных форм (вход, единственный фильтр), где неявной модели <code>ngModel</code> достаточно, но для теста
+          ей нужны DOM и async-тик. В FinTech-приложении — ордерные тикеты, многоногие корзины — вы почти всегда выбираете
+          reactive.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. В чём разница между <code>setValue</code> и <code>patchValue</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>setValue(obj)</code> требует <em>полный</em> объект, покрывающий <em>все</em>
+          контролы — отсутствующий или неизвестный ключ выбросит ошибку. <code>patchValue(partial)</code> обновляет только те ключи, что вы передали,
+          оставляет остальное без изменений и молча игнорирует неизвестные ключи. Используйте <code>setValue</code>, когда у вас есть вся
+          модель и нужна безопасность строгой проверки формы; используйте <code>patchValue</code> для частичных обновлений, таких как
+          предзаполнение с сервера.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Почему в <code>form.value</code> может отсутствовать поле и как его вернуть?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Отключённые контролы исключаются из <code>form.value</code>. Используйте
+          <code>form.getRawValue()</code>, чтобы получить значение, включая отключённые контролы. На этом спотыкаются, когда
+          поле условно отключается и затем «исчезает» из отправляемого payload.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Как валидировать, что два поля совпадают (например, пароль / подтверждение)?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Прикрепите <em>групповой</em> валидатор к <code>FormGroup</code>, а не к одному
+          контролу. Валидатор получает группу как <code>AbstractControl</code>, читает соседей через
+          <code>group.get('password')</code> и <code>group.get('confirm')</code> и возвращает
+          <code>{ passwordMismatch: true }</code> или <code>null</code>. Ошибка сообщается на группе, поэтому
+          шаблон читает <code>group.hasError('passwordMismatch')</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Как async-валидаторы влияют на статус контрола и в чём подводный камень?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Пока <code>Observable</code>/<code>Promise</code> async-валидатора выполняется,
+          статус контрола — <code>PENDING</code>, а <code>valid</code> равно <code>false</code>, поэтому отправку следует блокировать
+          по <code>form.pending || form.invalid</code>. Главный подводный камень — необработка ошибок: брошенная HTTP-ошибка
+          оставляет поле застрявшим. Всегда делайте <code>catchError(() =&gt; of(null))</code>, чтобы сбой сети разрешался в
+          «валидно», а не блокировал форму навсегда.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какой метод требует полный объект, покрывающий <strong>все</strong> контролы формы?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">patchValue()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">setValue()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">getRawValue()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">reset()</button>
+        <div class="quiz-explain">setValue() выбрасывает ошибку, если в объекте отсутствует какой-либо контрол. patchValue() обновляет только переданные ключи и игнорирует неизвестные.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Контрол отключён. Какой вызов всё равно вернёт его значение?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">form.value</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">form.getRawValue()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">form.controls.value</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">form.patchValue()</button>
+        <div class="quiz-explain">form.value пропускает отключённые контролы; getRawValue() их включает. Это распространённый баг «моё поле пропало из payload».</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Куда прикрепить валидатор, сравнивающий два соседних контрола?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">На каждый отдельный FormControl</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">На родительский FormGroup</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">На FormBuilder</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Только в шаблоне</button>
+        <div class="quiz-explain">Межполевая валидация живёт на FormGroup, чтобы валидатор мог читать обоих соседей через group.get(...). Ошибка сообщается на группе.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Пока async-валидатор выполняется, каков статус контрола?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">VALID</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">INVALID</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">PENDING</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">DISABLED</button>
+        <div class="quiz-explain">Асинхронная валидация устанавливает статус PENDING (а valid равно false), пока Observable/Promise не завершится. Блокируйте отправку по form.pending || form.invalid.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="di.html" class="btn-nav">← Внедрение зависимостей</a>
+      <a href="routing.html" class="btn-nav">Маршрутизация →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

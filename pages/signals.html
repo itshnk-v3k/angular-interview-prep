@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Angular Signals — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Angular Signals</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Angular Signals</h1>
+      <p class="page-desc">Реактивный примитив, который меняет облик Angular: <code>signal</code>, <code>computed</code>,
+        <code>effect</code>, мост интеграции с RxJS (<code>toSignal</code>/<code>toObservable</code>),
+        сигнальные inputs и models, а также новое хранилище <code>@ngrx/signals</code>.</p>
+      <button class="btn-done" data-page="signals" onclick="markDone('signals')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= WHAT ARE SIGNALS ============================= -->
+    <section data-searchable>
+      <h2 id="what-are-signals">Что такое Signals</h2>
+      <p class="definition"><strong>Signal (сигнал)</strong> — реактивный примитив, который хранит значение и уведомляет своих потребителей
+        при каждом его изменении. Сигналы <em>синхронны</em>, у них <em>всегда есть текущее значение</em>,
+        а чтобы прочитать сигнал, его вызывают как функцию (<code>price()</code>). Появились в Angular 16.</p>
+      <p class="definition"><strong>Граф реактивности</strong> — сигналы, вычисляемые значения и эффекты образуют граф
+        зависимостей. Когда сигнал меняется, повторно вычисляются только те потребители, которые его действительно читают
+        (<em>точечная, fine-grained реактивность</em>), а не пересчитывается всё дерево компонентов.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Writable signal (изменяемый сигнал)</strong> — сигнал, который можно изменить через <code>.set()</code> или <code>.update()</code>.</p>
+        <p class="definition"><strong>Read-only signal (только для чтения)</strong> — производное значение (из <code>computed</code> или интеграции), которое можно читать, но нельзя задать напрямую.</p>
+        <p class="definition"><strong>Потребитель</strong> — всё, что читает сигнал: <code>computed</code>, <code>effect</code> или привязка в шаблоне. Чтение автоматически устанавливает зависимость.</p>
+      </div>
+
+      <h3 id="why-signals">Зачем нужны сигналы</h3>
+      <ul>
+        <li><strong>Проще RxJS для локального состояния</strong> — никаких потоков, операторов и marble-диаграмм ради счётчика или переключателя.</li>
+        <li><strong>Не нужно управлять подписками</strong> — отписываться не от чего; нет утечек памяти из-за забытых подписок.</li>
+        <li><strong>Точечная реактивность</strong> — обновляются ровно те привязки, которые зависят от изменившегося сигнала, а не весь компонент.</li>
+        <li><strong>Будущее change detection в Angular</strong> — zoneless-режим опирается на сигналы, чтобы точно знать, что нужно обновить.</li>
+        <li><strong>Всегда синхронны и без «глитчей»</strong> — чтение всегда возвращает актуальное согласованное значение.</li>
+      </ul>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { signal } from '@angular/core';
+
+const price = signal&lt;number&gt;(100); // create a writable signal
+console.log(price());              // read → 100 (call it like a function)
+price.set(105);                    // write → consumers notified
+console.log(price());              // 105</code></pre>
+      </div>
+      <div class="tip"><p>Чтение сигнала <strong>внутри реактивного контекста</strong> (шаблон, <code>computed</code> или <code>effect</code>) автоматически подписывает на него. Чтение в обычном императивном коде просто возвращает текущее значение.</p></div>
+    </section>
+
+    <!-- ============================= CORE API ============================= -->
+    <section data-searchable>
+      <h2 id="core-api">Базовый API</h2>
+
+      <!-- signal() -->
+      <div class="card">
+        <h3 id="api-signal"><code>signal&lt;T&gt;(initialValue)</code> — изменяемый сигнал</h3>
+        <p class="definition"><strong>signal&lt;T&gt;()</strong> — создаёт изменяемый сигнал с начальным значением <code>initialValue</code>. Возвращает <code>WritableSignal&lt;T&gt;</code> с тремя методами записи и одним чтением.</p>
+        <ul>
+          <li class="definition"><strong>.set(newValue)</strong> — полностью заменяет текущее значение.</li>
+          <li class="definition"><strong>.update(fn)</strong> — вычисляет следующее значение на основе текущего: <code>(current) =&gt; next</code>.</li>
+          <li class="definition"><strong>.mutate(fn)</strong> — изменяет значение на месте. <em>Объявлен устаревшим / удалён в новых версиях Angular</em> — предпочитайте <code>.update()</code> с неизменяемой копией.</li>
+          <li class="definition"><strong>Вызов <code>price()</code></strong> — читает текущее значение и (в реактивном контексте) регистрирует зависимость.</li>
+        </ul>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, WritableSignal } from '@angular/core';
+
+interface Order { id: number; symbol: string; qty: number; }
+
+const qty: WritableSignal&lt;number&gt; = signal(100);
+
+qty.set(250);                         // replace
+qty.update(current =&gt; current + 50);  // derive from current → 300
+console.log(qty());                   // 300
+
+// Immutable update for object/array signals (preferred over .mutate)
+const orders = signal&lt;Order[]&gt;([]);
+orders.update(list =&gt; [...list, { id: 1, symbol: 'EURUSD', qty: 100 }]);</code></pre>
+        </div>
+        <div class="warn"><p><strong>.mutate устарел.</strong> Он менял ту же самую ссылку, что ненадёжно для change detection, и был удалён. Всегда создавайте <em>новый</em> массив/объект внутри <code>.update()</code>.</p></div>
+      </div>
+
+      <!-- computed() -->
+      <div class="card">
+        <h3 id="api-computed"><code>computed(fn)</code> — производный сигнал</h3>
+        <p class="definition"><strong>computed()</strong> — создаёт <em>только для чтения</em> производный сигнал. Он выполняет <code>fn</code>, автоматически отслеживает каждый прочитанный внутри сигнал как зависимость и <em>мемоизирует</em> результат — пересчитывая его только при изменении одной из зависимостей. Ленивый: не вычисляется до первого чтения.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, computed } from '@angular/core';
+
+const price = signal(100);
+const tax = signal(0.2);
+
+// auto-tracks price() and tax(); recomputes only when either changes
+const total = computed(() =&gt; price() * (1 + tax()));
+
+console.log(total()); // 120
+price.set(200);
+console.log(total()); // 240 — memoized recompute
+// total.set(...) ❌ does not exist — computed signals are read-only</code></pre>
+        </div>
+        <div class="tip"><p>Поскольку <code>computed</code> мемоизирован, чтение <code>total()</code> десять раз выполнит функцию один раз — пока не изменится зависимость.</p></div>
+      </div>
+
+      <!-- effect() -->
+      <div class="card">
+        <h3 id="api-effect"><code>effect(fn)</code> — реактивные побочные эффекты</h3>
+        <p class="definition"><strong>effect()</strong> — регистрирует побочный эффект, который перезапускается при изменении любого прочитанного им сигнала. Он выполняется хотя бы раз, запускается <em>после</em> рендеринга и должен создаваться в контексте внедрения (конструктор или инициализатор поля). Возвращает <code>EffectRef</code> с методом <code>.destroy()</code>; также автоматически очищается при уничтожении его инжектора.</p>
+
+        <h4>Базовый эффект — авто-отслеживание</h4>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, signal, effect } from '@angular/core';
+
+@Component({ selector: 'app-ticker', template: '' })
+export class TickerComponent {
+  readonly price = signal(100);
+
+  constructor() {
+    // re-runs every time price() changes (after render)
+    effect(() =&gt; console.log('price is now', this.price()));
+  }
+}</code></pre>
+        </div>
+
+        <h4>Эффект с <code>onCleanup</code></h4>
+        <p class="definition"><strong>onCleanup(fn)</strong> — регистрируется внутри эффекта; выполняется перед следующим запуском и при уничтожении. Идеален для очистки таймеров, интервалов и слушателей.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, effect } from '@angular/core';
+
+const pollMs = signal(1000);
+
+effect((onCleanup) =&gt; {
+  const id = setInterval(() =&gt; console.log('poll quote'), pollMs());
+  onCleanup(() =&gt; clearInterval(id)); // clears before re-run / on destroy
+});</code></pre>
+        </div>
+
+        <h4><code>allowSignalWrites</code> — запись сигнала внутри эффекта</h4>
+        <p class="definition"><strong>allowSignalWrites</strong> — опция, разрешающая эффекту вызывать <code>.set()</code>/<code>.update()</code> у сигнала. По умолчанию запись внутри эффекта выбрасывает ошибку, чтобы не плодить скрытые каскады.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, effect } from '@angular/core';
+
+const bid = signal(1.07);
+const lastBid = signal(0);
+
+effect(() =&gt; {
+  // writing a DIFFERENT signal than the one we read
+  lastBid.set(bid());
+}, { allowSignalWrites: true });</code></pre>
+        </div>
+
+        <h4><code>untracked()</code> — чтение без зависимости</h4>
+        <p class="definition"><strong>untracked(fn)</strong> — читает сигналы внутри <code>fn</code> <em>без</em> регистрации их как зависимостей. Используйте, когда эффект должен реагировать на один сигнал, но лишь читать другой для контекста.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, effect, untracked } from '@angular/core';
+
+const symbol = signal('EURUSD');
+const requestId = signal(0);
+
+effect(() =&gt; {
+  const id = requestId();                 // depend on requestId
+  const sym = untracked(() =&gt; symbol());  // read but do NOT depend
+  console.log('request', id, 'for', sym);
+});</code></pre>
+        </div>
+
+        <div class="danger">
+          <p><strong>Подводные камни:</strong></p>
+          <ul>
+            <li>Запись сигнала внутри эффекта <em>без</em> <code>allowSignalWrites</code> выбрасывает ошибку.</li>
+            <li>Чтение <em>и</em> запись <strong>одного и того же</strong> сигнала в одном эффекте создаёт <strong>бесконечный цикл</strong> (каждая запись перезапускает эффект).</li>
+            <li>Для производного состояния предпочитайте <code>computed</code> — прибегайте к эффекту только тогда, когда нужен настоящий побочный эффект (логирование, DOM, localStorage, аналитика).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- toSignal() -->
+      <div class="card">
+        <h3 id="api-tosignal"><code>toSignal(observable$)</code> — Observable → Signal</h3>
+        <p class="definition"><strong>toSignal()</strong> — подписывается на Observable и предоставляет его последнее значение как сигнал <em>только для чтения</em>. Должен вызываться в контексте внедрения; автоматически отписывается при уничтожении контекста. Передайте <code>initialValue</code> (или <code>requireSync</code>), чтобы определить значение до первой эмиссии.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, inject, Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+
+interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+
+@Component({ selector: 'app-quotes', template: '' })
+export class QuotesComponent {
+  private readonly ws = inject(WsService);
+
+  // Observable&lt;Quote[]&gt; → Signal&lt;Quote[]&gt;
+  readonly quotes: Signal&lt;Quote[]&gt; =
+    toSignal(this.ws.quotes$, { initialValue: [] });
+}</code></pre>
+        </div>
+        <div class="tip"><p><code>toSignal</code> — это мост из потоковых данных (HTTP, WebSocket) в мир сигналов, чтобы шаблоны могли читать их без пайпа <code>async</code>.</p></div>
+      </div>
+
+      <!-- toObservable() -->
+      <div class="card">
+        <h3 id="api-toobservable"><code>toObservable(signal)</code> — Signal → Observable</h3>
+        <p class="definition"><strong>toObservable()</strong> — преобразует сигнал в Observable, который эмитит при каждом изменении сигнала (внутренне управляется эффектом). Полезно, когда нужны операторы RxJS (<code>debounceTime</code>, <code>switchMap</code>) поверх состояния-сигнала.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { debounceTime, switchMap } from 'rxjs';
+
+const search = signal('');
+
+const results$ = toObservable(search).pipe(
+  debounceTime(300),
+  switchMap(term =&gt; this.api.searchInstruments(term)),
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- input() -->
+      <div class="card">
+        <h3 id="api-input"><code>input()</code> — сигнальные inputs (Angular 17+)</h3>
+        <p class="definition"><strong>input()</strong> — объявляет input компонента как <em>сигнал только для чтения</em>, заменяя декоратор <code>@Input()</code>. <strong>input.required&lt;T&gt;()</strong> объявляет обязательный input без значения по умолчанию (компилятор требует, чтобы он был привязан).</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, input, computed } from '@angular/core';
+
+@Component({ selector: 'app-order-row', template: '{{ label() }}' })
+export class OrderRowComponent {
+  readonly symbol = input&lt;string&gt;('EURUSD');     // optional, with default
+  readonly orderId = input.required&lt;number&gt;();   // required input
+
+  // inputs are signals → compose them with computed
+  readonly label = computed(() =&gt; `#${this.orderId()} ${this.symbol()}`);
+}</code></pre>
+        </div>
+        <div class="tip"><p>Поскольку inputs — это сигналы, для реакции на их изменения больше не нужен <code>ngOnChanges</code> — используйте <code>computed</code> или <code>effect</code>.</p></div>
+      </div>
+
+      <!-- model() -->
+      <div class="card">
+        <h3 id="api-model"><code>model()</code> — сигнал двусторонней привязки (Angular 17+)</h3>
+        <p class="definition"><strong>model()</strong> — объявляет изменяемый сигнал с поддержкой <em>двусторонней привязки</em> (<code>[(value)]</code>), заменяя старую пару <code>@Input()</code> + <code>@Output()</code>. Запись в model одновременно обновляет локальное значение и эмитит изменение родителю.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, model } from '@angular/core';
+
+@Component({
+  selector: 'app-qty-input',
+  template: `&lt;input type="number"
+            [value]="qty()"
+            (input)="qty.set(+$any($event.target).value)"&gt;`,
+})
+export class QtyInputComponent {
+  readonly qty = model&lt;number&gt;(1); // two-way: [(qty)] in the parent
+}
+
+// Parent usage:  &lt;app-qty-input [(qty)]="orderQty" /&gt;</code></pre>
+        </div>
+      </div>
+
+      <!-- linkedSignal() -->
+      <div class="card">
+        <h3 id="api-linkedsignal"><code>linkedSignal()</code> — связанный изменяемый сигнал (Angular 19+)</h3>
+        <p class="definition"><strong>linkedSignal()</strong> — изменяемый сигнал, значение которого <em>производится</em> от исходного сигнала, но может быть локально переопределено. Когда источник меняется, он пересчитывается (сбрасывая любое ручное переопределение). Закрывает разрыв между <code>computed</code> (только для чтения) и обычным изменяемым сигналом.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { signal, linkedSignal } from '@angular/core';
+
+interface Instrument { symbol: string; defaultQty: number; }
+
+const instrument = signal&lt;Instrument&gt;({ symbol: 'EURUSD', defaultQty: 100 });
+
+// derives from instrument, but the user can still override qty
+const qty = linkedSignal(() =&gt; instrument().defaultQty);
+
+qty.set(500);                                  // manual override → 500
+instrument.set({ symbol: 'BTCUSD', defaultQty: 1 });
+console.log(qty());                            // 1 — reset to new source
+
+// With an explicit source + computation:
+const selected = linkedSignal({
+  source: instrument,
+  computation: (instr) =&gt; instr.defaultQty,
+});</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= SIGNALS VS RXJS ============================= -->
+    <section data-searchable>
+      <h2 id="signals-vs-rxjs">Signals против RxJS — таблица выбора</h2>
+      <p>Сигналы и RxJS дополняют друг друга, а не конкурируют. Сигналы отвечают за <strong>синхронное состояние</strong>;
+        RxJS — за <strong>асинхронные потоки</strong> во времени. Выбирайте инструмент под форму задачи.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Сценарий</th><th>Signals</th><th>RxJS</th></tr></thead>
+          <tbody>
+            <tr><td>Локальное состояние компонента</td><td>✅ идеально</td><td>❌ избыточно</td></tr>
+            <tr><td>HTTP-запрос</td><td>❌</td><td>✅ (одноразовый поток, операторы, retry)</td></tr>
+            <tr><td>Поток WebSocket</td><td>❌</td><td>✅ (непрерывный асинхронный поток)</td></tr>
+            <tr><td>Производное / вычисляемое значение</td><td>✅ <code>computed</code></td><td>возможно, но многословно (<code>combineLatest</code>+<code>map</code>)</td></tr>
+            <tr><td>Общее состояние между компонентами</td><td>сигналы + сервис</td><td><code>BehaviorSubject</code></td></tr>
+            <tr><td>Сложные асинхронные потоки (debounce, switchMap, retry)</td><td>❌</td><td>✅ операторы блистают</td></tr>
+            <tr><td>Простой счётчик / переключатель</td><td>✅</td><td>❌ избыточно</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Правило большого пальца:</strong> если это «значение, которое меняется» — берите <strong>сигнал</strong>; если это «события, приходящие во времени» — берите <strong>Observable</strong>. Используйте <code>toSignal</code>/<code>toObservable</code>, чтобы пересечь границу.</p></div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// async source (RxJS) → synchronous state (signal) at the edge
+readonly quotes = toSignal(this.ws.quotes$, { initialValue: [] });
+
+// derived UI state stays in signal land
+readonly bestBid = computed(() =&gt;
+  Math.max(0, ...this.quotes().map(q =&gt; q.bid)));</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================= SIGNALS + NGRX ============================= -->
+    <section data-searchable>
+      <h2 id="signals-ngrx">Signals + NgRx (<code>@ngrx/signals</code>)</h2>
+      <p class="definition"><strong>SignalStore</strong> — лёгкое функциональное хранилище из <code>@ngrx/signals</code>, целиком построенное на сигналах. Вы собираете его из <em>features</em>: состояния, вычисляемых селекторов и методов. Без actions, reducers и шаблонного кода.</p>
+
+      <div class="card">
+        <p class="definition"><strong>withState&lt;T&gt;(initial)</strong> — объявляет состояние хранилища; каждое свойство становится сигналом в хранилище.</p>
+        <p class="definition"><strong>withComputed(store =&gt; ...)</strong> — объявляет производные сигналы (селекторы), построенные из состояния через <code>computed</code>.</p>
+        <p class="definition"><strong>withMethods(store =&gt; ...)</strong> — объявляет методы, читающие/обновляющие состояние через <code>patchState</code>, включая асинхронные <code>rxMethod</code>.</p>
+        <p class="definition"><strong>patchState(store, partial)</strong> — иммутабельно обновляет один или несколько срезов состояния.</p>
+        <p class="definition"><strong>rxMethod&lt;T&gt;(pipe(...))</strong> — оборачивает RxJS-конвейер в вызываемый метод хранилища, идеально для побочных эффектов HTTP/WebSocket.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { computed, inject } from '@angular/core';
+import { pipe, switchMap, tap } from 'rxjs';
+
+interface Order { id: number; symbol: string; qty: number; }
+
+interface OrderState {
+  orders: Order[];
+  loading: boolean;
+}
+
+export const OrderStore = signalStore(
+  { providedIn: 'root' },
+  withState&lt;OrderState&gt;({ orders: [], loading: false }),
+
+  withComputed(({ orders }) =&gt; ({
+    orderCount: computed(() =&gt; orders().length),
+  })),
+
+  withMethods((store) =&gt; ({
+    loadOrders: rxMethod&lt;void&gt;(
+      pipe(
+        tap(() =&gt; patchState(store, { loading: true })),
+        switchMap(() =&gt; inject(OrderService).getOrders()),
+        tap((orders) =&gt; patchState(store, { orders, loading: false })),
+      ),
+    ),
+  })),
+);</code></pre>
+      </div>
+
+      <div class="success"><p><strong>Потребление</strong> — это чистые сигналы: <code>store.orders()</code>, <code>store.orderCount()</code>, <code>store.loadOrders()</code> — читаются прямо в шаблонах без пайпа <code>async</code> и без ручных подписок.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — собеседование</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Что такое сигнал и чем он отличается от <code>BehaviorSubject</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Сигнал — это синхронный реактивный примитив, который всегда хранит текущее значение и уведомляет потребителей при изменении. Как и <code>BehaviorSubject</code>, у него есть «текущее значение», но сигнал читается вызовом функции (<code>price()</code>) вместо <code>.getValue()</code>/<code>subscribe</code>, <strong>не требует отписки</strong>, автоматически отслеживает зависимости (точечно) и интегрирован с change detection в Angular. <code>BehaviorSubject</code> — это асинхронный поток, на который нужно подписываться и который нужно освобождать. Используйте сигналы для состояния, а <code>BehaviorSubject</code> — когда вам действительно нужны операторы потоков.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Когда использовать <code>computed</code>, а когда <code>effect</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Используйте <code>computed</code>, чтобы <strong>вывести новое значение</strong> из других сигналов — он только для чтения, мемоизирован и ленив. Используйте <code>effect</code> только для <strong>побочных эффектов</strong>, не порождающих значение: логирование, запись в <code>localStorage</code>, манипуляции с DOM, аналитика. Частая ошибка — использовать эффект для записи в другой сигнал, который должен был быть <code>computed</code>. Если ответ — «мне нужно значение», то это <code>computed</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Почему запись сигнала внутри эффекта выбрасывает ошибку и как её разрешить?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>По умолчанию Angular запрещает запись внутри эффектов, чтобы предотвратить скрытые реактивные каскады и случайные бесконечные циклы (чтение и запись <em>одного и того же</em> сигнала перезапускает эффект вечно). Когда есть законная необходимость записать <em>другой</em> сигнал, передайте <code>{ allowSignalWrites: true }</code> вторым аргументом в <code>effect()</code>. Даже тогда предпочитайте <code>computed</code> или <code>linkedSignal</code>, если на самом деле вы просто выводите состояние.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Как завести поток WebSocket/HTTP в мир сигналов?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Используйте <code>toSignal(observable$, { initialValue })</code> из <code>@angular/core/rxjs-interop</code>. Он подписывается на Observable, предоставляет последнюю эмиссию как сигнал только для чтения и автоматически отписывается при уничтожении контекста внедрения — поэтому не нужен ни пайп <code>async</code>, ни ручное освобождение. В обратную сторону (применить операторы RxJS к состоянию-сигналу) используйте <code>toObservable(signal)</code>, например <code>debounceTime</code> + <code>switchMap</code> на поисковом сигнале.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Что заменило <code>@Input()</code>/<code>@Output()</code> и <code>.mutate()</code> в современных сигналах Angular?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Сигнальные inputs <code>input()</code> / <code>input.required&lt;T&gt;()</code> заменяют <code>@Input()</code> (и устраняют необходимость в <code>ngOnChanges</code>). <code>model()</code> заменяет пару двусторонней привязки <code>@Input()</code> + <code>@Output()</code>, давая изменяемый сигнал, пригодный для <code>[(value)]</code>. Метод записи <code>.mutate()</code> у сигнала объявлен устаревшим/удалён — вместо него используйте <code>.update()</code>, возвращающий новый массив/объект. В Angular 19 также добавили <code>linkedSignal()</code> — изменяемый сигнал, производный от источника.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Как прочитать текущее значение сигнала с именем <code>price</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">price.value</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">price.getValue()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">price()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">price.subscribe()</button>
+        <div class="quiz-explain">Сигналы читаются вызовом как функции: <code>price()</code>. Внутри реактивного контекста это также регистрирует зависимость.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Какое утверждение о <code>computed()</code> верно?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Его можно обновить через .set()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Он только для чтения, авто-отслеживает зависимости и мемоизирован</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он выполняет побочные эффекты после рендеринга</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он пересчитывается при каждом чтении независимо от зависимостей</button>
+        <div class="quiz-explain">Вычисляемый сигнал только для чтения, автоматически отслеживает читаемые им сигналы и мемоизируется — пересчитываясь только при изменении зависимости.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Что произойдёт, если читать И писать один и тот же сигнал внутри одного <code>effect</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Всё работает нормально и выполняется один раз</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Запись молча игнорируется</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Создаётся бесконечный цикл (каждая запись перезапускает эффект)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Angular автоматически делает debounce</button>
+        <div class="quiz-explain">Запись сигнала, который вы также читаете, перезапускает эффект бесконечно. По умолчанию запись внутри эффектов выбрасывает ошибку; даже с allowSignalWrites никогда не пишите тот же сигнал, который читаете.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Какой API преобразует <code>Observable</code> в сигнал только для чтения?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">toObservable()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">toSignal()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">computed()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">model()</button>
+        <div class="quiz-explain"><code>toSignal(observable$, { initialValue })</code> подписывается и предоставляет последнюю эмиссию как сигнал. <code>toObservable</code> делает обратное.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="angular-core.html" class="btn-nav">← Основы Angular</a>
+      <a href="di.html" class="btn-nav">Внедрение зависимостей →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

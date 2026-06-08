@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Основы Angular — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Основы Angular</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Основы Angular</h1>
+      <p class="page-desc">Фундаментальные темы Angular, которые разбирают на собеседованиях уровня senior: хуки
+        жизненного цикла, обнаружение изменений и OnPush, standalone-компоненты, новый синтаксис
+        управления потоком, пайпы, trackBy, запросы view/content, шаблоны и основные декораторы.</p>
+      <button class="btn-done" data-page="angular-core" onclick="markDone('angular-core')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= LIFECYCLE HOOKS ============================= -->
+    <section data-searchable>
+      <h2 id="lifecycle-hooks">Хуки жизненного цикла</h2>
+      <p class="definition"><strong>Хук жизненного цикла</strong> — метод, который Angular вызывает в определённый момент жизни компонента или директивы, от создания до уничтожения. Они выполняются в гарантированном порядке в каждом цикле обнаружения изменений.</p>
+      <p>Порядок первого выполнения: <code>constructor</code> → <code>ngOnChanges</code> → <code>ngOnInit</code> → <code>ngDoCheck</code> → <code>ngAfterContentInit</code> → <code>ngAfterContentChecked</code> → <code>ngAfterViewInit</code> → <code>ngAfterViewChecked</code> → <code>ngOnDestroy</code>.</p>
+
+      <div class="card">
+        <h4><code>constructor</code></h4>
+        <p class="definition"><strong>constructor</strong> — конструктор класса, вызываемый JavaScript при создании экземпляра компонента, до того как Angular свяжет какие-либо входы или построит представление.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> первым, при создании экземпляра, до любого хука Angular.</li>
+          <li><strong>Типичный сценарий:</strong> только внедрение зависимостей — присвоение внедрённых сервисов полям.</li>
+          <li><strong>Подводный камень:</strong> нет DOM, нет значений <code>@Input</code>, нет HTTP. Входы всё ещё <code>undefined</code>, а <code>@ViewChild</code>/DOM недоступны.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({ selector: 'app-orders', standalone: true, template: '' })
+export class OrdersComponent {
+  // DI only — never call HTTP or touch the DOM here
+  constructor(private readonly http: HttpClient) {}
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngOnChanges(changes: SimpleChanges)</code></h4>
+        <p class="definition"><strong>ngOnChanges</strong> — вызывается всякий раз, когда привязанное свойство <code>@Input</code> изменяется по ссылке, с картой предыдущих и текущих значений.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> перед <code>ngOnInit</code> при первом изменении (только если у компонента есть хотя бы один <code>@Input</code>), затем снова при каждом изменении ссылки <code>@Input</code>.</li>
+          <li><strong>Типичный сценарий:</strong> реагирование на изменения входов — пересчёт производных значений при изменении привязанного <code>Order</code>.</li>
+          <li><strong>Подводный камень:</strong> срабатывает только при изменении <em>ссылки</em> входа — мутация объекта/массива на месте его не вызовет.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Input() order!: Order;
+
+ngOnChanges(changes: SimpleChanges): void {
+  const change = changes['order'];
+  if (change &amp;&amp; !change.firstChange) {
+    console.log('prev', change.previousValue, 'curr', change.currentValue);
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngOnInit</code></h4>
+        <p class="definition"><strong>ngOnInit</strong> — вызывается один раз после того, как Angular установил начальные входы компонента и выполнил первый <code>ngOnChanges</code>.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> один раз, после первого <code>ngOnChanges</code>.</li>
+          <li><strong>Типичный сценарий:</strong> начальная загрузка данных (HTTP), настройка подписок, чтение начальных значений <code>@Input</code>.</li>
+          <li><strong>Подводный камень:</strong> DOM/представление ещё не готовы — используйте <code>ngAfterViewInit</code> для <code>@ViewChild</code> или работы с canvas.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ngOnInit(): void {
+  this.sub = this.quoteService.stream(this.symbol)
+    .subscribe((quote: Quote) =&gt; (this.quote = quote));
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngDoCheck</code></h4>
+        <p class="definition"><strong>ngDoCheck</strong> — пользовательский хук обнаружения изменений, вызываемый в каждом цикле обнаружения изменений, что позволяет отлавливать изменения, которые Angular не может обнаружить самостоятельно.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> при каждом запуске обнаружения изменений, после <code>ngOnChanges</code>/<code>ngOnInit</code>.</li>
+          <li><strong>Типичный сценарий:</strong> обнаружение глубоких мутаций, которые Angular пропускает (например, изменённый массив), через пользовательские <code>KeyValueDiffers</code>/<code>IterableDiffers</code>.</li>
+          <li><strong>Подводный камень:</strong> выполняется крайне часто и затратен — избегайте без крайней необходимости и никогда не делайте здесь тяжёлую работу.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ngDoCheck(): void {
+  // Runs on EVERY CD cycle — keep it trivial or avoid entirely
+  if (this.orders.length !== this.lastCount) {
+    this.lastCount = this.orders.length;
+  }
+}</code></pre></div>
+        <div class="warn"><p><strong>Подводный камень:</strong> <code>ngDoCheck</code> срабатывает тысячи раз — тяжёлая логика здесь обрушит производительность.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngAfterContentInit</code></h4>
+        <p class="definition"><strong>ngAfterContentInit</strong> — вызывается один раз после того, как Angular проецирует внешний контент (<code>ng-content</code>) в компонент.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> один раз, после первой проверки спроецированного контента.</li>
+          <li><strong>Типичный сценарий:</strong> доступ к спроецированным потомкам — <code>@ContentChild</code>/<code>@ContentChildren</code> теперь доступны.</li>
+          <li><strong>Подводный камень:</strong> <code>@ContentChild</code> равен <code>undefined</code> до этого хука (в конструкторе/ngOnInit).</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@ContentChild(HeaderComponent) header?: HeaderComponent;
+
+ngAfterContentInit(): void {
+  // Projected content is now available
+  console.log(this.header?.title);
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngAfterContentChecked</code></h4>
+        <p class="definition"><strong>ngAfterContentChecked</strong> — вызывается после каждой проверки обнаружения изменений спроецированного контента.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> после <code>ngAfterContentInit</code> и после каждой последующей проверки контента.</li>
+          <li><strong>Типичный сценарий:</strong> реагирование на изменения спроецированного контента в каждом цикле.</li>
+          <li><strong>Подводный камень:</strong> никогда не меняйте привязки здесь — рискуете получить <code>ExpressionChangedAfterItHasBeenCheckedError</code>, и это выполняется в каждом цикле.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ngAfterContentChecked(): void {
+  // Runs after each content check — keep it side-effect free
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngAfterViewInit</code></h4>
+        <p class="definition"><strong>ngAfterViewInit</strong> — вызывается один раз после того, как Angular инициализирует собственное представление компонента и дочерние представления.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> один раз, после полной отрисовки представления компонента (и дочерних представлений).</li>
+          <li><strong>Типичный сценарий:</strong> элементы <code>@ViewChild</code> доступны, и DOM готов — идеально для инициализации графика на <code>&lt;canvas&gt;</code> или сторонней библиотеки.</li>
+          <li><strong>Подводный камень:</strong> обновление привязанного свойства здесь может выбросить <code>ExpressionChangedAfterItHasBeenCheckedError</code> в dev-режиме; оберните в микрозадачу или вызовите <code>detectChanges()</code>.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@ViewChild('chart') chartRef!: ElementRef&lt;HTMLCanvasElement&gt;;
+
+ngAfterViewInit(): void {
+  const ctx = this.chartRef.nativeElement.getContext('2d');
+  this.renderCandles(ctx); // DOM is ready now
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngAfterViewChecked</code></h4>
+        <p class="definition"><strong>ngAfterViewChecked</strong> — вызывается после каждой проверки обнаружения изменений представления компонента и дочерних представлений.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> после <code>ngAfterViewInit</code> и после каждой последующей проверки представления.</li>
+          <li><strong>Типичный сценарий:</strong> реагирование, когда представление стабильно в каждом цикле (например, измерение размера отрисованного элемента).</li>
+          <li><strong>Подводный камень:</strong> выполняется в каждом цикле; мутация привязок здесь вызывает ошибку изменения-после-проверки в dev-режиме.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ngAfterViewChecked(): void {
+  // Fires after every view check — avoid binding mutations
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ngOnDestroy</code></h4>
+        <p class="definition"><strong>ngOnDestroy</strong> — вызывается один раз непосредственно перед тем, как Angular уничтожает компонент, для очистки.</p>
+        <ul>
+          <li><strong>Когда срабатывает:</strong> один раз, непосредственно перед удалением компонента из DOM.</li>
+          <li><strong>Типичный сценарий:</strong> очистка — отписка от Observable, <code>clearInterval</code>, <code>worker.terminate()</code>, закрытие WebSocket.</li>
+          <li><strong>Подводный камень:</strong> его пропуск вызывает утечки памяти; долгоживущие подписки удерживают компоненты живыми после навигации.</li>
+        </ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">private sub?: Subscription;
+private timer?: ReturnType&lt;typeof setInterval&gt;;
+private worker?: Worker;
+
+ngOnDestroy(): void {
+  this.sub?.unsubscribe();
+  if (this.timer) clearInterval(this.timer);
+  this.worker?.terminate();
+}</code></pre></div>
+        <div class="danger"><p><strong>Утечка памяти:</strong> поток без отписки удерживает компонент (и его DOM) в памяти навсегда. Всегда выполняйте очистку в <code>ngOnDestroy</code> (или используйте <code>takeUntilDestroyed()</code> / пайп <code>async</code>).</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= CHANGE DETECTION ============================= -->
+    <section data-searchable>
+      <h2 id="change-detection">Обнаружение изменений</h2>
+      <p class="definition"><strong>Обнаружение изменений (Change Detection, CD)</strong> — процесс, с помощью которого Angular синхронизирует модель данных компонента с отрисованным DOM. После любого асинхронного события Angular обходит дерево компонентов и обновляет изменившиеся привязки.</p>
+
+      <h3 id="zonejs">Zone.js</h3>
+      <p class="definition"><strong>Zone.js</strong> — библиотека, которая патчит (monkey-patch) все асинхронные браузерные API, чтобы Angular знал, когда асинхронная задача завершается, и мог автоматически запускать обнаружение изменений. Она патчит <code>setTimeout</code>/<code>setInterval</code>, <code>Promise</code>, <code>fetch</code>/<code>XHR</code> и DOM-события (click, input и т. д.).</p>
+      <div class="tip"><p><strong>Как это связано с основами JS:</strong> те же API цикла событий (макрозадачи, микрозадачи, DOM-события) — это именно то, что перехватывает Zone.js. Когда пропатченная задача завершается, Zone уведомляет Angular, и запускается CD.</p></div>
+
+      <h3 id="cd-default">Стратегия Default</h3>
+      <p class="definition"><strong>Default (<code>ChangeDetectionStrategy.Default</code>)</strong> — после любого асинхронного события Angular выполняет обнаружение изменений на <em>всём</em> дереве компонентов, сверху вниз. Это безопасно (никогда не пропускает изменение), но медленно на больших деревьях, потому что каждый компонент проверяется при каждом событии.</p>
+
+      <h3 id="cd-onpush">Стратегия OnPush</h3>
+      <p class="definition"><strong>OnPush (<code>ChangeDetectionStrategy.OnPush</code>)</strong> — Angular пропускает компонент (и его поддерево) во время CD, пока не произойдёт одно из четырёх конкретных условий. Это резко сокращает количество проверок на больших деревьях.</p>
+      <p>OnPush-компонент проверяется только когда происходит одно из этих <strong>ровно 4 условий-триггеров</strong>:</p>
+      <ol>
+        <li><strong>Изменяется ссылка</strong> <code>@Input</code> — присваивается НОВЫЙ объект/массив, а не мутируется существующий.</li>
+        <li><strong>Срабатывает событие от компонента или одного из его потомков</strong> (например, обработчик клика в шаблоне).</li>
+        <li><strong>Пайп async</strong>, привязанный в шаблоне, испускает новое значение.</li>
+        <li>Обнаружение изменений запущено <strong>вручную</strong> через <code>markForCheck()</code> или <code>detectChanges()</code>.</li>
+      </ol>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({
+  selector: 'app-instruments',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '...',
+})
+export class InstrumentsComponent {
+  @Input() instruments: readonly Instrument[] = [];
+}</code></pre></div>
+
+      <h3 id="cd-manual">Ручные триггеры</h3>
+      <p class="definition"><strong>markForCheck()</strong> — (у <code>ChangeDetectorRef</code>) помечает этот компонент и всех его предков для проверки в <em>следующем</em> цикле обнаружения изменений. CD не запускается немедленно.</p>
+      <p class="definition"><strong>detectChanges()</strong> — (у <code>ChangeDetectorRef</code>) выполняет обнаружение изменений синхронно на этом компоненте и его потомках <em>сейчас</em>.</p>
+      <p class="definition"><strong>ApplicationRef.tick()</strong> — один раз выполняет обнаружение изменений по <em>всему приложению</em>, начиная с корня.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">constructor(private readonly cdr: ChangeDetectorRef) {}
+
+onTickOutsideAngular(quote: Quote): void {
+  this.quote = quote;
+  this.cdr.markForCheck();   // schedule a check for next cycle
+  // this.cdr.detectChanges(); // or run CD on this subtree right now
+}</code></pre></div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>API</th><th>Область</th><th>Время</th></tr></thead>
+          <tbody>
+            <tr><td><code>markForCheck()</code></td><td>Компонент + предки</td><td>Следующий цикл CD</td></tr>
+            <tr><td><code>detectChanges()</code></td><td>Компонент + потомки</td><td>Немедленно (синхронно)</td></tr>
+            <tr><td><code>ApplicationRef.tick()</code></td><td>Всё приложение</td><td>Немедленно (синхронно)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="cd-fintech">Пример из FinTech — 20 000 инструментов</h3>
+      <p>Живая таблица инструментов, отрисовывающая <strong>20 000 строк</strong> и получающая по несколько обновлений котировок в секунду. При стратегии Default Angular перепроверяет всё дерево на каждом тике — интерфейс подтормаживает. OnPush делает задачу решаемой, но только если вы соблюдаете равенство по ссылке.</p>
+      <div class="danger">
+        <p><strong>Неправильно</strong> — мутация сохраняет ту же ссылку, OnPush её никогда не видит:</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">this.quotes.push(quote); // same array reference → OnPush misses the update</code></pre></div>
+      </div>
+      <div class="success">
+        <p><strong>Правильно</strong> — новая ссылка (или сигнал), OnPush её обнаруживает:</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">this.quotes = [...this.quotes, quote]; // new array → CD runs
+// or, even better, use a signal:
+this.quotes.update(list =&gt; [...list, quote]);</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>Почему здесь OnPush обязателен:</strong> при 20 000 строк стратегия Default проверяет десятки тысяч привязок на каждом тике котировки. OnPush + неизменяемые обновления + <code>trackBy</code>/<code>@for track</code> сокращают это только до строк, которые действительно изменились.</p></div>
+    </section>
+
+    <!-- ============================= STANDALONE COMPONENTS ============================= -->
+    <section data-searchable>
+      <h2 id="standalone-components">Standalone-компоненты</h2>
+      <p class="definition"><strong>Standalone-компонент</strong> — компонент, директива или пайп с пометкой <code>standalone: true</code>, который объявляет собственные зависимости в массиве <code>imports</code>, устраняя необходимость в <code>NgModule</code>. Standalone — это значение по умолчанию начиная с Angular 17+.</p>
+
+      <h3 id="standalone-before-after">До (NgModule) и после (standalone)</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// --- BEFORE: NgModule-based ---
+@Component({ selector: 'app-orders', template: '...' })
+export class OrdersComponent {}
+
+@NgModule({
+  declarations: [OrdersComponent],
+  imports: [CommonModule, RouterModule],
+  exports: [OrdersComponent],
+})
+export class OrdersModule {}</code></pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// --- AFTER: standalone ---
+@Component({
+  selector: 'app-orders',
+  standalone: true,            // no NgModule needed
+  imports: [RouterLink, FormatPricePipe], // declare deps directly
+  template: '...',
+})
+export class OrdersComponent {}</code></pre></div>
+
+      <h3 id="bootstrap-application">bootstrapApplication()</h3>
+      <p class="definition"><strong>bootstrapApplication(rootComponent, options)</strong> — функция запуска для standalone-приложения. Она загружает единственный корневой standalone-компонент и принимает провайдеры уровня приложения, заменяя старый <code>platformBrowserDynamic().bootstrapModule(AppModule)</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// main.ts
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes),
+    provideHttpClient(),
+  ],
+}).catch((err: unknown) =&gt; console.error(err));</code></pre></div>
+
+      <h3 id="import-providers-from">importProvidersFrom()</h3>
+      <p class="definition"><strong>importProvidersFrom(...modules)</strong> — мост, который извлекает провайдеры из существующего <code>NgModule</code>, чтобы вы могли использовать старые библиотеки на основе модулей внутри списка провайдеров standalone-приложения.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">bootstrapApplication(AppComponent, {
+  providers: [
+    importProvidersFrom(SomeLegacyModule), // reuse an old NgModule's providers
+  ],
+});</code></pre></div>
+
+      <h3 id="imports-array">Массив <code>imports</code> в @Component</h3>
+      <p>Standalone-компонент импортирует ровно то, что использует его шаблон — другие standalone-компоненты, директивы и пайпы. Глобального <code>CommonModule</code> нет; встроенному управлению потоком (<code>@if</code>/<code>@for</code>) импорт не нужен, но <code>AsyncPipe</code>, <code>DatePipe</code> и т. д. импортируются по отдельности (или через <code>CommonModule</code>).</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({
+  selector: 'app-quote',
+  standalone: true,
+  imports: [AsyncPipe, CurrencyPipe, RouterLink],
+  template: '...',
+})
+export class QuoteComponent {}</code></pre></div>
+    </section>
+
+    <!-- ============================= CONTROL FLOW ============================= -->
+    <section data-searchable>
+      <h2 id="control-flow">Новый синтаксис управления потоком (Angular 17+)</h2>
+      <p class="definition"><strong>Встроенное управление потоком</strong> — блочный синтаксис (<code>@if</code>, <code>@for</code>, <code>@switch</code>, <code>@defer</code>), компилируемый в шаблон во <em>время сборки</em>. Он заменяет структурные директивы <code>*ngIf</code>, <code>*ngFor</code>, <code>*ngSwitch</code> более быстрыми, типобезопасными и не требующими импорта конструкциями.</p>
+
+      <h3 id="cf-if"><code>@if</code> / <code>@else if</code> / <code>@else</code></h3>
+      <p class="definition"><strong>@if</strong> — условно отрисовывает блок. Поддерживает псевдоним <code>as</code> для захвата вычисленного выражения и цепочки ветвей <code>@else if</code> / <code>@else</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@if (quote$ | async; as quote) {
+  &lt;div class="bid"&gt;{{ quote.bid }} / {{ quote.ask }}&lt;/div&gt;
+} @else if (loading) {
+  &lt;app-spinner /&gt;
+} @else {
+  &lt;p&gt;No quote available&lt;/p&gt;
+}</code></pre></div>
+      <div class="tip"><p>Псевдоним <code>as</code> (<code>quote$ | async; as quote</code>) подписывается один раз и переиспользует значение во всём блоке — без повторного <code>| async</code>.</p></div>
+
+      <h3 id="cf-for"><code>@for</code> / <code>@empty</code></h3>
+      <p class="definition"><strong>@for</strong> — повторяет блок для каждого элемента коллекции. Он <strong>требует</strong> выражение <code>track</code> для идентификации и предоставляет контекстные переменные <code>$index</code>, <code>$first</code>, <code>$last</code>, <code>$even</code>, <code>$odd</code> и <code>$count</code>. Необязательный блок <code>@empty</code> отрисовывается, когда коллекция пуста.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@for (order of orders; track order.id) {
+  &lt;tr [class.even]="$even"&gt;
+    &lt;td&gt;{{ $index + 1 }}&lt;/td&gt;
+    &lt;td&gt;{{ order.symbol }}&lt;/td&gt;
+    &lt;td&gt;{{ order.side }}&lt;/td&gt;
+  &lt;/tr&gt;
+} @empty {
+  &lt;tr&gt;&lt;td colspan="3"&gt;No orders&lt;/td&gt;&lt;/tr&gt;
+}</code></pre></div>
+      <div class="warn"><p><strong>track обязателен:</strong> в отличие от <code>*ngFor</code>, где <code>trackBy</code> был необязателен, <code>@for</code> не скомпилируется без <code>track</code>. Используйте стабильный уникальный ключ (<code>order.id</code>), никогда не <code>$index</code> для данных, которые переупорядочиваются.</p></div>
+
+      <h3 id="cf-switch"><code>@switch</code> / <code>@case</code> / <code>@default</code></h3>
+      <p class="definition"><strong>@switch</strong> — выбирает один блок на основе совпадающего значения <code>@case</code>, с необязательным <code>@default</code>. Заменяет <code>[ngSwitch]</code> / <code>*ngSwitchCase</code> / <code>*ngSwitchDefault</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@switch (instrument.type) {
+  @case ('FOREX')  { &lt;app-forex  [data]="instrument" /&gt; }
+  @case ('STOCK')  { &lt;app-stock  [data]="instrument" /&gt; }
+  @case ('CRYPTO') { &lt;app-crypto [data]="instrument" /&gt; }
+  @default { &lt;p&gt;Unknown instrument&lt;/p&gt; }
+}</code></pre></div>
+
+      <h3 id="cf-defer"><code>@defer</code></h3>
+      <p class="definition"><strong>@defer</strong> — лениво загружает компоненты/директивы/пайпы внутри своего блока (и их JS) только при срабатывании триггера. Он поддерживает под-блоки <code>@placeholder</code> (показывается до загрузки), <code>@loading</code> (показывается во время загрузки) и <code>@error</code> (показывается при сбое).</p>
+      <p class="definition"><strong>Триггеры @defer</strong> — <code>on viewport</code> (блок попадает в область видимости), <code>on interaction</code> (пользователь кликает/нажимает клавиши на плейсхолдере), <code>on hover</code>, <code>on idle</code> (браузер простаивает, по умолчанию), <code>on timer(2s)</code> (после задержки) и <code>when &lt;condition&gt;</code> (булево выражение становится истинным).</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@defer (on viewport) {
+  &lt;app-heavy-chart [series]="candles" /&gt;
+} @placeholder {
+  &lt;div class="chart-skeleton"&gt;Chart loads on scroll&lt;/div&gt;
+} @loading (minimum 500ms) {
+  &lt;app-spinner /&gt;
+} @error {
+  &lt;p&gt;Failed to load chart&lt;/p&gt;
+}</code></pre></div>
+      <div class="tip"><p><strong><code>@loading (minimum 500ms)</code></strong> гарантирует, что спиннер показывается хотя бы 500мс, чтобы он не мелькал и не исчезал при быстрой загрузке.</p></div>
+
+      <h3 id="cf-why">Почему новый синтаксис лучше структурных директив</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>Структурные директивы (<code>*ngIf</code>)</th><th>Встроенное управление потоком (<code>@if</code>)</th></tr></thead>
+          <tbody>
+            <tr><td>Требует импорт</td><td>✅ <code>CommonModule</code></td><td>❌ встроено</td></tr>
+            <tr><td>Компилируется во время сборки</td><td>❌ директивы времени выполнения</td><td>✅ компилируется в шаблон</td></tr>
+            <tr><td>Проверка типов</td><td>Слабее</td><td>✅ Сильная</td></tr>
+            <tr><td>Производительность</td><td>Медленнее</td><td>✅ Быстрее (до ~90% на <code>@for</code>)</td></tr>
+            <tr><td>Встроенная ленивая загрузка</td><td>❌</td><td>✅ <code>@defer</code></td></tr>
+            <tr><td><code>track</code> обязателен</td><td>❌ необязателен</td><td>✅ обязателен</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="cf-migration">CLI для миграции</h3>
+      <p>Angular поставляет автоматическую схематику, которая переписывает существующие шаблоны <code>*ngIf</code>/<code>*ngFor</code>/<code>*ngSwitch</code> на новый синтаксис.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ng generate @angular/core:control-flow</code></pre></div>
+    </section>
+
+    <!-- ============================= PIPES ============================= -->
+    <section data-searchable>
+      <h2 id="pipes">Пайпы Angular</h2>
+      <p class="definition"><strong>Пайп</strong> — преобразование в шаблоне, применяемое оператором <code>|</code>, которое принимает входное значение (и необязательные аргументы) и возвращает форматированное/производное значение, не мутируя источник.</p>
+
+      <h3 id="builtin-pipes">Встроенные пайпы</h3>
+      <div class="card">
+        <p class="definition"><strong>DatePipe</strong> — форматирует дату/число/строку в строку даты по шаблону или именованному формату.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ quote.timestamp | date:'dd/MM/yyyy' }}  &lt;!-- 08/06/2026 --&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>CurrencyPipe</strong> — форматирует число как локализованную строку валюты. Аргументы: код валюты, отображение и строка <code>digitsInfo</code> вида <code>min.minFrac-maxFrac</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ order.price | currency:'USD':'symbol':'1.2-2' }}  &lt;!-- $1,234.50 --&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>DecimalPipe</strong> — форматирует число с группировкой и минимальным/максимальным числом дробных цифр (<code>number:'minInt.minFrac-maxFrac'</code>).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ quote.bid | number:'1.4-5' }}  &lt;!-- 1.07020 --&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>PercentPipe</strong> — умножает на 100 и форматирует как процент.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ instrument.change | percent:'1.1-2' }}  &lt;!-- 2.35% --&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>AsyncPipe</strong> — подписывается на <code>Observable</code> или <code>Promise</code> в шаблоне, возвращает их последнее значение и <strong>автоматически отписывается</strong> при уничтожении. Он также вызывает <code>markForCheck()</code>, поэтому без проблем работает с OnPush.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@if (quote$ | async; as quote) { {{ quote.ask }} }</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>JsonPipe</strong> — сериализует значение через <code>JSON.stringify</code>. Быстрое средство для отладки.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;pre&gt;{{ order | json }}&lt;/pre&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>SlicePipe</strong> — возвращает подмножество массива или строки (как <code>Array.slice</code>), полезно для пагинации/превью.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@for (o of orders | slice:0:10; track o.id) { ... }</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>UpperCasePipe / LowerCasePipe / TitleCasePipe</strong> — преобразуют регистр строки в верхний регистр, нижний регистр или регистр заголовка (Title Case) соответственно.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ order.symbol | uppercase }}   &lt;!-- EURUSD --&gt;
+{{ order.side | lowercase }}     &lt;!-- buy --&gt;
+{{ instrument.type | titlecase }} &lt;!-- Forex --&gt;</code></pre></div>
+      </div>
+      <div class="card">
+        <p class="definition"><strong>KeyValuePipe</strong> — превращает объект или <code>Map</code> в итерируемую коллекцию пар <code>{ key, value }</code> для использования с <code>@for</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">@for (entry of positionsBySymbol | keyvalue; track entry.key) {
+  &lt;div&gt;{{ entry.key }}: {{ entry.value }}&lt;/div&gt;
+}</code></pre></div>
+      </div>
+
+      <h3 id="custom-pipe">Пользовательский пайп — FormatPricePipe</h3>
+      <p>Standalone, чистый пайп, который форматирует цену через <code>Intl.NumberFormat</code>, принимая валюту и количество дробных цифр.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Pipe({
+  name: 'formatPrice',
+  standalone: true,
+  pure: true, // default — recompute only when inputs change by reference
+})
+export class FormatPricePipe implements PipeTransform {
+  transform(value: number, currency = 'USD', digits = 2): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value);
+  }
+}</code></pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">{{ instrument.price | formatPrice:'EUR':4 }}  &lt;!-- €1,234.5000 --&gt;</code></pre></div>
+
+      <h3 id="pure-impure">Чистые и нечистые пайпы</h3>
+      <p class="definition"><strong>Чистый пайп</strong> (по умолчанию) — Angular повторно запускает <code>transform()</code> только когда изменяется <em>ссылка</em> входа (или примитивное значение). Дёшево и предсказуемо.</p>
+      <p class="definition"><strong>Нечистый пайп</strong> (<code>pure: false</code>) — <code>transform()</code> выполняется в <em>каждом</em> цикле обнаружения изменений, независимо от того, изменились ли входы. Необходим для изменяемых входов, но затратен.</p>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>Чистый</th><th>Нечистый</th></tr></thead>
+          <tbody>
+            <tr><td>Повторный запуск когда</td><td>Изменяется ссылка входа</td><td>В каждом цикле CD</td></tr>
+            <tr><td>Производительность</td><td>✅ Дёшево</td><td>❌ Дорого</td></tr>
+            <tr><td>Обнаруживает мутацию на месте</td><td>❌</td><td>✅</td></tr>
+            <tr><td>По умолчанию</td><td>✅</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Правило FinTech:</strong> держите пайпы <strong>чистыми</strong> и подавайте им <strong>неизменяемые данные</strong>. При OnPush + неизменяемых обновлениях чистый пайп пересчитывается ровно тогда, когда нужно — никогда не на каждом тике.</p></div>
+    </section>
+
+    <!-- ============================= TRACKBY ============================= -->
+    <section data-searchable>
+      <h2 id="trackby">trackBy</h2>
+      <p class="definition"><strong>trackBy</strong> — функция, которая сообщает Angular, как идентифицировать элементы в списке, чтобы он мог переиспользовать существующие DOM-узлы для неизменившихся элементов вместо их уничтожения и пересоздания. В новом синтаксисе это обязательное выражение <code>track</code> у <code>@for</code>.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Без trackBy / track</th><th>С trackBy / track</th></tr></thead>
+          <tbody>
+            <tr><td>Angular сравнивает по идентичности объектов</td><td>Angular сравнивает по возвращённому вами ключу</td></tr>
+            <tr><td>Новый массив ⇒ уничтожает и пересоздаёт <em>все</em> DOM-узлы</td><td>Перерисовываются только изменившиеся элементы</td></tr>
+            <tr><td>Теряет состояние фокуса/прокрутки/анимации</td><td>Сохраняет существующие узлы и состояние</td></tr>
+            <tr><td>❌ Подтормаживает на больших списках</td><td>✅ Плавно на больших списках</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Component — trackBy function for legacy *ngFor
+trackByOrderId(index: number, order: Order): number {
+  return order.id;
+}</code></pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;!-- Legacy *ngFor --&gt;
+&lt;tr *ngFor="let order of orders; trackBy: trackByOrderId"&gt;...&lt;/tr&gt;
+
+&lt;!-- New control flow — track is mandatory --&gt;
+@for (order of orders; track order.id) {
+  &lt;tr&gt;{{ order.symbol }}&lt;/tr&gt;
+}</code></pre></div>
+      <div class="danger"><p><strong>FinTech — без компромиссов:</strong> таблица из <strong>10 000 строк</strong>, получающая потоковые обновления. Без <code>track</code> каждая новая ссылка на массив перерисовывает все 10 000 строк на каждом тике. С <code>track order.id</code> Angular затрагивает только строки, данные которых действительно изменились.</p></div>
+    </section>
+
+    <!-- ============================= VIEWCHILD / CONTENTCHILD ============================= -->
+    <section data-searchable>
+      <h2 id="view-content-child">ViewChild и ContentChild</h2>
+      <p class="definition"><strong>@ViewChild(selector)</strong> — запрашивает один элемент, директиву или дочерний компонент, который находится <em>в собственном шаблоне этого компонента</em> (его представлении).</p>
+      <p class="definition"><strong>@ContentChild(selector)</strong> — запрашивает один спроецированный элемент/компонент, переданный через <code>&lt;ng-content&gt;</code> (спроецированный контент компонента, а не его собственный шаблон).</p>
+      <p class="definition"><strong>@ViewChildren / @ContentChildren</strong> — запрашивают <em>все</em> совпадающие элементы, возвращая <code>QueryList&lt;T&gt;</code> (observable-коллекция с итерацией, которая обновляется по мере изменения DOM).</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Декоратор</th><th>Ищет в</th><th>Доступно с</th></tr></thead>
+          <tbody>
+            <tr><td><code>@ViewChild</code></td><td>Собственный шаблон (представление)</td><td><code>ngAfterViewInit</code></td></tr>
+            <tr><td><code>@ContentChild</code></td><td>Спроецированный <code>ng-content</code></td><td><code>ngAfterContentInit</code></td></tr>
+            <tr><td><code>@ViewChildren</code></td><td>Собственный шаблон (все)</td><td><code>ngAfterViewInit</code></td></tr>
+            <tr><td><code>@ContentChildren</code></td><td>Спроецированный контент (все)</td><td><code>ngAfterContentInit</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="static-flag"><code>{ static: true }</code> vs <code>{ static: false }</code></h3>
+      <p class="definition"><strong>{ static: true }</strong> — разрешает запрос <em>до</em> первого обнаружения изменений, поэтому результат доступен в <code>ngOnInit</code>. Работает только для запросов, которые не находятся внутри условных/циклических блоков.</p>
+      <p class="definition"><strong>{ static: false }</strong> — (по умолчанию) разрешает запрос после построения представления, поэтому результат доступен в <code>ngAfterViewInit</code>. Обязательно для элементов внутри <code>@if</code>/<code>@for</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// static: true — usable in ngOnInit
+@ViewChild('header', { static: true }) header!: ElementRef&lt;HTMLElement&gt;;
+
+// static: false (default) — usable in ngAfterViewInit
+@ViewChild('chart') chart!: ElementRef&lt;HTMLCanvasElement&gt;;
+
+@ViewChildren(RowComponent) rows!: QueryList&lt;RowComponent&gt;;
+
+ngAfterViewInit(): void {
+  console.log('row count', this.rows.length);
+  this.rows.changes.subscribe((list: QueryList&lt;RowComponent&gt;) =&gt; {
+    console.log('rows changed', list.length);
+  });
+}</code></pre></div>
+    </section>
+
+    <!-- ============================= TEMPLATES ============================= -->
+    <section data-searchable>
+      <h2 id="templates">ng-template, ng-container, ngTemplateOutlet</h2>
+      <p class="definition"><strong>&lt;ng-template&gt;</strong> — определяет фрагмент шаблона, который <em>не отрисовывается</em>, пока что-то явно его не инстанцирует (например, ветвь <code>else</code> у <code>*ngIf</code> или <code>ngTemplateOutlet</code>).</p>
+      <p class="definition"><strong>&lt;ng-container&gt;</strong> — логический группирующий элемент, который <em>ничего</em> не отрисовывает в DOM. Используйте его, чтобы применить структурную директиву или сгруппировать соседние элементы без добавления лишней обёртки.</p>
+      <p class="definition"><strong>ngTemplateOutlet</strong> — директива, которая отрисовывает указанный <code>&lt;ng-template&gt;</code> в заданном месте, опционально передавая ему объект контекста.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;!-- ng-template as an *ngIf else branch (not rendered until used) --&gt;
+&lt;div *ngIf="quote; else loading"&gt;{{ quote.bid }}&lt;/div&gt;
+&lt;ng-template #loading&gt;&lt;app-spinner /&gt;&lt;/ng-template&gt;
+
+&lt;!-- ng-container groups without an extra DOM element --&gt;
+&lt;ng-container *ngIf="order"&gt;
+  &lt;td&gt;{{ order.symbol }}&lt;/td&gt;
+  &lt;td&gt;{{ order.price }}&lt;/td&gt;
+&lt;/ng-container&gt;
+
+&lt;!-- ngTemplateOutlet renders a template ref with context --&gt;
+&lt;ng-template #row let-o="order"&gt;
+  &lt;tr&gt;&lt;td&gt;{{ o.symbol }}&lt;/td&gt;&lt;/tr&gt;
+&lt;/ng-template&gt;
+&lt;ng-container *ngTemplateOutlet="row; context: { order: currentOrder }" /&gt;</code></pre></div>
+      <div class="tip"><p><strong>Почему <code>ng-container</code>:</strong> внутри <code>&lt;table&gt;</code> нельзя обернуть ячейки в <code>&lt;div&gt;</code>, не сломав вёрстку — <code>ng-container</code> применяет директиву, не создавая элемента.</p></div>
+    </section>
+
+    <!-- ============================= DECORATORS ============================= -->
+    <section data-searchable>
+      <h2 id="decorators">Справочник по декораторам</h2>
+      <p class="definition"><strong>@Input()</strong> — помечает свойство класса как привязываемый вход, позволяя родителю передать значение через <code>[prop]="..."</code>.</p>
+      <p class="definition"><strong>@Input({ required: true })</strong> — делает вход обязательным; Angular сообщает об ошибке на этапе компиляции, если родитель его не передаёт.</p>
+      <p class="definition"><strong>@Input({ transform: fn })</strong> — применяет функцию преобразования к привязанному значению перед присваиванием (например, <code>booleanAttribute</code>, <code>numberAttribute</code> или пользовательское приведение).</p>
+      <p class="definition"><strong>@Output()</strong> — предоставляет <code>EventEmitter</code>, который потомок использует для испускания пользовательских событий родителю через <code>(event)="..."</code>.</p>
+      <p class="definition"><strong>@HostListener(event, args)</strong> — привязывает метод к DOM-событию на хост-элементе, опционально передавая данные события, такие как <code>$event</code>.</p>
+      <p class="definition"><strong>@HostBinding(property)</strong> — привязывает свойство/атрибут/класс/стиль хост-элемента к полю компонента, так что значение поля управляет хостом.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({ selector: 'app-order-row', standalone: true, template: '...' })
+export class OrderRowComponent {
+  // Required input
+  @Input({ required: true }) order!: Order;
+
+  // Transformed input — coerce string "true"/presence to boolean
+  @Input({ transform: booleanAttribute }) highlighted = false;
+
+  // Numeric coercion
+  @Input({ transform: numberAttribute }) rowIndex = 0;
+
+  // Output — emit a typed event to the parent
+  @Output() selected = new EventEmitter&lt;Order&gt;();
+
+  // Host class bound to a field
+  @HostBinding('class.active') get isActive(): boolean {
+    return this.highlighted;
+  }
+
+  // Host event with $event payload
+  @HostListener('click', ['$event'])
+  onClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.selected.emit(this.order);
+  }
+}</code></pre></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-html">&lt;!-- Parent template --&gt;
+&lt;app-order-row
+  [order]="order"
+  highlighted
+  (selected)="onSelect($event)"&gt;
+&lt;/app-order-row&gt;</code></pre></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — вопросы для собеседования</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В каком порядке выполняются хуки жизненного цикла и где находится <code>ngOnChanges</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>constructor</code> → <code>ngOnChanges</code> → <code>ngOnInit</code> → <code>ngDoCheck</code> → <code>ngAfterContentInit</code> → <code>ngAfterContentChecked</code> → <code>ngAfterViewInit</code> → <code>ngAfterViewChecked</code> → <code>ngOnDestroy</code>. <code>ngOnChanges</code> выполняется <em>перед</em> первым <code>ngOnInit</code>, но только если у компонента есть хотя бы один <code>@Input</code>, и снова при каждом последующем изменении ссылки входа.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Каковы точные условия, запускающие обнаружение изменений на OnPush-компоненте?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Четыре: (1) изменяется ссылка <code>@Input</code> (новый объект/массив, а не мутация), (2) срабатывает событие от компонента или потомка, (3) пайп <code>async</code> в его шаблоне испускает новое значение, или (4) он помечен вручную через <code>markForCheck()</code> / <code>detectChanges()</code>. Иначе Angular пропускает компонент и его поддерево.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Почему <code>this.quotes.push(q)</code> не обновляет OnPush-представление и как это исправить?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>push</code> мутирует массив на месте, поэтому его ссылка не меняется. OnPush сравнивает ссылки <code>@Input</code>, видит тот же массив и пропускает компонент. Исправьте, присвоив новую ссылку — <code>this.quotes = [...this.quotes, q]</code> — или используя сигнал (<code>this.quotes.update(list =&gt; [...list, q])</code>), который уведомляет CD при каждой установке.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. В чём разница между <code>markForCheck()</code> и <code>detectChanges()</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>markForCheck()</code> помечает компонент и всех его предков как «грязные», чтобы они были проверены в <em>следующем</em> цикле CD — он не запускает CD сейчас. <code>detectChanges()</code> выполняет обнаружение изменений <em>синхронно, немедленно</em> на компоненте и его потомках. Используйте <code>markForCheck()</code> с OnPush после обновления состояния вне поля зрения Angular; используйте <code>detectChanges()</code>, когда нужна немедленная синхронная отрисовка.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Почему <code>track</code> обязателен в <code>@for</code> и что ломается без хорошего ключа?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>track</code> даёт каждому элементу стабильную идентичность, чтобы Angular мог переиспользовать DOM-узлы для неизменившихся элементов вместо уничтожения и пересоздания всего списка. Без него (или с плохим ключом вроде <code>$index</code> для переупорядочиваемых данных) новая ссылка на массив заставляет Angular перерисовывать каждый узел, теряя состояние фокуса/прокрутки/анимации и обрушивая производительность на больших списках — недопустимо для таблицы из 10 000 строк.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">6. Когда доступен <code>@ViewChild</code> и как <code>{ static: true }</code> это меняет?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>По умолчанию (<code>static: false</code>) <code>@ViewChild</code> разрешается после построения представления, поэтому впервые доступен в <code>ngAfterViewInit</code>. С <code>{ static: true }</code> Angular разрешает его до первого обнаружения изменений, делая его доступным в <code>ngOnInit</code> — но только для запросов, которые не находятся внутри условного (<code>@if</code>) или циклического (<code>@for</code>) блока, который может ещё не существовать.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Квиз</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какой хук жизненного цикла — правильное место для инициализации <code>&lt;canvas&gt;</code> через <code>@ViewChild</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">constructor</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">ngOnInit</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">ngAfterViewInit</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">ngOnChanges</button>
+        <div class="quiz-explain">Представление (и его элементы <code>@ViewChild</code>) готовы только в ngAfterViewInit. В конструкторе и ngOnInit DOM ещё не существует.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Что из этого НЕ запускает обнаружение изменений на OnPush-компоненте?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Новый объект, присвоенный @Input</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Мутация существующего массива @Input через push()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Событие клика от компонента</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Пайп async, испускающий новое значение</button>
+        <div class="quiz-explain">push() сохраняет ту же ссылку на массив. OnPush сравнивает ссылки, не видит изменений и пропускает компонент. Вместо этого присвойте новый массив.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Что делает <code>markForCheck()</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Синхронно запускает CD на этом компоненте сейчас</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Помечает компонент и его предков для проверки в следующем цикле</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Запускает CD по всему приложению</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Навсегда отключает обнаружение изменений</button>
+        <div class="quiz-explain">markForCheck() помечает компонент + предков как «грязные» для СЛЕДУЮЩЕГО цикла. detectChanges() запускает сейчас; ApplicationRef.tick() охватывает всё приложение.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Какой триггер <code>@defer</code> загружает блок, когда он попадает в область видимости?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">on idle</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">on hover</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">on viewport</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">on timer(2s)</button>
+        <div class="quiz-explain">on viewport откладывает загрузку, пока блок не войдёт в область видимости. on idle (по умолчанию) ждёт простоя браузера, on hover — наведения указателя, on timer — задержки.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">5. В чём разница между чистым и нечистым пайпом?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Чистые пайпы могут мутировать вход; нечистые — нет</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Чистый перезапускается только при изменении ссылки входа; нечистый — в каждом цикле CD</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Нечистые пайпы быстрее чистых</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Чистые пайпы требуют явной установки pure: true</button>
+        <div class="quiz-explain">Чистый (по умолчанию) пересчитывается только при изменении ссылки/примитива на входе; нечистый (pure: false) пересчитывается в каждом цикле CD — затратно, поэтому предпочитайте чистый + неизменяемые данные.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="typescript.html" class="btn-nav">← TypeScript</a>
+      <a href="signals.html" class="btn-nav">Signals →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

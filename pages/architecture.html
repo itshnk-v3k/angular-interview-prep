@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Архитектура Angular приложений — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Архитектура</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Архитектура Angular приложений</h1>
+      <p class="page-desc">Как senior-инженеры структурируют крупные Angular-приложения: умные и глупые
+        компоненты, MVVM, масштабируемая структура папок, паттерны проектирования GoF в том виде, в
+        котором они реально встречаются во фреймворке, принципы ООП, а также паттерны Facade /
+        Repository / Barrel, применяемые в продакшен-кодовых базах FinTech.</p>
+      <button class="btn-done" data-page="architecture" onclick="markDone('architecture')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== SMART VS DUMB COMPONENTS ===================== -->
+    <section data-searchable>
+      <h2 id="smart-dumb">Умные и глупые компоненты</h2>
+      <p>Самое важное разделение в дизайне компонентов Angular. Оно удерживает работу с состоянием в
+        нескольких компонентах-контейнерах и делает остальное дерево UI чистым, переиспользуемым и
+        тривиальным для тестирования.</p>
+
+      <p class="definition"><strong>Умный (контейнерный) компонент</strong> — знает о состоянии приложения. Он внедряет сервисы, читает из стора, диспатчит экшены / обрабатывает события и передаёт простые данные <em>вниз</em> дочерним компонентам через инпуты. Ему принадлежит логика «что происходит».</p>
+      <p class="definition"><strong>Глупый (презентационный) компонент</strong> — ничего не знает о сервисах или состоянии. Он лишь получает данные через <code>@Input()</code>, испускает намерения пользователя через <code>@Output()</code> и рендерит. Он чистый, переиспользуемый, дружелюбный к OnPush и легко тестируется изолированно.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>Умный / контейнер</th><th>Глупый / презентационный</th></tr></thead>
+          <tbody>
+            <tr><td>Внедряет сервисы</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Знает о состоянии / сторе</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Взаимодействует через</td><td>Сервисы, стор, роутер</td><td><code>@Input()</code> / <code>@Output()</code></td></tr>
+            <tr><td>Переиспользуем между фичами</td><td>❌ (привязан к фиче)</td><td>✅ (легко переиспользуем)</td></tr>
+            <tr><td>Обнаружение изменений</td><td>Default или OnPush</td><td>OnPush (чистые инпуты)</td></tr>
+            <tr><td>Просто юнит-тестировать</td><td>Нужны замоканные сервисы</td><td>✅ тривиально</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Ниже <code>OrdersContainerComponent</code> — это умный компонент: он внедряет фасад,
+        владеет потоком <code>orders$</code> и превращает события дочерних компонентов в экшены. <code>OrderRowComponent</code>
+        — глупый: чистые инпуты/аутпуты и OnPush.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// order.model.ts — shared FinTech domain types
+export type OrderSide = 'BUY' | 'SELL';
+export type OrderStatus = 'pending' | 'filled' | 'cancelled';
+
+export interface Order {
+  readonly id: string;
+  readonly symbol: string;
+  readonly side: OrderSide;
+  readonly qty: number;
+  readonly price: number;
+  readonly status: OrderStatus;
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// orders-container.component.ts — SMART
+import { Component, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { OrderFacade } from './order.facade';
+import { Order } from './order.model';
+
+@Component({
+  selector: 'app-orders-container',
+  standalone: true,
+  imports: [OrderRowComponent, AsyncPipe],
+  template: `
+    &lt;app-order-row
+      *ngFor="let order of orders$ | async; trackBy: trackById"
+      [order]="order"
+      (cancel)="onCancel($event)"&gt;
+    &lt;/app-order-row&gt;
+  `,
+})
+export class OrdersContainerComponent {
+  private readonly facade = inject(OrderFacade);
+
+  readonly orders$: Observable&lt;Order[]&gt; = this.facade.orders$;
+
+  ngOnInit(): void {
+    this.facade.loadOrders();        // dispatches, owns the state
+  }
+
+  onCancel(orderId: string): void {
+    this.facade.cancelOrder(orderId); // turns child event into an action
+  }
+
+  trackById(_: number, order: Order): string {
+    return order.id;
+  }
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// order-row.component.ts — DUMB (OnPush, pure)
+import {
+  ChangeDetectionStrategy, Component, EventEmitter, Input, Output,
+} from '@angular/core';
+import { Order } from './order.model';
+
+@Component({
+  selector: 'app-order-row',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    &lt;span&gt;{{ order.symbol }}&lt;/span&gt;
+    &lt;span&gt;{{ order.side }} {{ order.qty }} @ {{ order.price }}&lt;/span&gt;
+    &lt;span&gt;{{ order.status }}&lt;/span&gt;
+    &lt;button (click)="cancel.emit(order.id)"&gt;Cancel&lt;/button&gt;
+  `,
+})
+export class OrderRowComponent {
+  @Input({ required: true }) order!: Order;     // data in
+  @Output() cancel = new EventEmitter&lt;string&gt;(); // intent out
+  // No services, no store — pure rendering.
+}</code></pre>
+      </div>
+
+      <div class="tip"><p><strong>Правило большого пальца:</strong> если компонент внедряет сервис — он умный. Держите умных компонентов мало и делайте их тонкими; выносите всё визуальное в переиспользуемые глупые компоненты, управляемые инпутами.</p></div>
+    </section>
+
+    <!-- ===================== MVVM IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="mvvm">MVVM в Angular</h2>
+      <p class="definition"><strong>MVVM (Model-View-ViewModel)</strong> — архитектурный паттерн, который отделяет пользовательский интерфейс от бизнес-логики через три слоя, связанные привязкой данных, так что View не знает напрямую, откуда берутся его данные.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Model</strong> — данные плюс бизнес-логика. В Angular это ваши сервисы, интерфейсы и доменные типы (<code>Order</code>, <code>Quote</code>, сервис <code>OrderService</code>, который их получает).</p>
+        <p class="definition"><strong>View</strong> — отрендеренный UI. В Angular это HTML-шаблон компонента, включая привязки и структурные директивы.</p>
+        <p class="definition"><strong>ViewModel</strong> — связующее звено, которое предоставляет данные Model и команды для View и реагирует на ввод пользователя. В Angular это <strong>класс компонента</strong>: он хранит реактивное состояние и методы, которые вызывает шаблон.</p>
+      </div>
+
+      <p>Angular <strong>по своей природе MVVM</strong>: класс компонента <em>и есть</em> ViewModel, а
+        движок привязок Angular — механизм синхронизации. Привязки свойств/интерполяции проталкивают данные Model
+        во View; привязки событий проталкивают действия пользователя обратно; <code>[(ngModel)]</code> делает и то и другое сразу
+        (двусторонняя привязка).</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// MODEL — data + business logic
+export interface Instrument {
+  readonly symbol: string;
+  readonly tickSize: number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class InstrumentService {            // Model layer
+  getBySymbol(symbol: string): Observable&lt;Instrument&gt; { /* ... */ }
+}
+
+// VIEWMODEL — the component class binds Model to View
+@Component({
+  selector: 'app-instrument-search',
+  template: `
+    &lt;!-- VIEW: template HTML --&gt;
+    &lt;input [(ngModel)]="query" placeholder="Symbol" /&gt;   &lt;!-- two-way sync --&gt;
+    &lt;p&gt;Tick size: {{ instrument?.tickSize }}&lt;/p&gt;        &lt;!-- Model → View --&gt;
+    &lt;button (click)="search()"&gt;Load&lt;/button&gt;             &lt;!-- View → ViewModel --&gt;
+  `,
+})
+export class InstrumentSearchComponent {     // ViewModel
+  private readonly service = inject(InstrumentService);
+  query = '';                                // bound state
+  instrument: Instrument | null = null;
+
+  search(): void {                           // command exposed to the View
+    this.service.getBySymbol(this.query)
+      .subscribe(i =&gt; (this.instrument = i));
+  }
+}</code></pre>
+      </div>
+
+      <p class="definition"><strong>Двусторонняя привязка <code>[(ngModel)]</code></strong> — синтаксис Angular «банан в коробке», сокращение для привязки свойства <code>[ngModel]</code> плюс привязки события <code>(ngModelChange)</code>. Она автоматически синхронизирует поле ввода View и поле ViewModel — механизм синхронизации в самом сердце MVVM.</p>
+
+      <h3 id="mvvm-vs-mvc">Чем MVVM отличается от MVC</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>MVC</th><th>MVVM</th></tr></thead>
+          <tbody>
+            <tr><td>Третий слой</td><td>Controller (оркеструет запрос → ответ)</td><td>ViewModel (предоставляет состояние + команды)</td></tr>
+            <tr><td>Связь View ↔ логика</td><td>Controller вручную обновляет View</td><td>Автоматическая двусторонняя <strong>привязка данных</strong></td></tr>
+            <tr><td>Осведомлённость о View</td><td>Controller знает о View</td><td>ViewModel <em>не</em> ссылается на View</td></tr>
+            <tr><td>Типичное место обитания</td><td>Серверные фреймворки (Rails, Spring MVC)</td><td>Богатые клиентские UI (Angular, WPF)</td></tr>
+            <tr><td>Шаблонный код для синхронизации UI</td><td>Высокий (ручная разводка)</td><td>Низкий (привязка делает это)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Ключевая мысль:</strong> в MVC Controller активно лезет во View; в MVVM ViewModel просто предоставляет данные, а движок привязок Angular выполняет синхронизацию. ViewModel никогда не импортирует и не трогает DOM, поэтому он так хорошо тестируется.</p></div>
+    </section>
+
+    <!-- ===================== FEATURE/CORE/SHARED STRUCTURE ===================== -->
+    <section data-searchable>
+      <h2 id="folder-structure">Структура Feature / Core / Shared</h2>
+      <p>Общепринятая масштабируемая структура для корпоративного Angular-приложения на standalone-API. Она разделяет
+        <strong>синглтоны</strong> (Core), <strong>переиспользуемые части</strong> (Shared) и
+        <strong>бизнес-домены</strong> (Features), так что приложение растёт по фичам без перепутывания.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-text">src/
+└── app/
+    ├── core/                      # app-wide SINGLETONS (loaded once)
+    │   ├── auth/
+    │   │   ├── auth.service.ts
+    │   │   └── auth.guard.ts
+    │   ├── interceptors/
+    │   │   ├── auth.interceptor.ts
+    │   │   └── error.interceptor.ts
+    │   └── guards/
+    │       └── role.guard.ts
+    ├── shared/                    # REUSABLE, stateless building blocks
+    │   ├── components/
+    │   │   ├── order-row/
+    │   │   └── price-badge/
+    │   ├── pipes/
+    │   │   └── currency-precision.pipe.ts
+    │   └── directives/
+    │       └── highlight-change.directive.ts
+    ├── features/                  # BUSINESS DOMAINS (lazy-loaded)
+    │   ├── orders/
+    │   │   ├── orders-container.component.ts
+    │   │   ├── order-row.component.ts
+    │   │   ├── order.facade.ts
+    │   │   ├── order.service.ts
+    │   │   └── orders.routes.ts
+    │   └── charts/
+    │       ├── base-chart.component.ts
+    │       ├── candlestick-chart.component.ts
+    │       └── line-chart.component.ts
+    ├── app.component.ts
+    ├── app.config.ts              # providers, router, interceptors
+    └── app.routes.ts              # top-level (lazy) routes</code></pre>
+      </div>
+
+      <div class="card">
+        <p class="definition"><strong>core/</strong> — общеприложенческие синглтоны, которые должны существовать ровно один раз: аутентификация, гарды маршрутов, HTTP-интерцепторы, глобальная обработка ошибок, конфигурация уровня приложения. Они помечены <code>providedIn: 'root'</code> и логически никогда не импортируются фичами более одного раза.</p>
+        <p class="definition"><strong>shared/</strong> — не имеющие состояния переиспользуемые презентационные строительные блоки без бизнес-логики: глупые компоненты, пайпы и директивы. Всё, что могло бы появиться в двух разных фичах, живёт здесь. Этот слой никогда не должен зависеть от фичи.</p>
+        <p class="definition"><strong>features/</strong> — самодостаточные бизнес-домены (orders, charts). Каждый владеет своими умными/глупыми компонентами, сервисами, фасадом и собственными лениво загружаемыми маршрутами. Фичи могут зависеть от <code>core</code> и <code>shared</code>, но <strong>не друг от друга</strong>.</p>
+        <p class="definition"><strong>app.config.ts</strong> — конфигурация standalone-бутстрапа: провайдеры приложения, настройка роутера и разводка интерцепторов / HTTP-клиента, передаваемая в <code>bootstrapApplication</code>.</p>
+      </div>
+
+      <div class="warn"><p><strong>Правило направления зависимостей:</strong> <code>features → shared → core</code>. Никогда не позволяйте <code>shared</code> импортировать из фичи и никогда не позволяйте одной фиче импортировать из другой — направляйте через общую абстракцию или стор.</p></div>
+    </section>
+
+    <!-- ===================== GOF PATTERNS ===================== -->
+    <section data-searchable>
+      <h2 id="gof-patterns">Паттерны GoF в Angular</h2>
+      <p>Паттерны проектирования «банды четырёх» в Angular не академичны — фреймворк <em>построен</em>
+        из них. Их распознавание — частый сигнал на senior-собеседовании.</p>
+
+      <div class="card">
+        <h4>Observer</h4>
+        <p class="definition"><strong>Observer</strong> — определяет зависимость «один ко многим», так что при изменении состояния одного объекта все его зависимые автоматически уведомляются. В Angular он проявляется как <strong>RxJS Observables / Subjects</strong>: подписчики реагируют на каждое испущенное значение.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">const quote$ = new Subject&lt;Quote&gt;();           // subject = observable
+quote$.subscribe(q =&gt; console.log('A', q.bid)); // observer 1
+quote$.subscribe(q =&gt; console.log('B', q.ask)); // observer 2
+quote$.next({ symbol: 'EURUSD', bid: 1.07, ask: 1.0702 }); // notifies all</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Factory</h4>
+        <p class="definition"><strong>Factory</strong> — делегирует создание объекта функции вместо конструктора, так что вызывающий код отвязан от конкретного класса. В Angular он проявляется как провайдеры DI <strong><code>useFactory</code></strong>, которые строят зависимость из других внедрённых значений.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export const ORDER_REPO = new InjectionToken&lt;IOrderRepository&gt;('OrderRepo');
+
+providers: [
+  {
+    provide: ORDER_REPO,
+    useFactory: (http: HttpClient) =&gt; new HttpOrderRepository(http),
+    deps: [HttpClient],          // injected into the factory
+  },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Decorator</h4>
+        <p class="definition"><strong>Decorator</strong> — динамически добавляет объекту дополнительное поведение/метаданные. <strong><code>@Component</code>, <code>@Injectable</code>, <code>@Pipe</code></strong> в Angular — это декораторы, которые аннотируют класс метаданными, читаемыми компилятором.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })   // decorator adds DI metadata
+export class OrderService {}
+
+@Pipe({ name: 'pnl' })                 // decorator adds pipe metadata
+export class PnlPipe implements PipeTransform {
+  transform(value: number): string { return value.toFixed(2); }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Strategy</h4>
+        <p class="definition"><strong>Strategy</strong> — инкапсулирует взаимозаменяемые алгоритмы за общим интерфейсом, выбираемые во время выполнения. <strong><code>ChangeDetectionStrategy</code></strong> в Angular переключает алгоритм обнаружения изменений (<code>Default</code> или <code>OnPush</code>) для каждого компонента.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({
+  selector: 'app-order-row',
+  changeDetection: ChangeDetectionStrategy.OnPush, // pick the strategy
+  template: `...`,
+})
+export class OrderRowComponent {}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Command</h4>
+        <p class="definition"><strong>Command</strong> — инкапсулирует запрос в самостоятельный объект, несущий всю информацию для его выполнения. В Angular это <strong>NgRx Actions</strong>: типизированный объект, описывающий «что произошло», диспатчится, чтобы быть обработанным позже редьюсерами/эффектами.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export const cancelOrder = createAction(
+  '[Orders] Cancel Order',
+  props&lt;{ orderId: string }&gt;(),    // the command's payload
+);
+
+store.dispatch(cancelOrder({ orderId: 'ord-42' })); // request as an object</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Proxy</h4>
+        <p class="definition"><strong>Proxy</strong> — суррогат, который контролирует доступ к другому объекту, перехватывая вызовы. <strong><code>HttpInterceptor</code></strong> в Angular проксирует каждый HTTP-запрос, имея возможность проинспектировать, изменить или замкнуть его до того, как он достигнет сервера.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const cloned = req.clone({               // proxy: modify the request
+    setHeaders: { Authorization: 'Bearer token' },
+  });
+  return next(cloned);                      // forward to the real handler
+};</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Chain of Responsibility</h4>
+        <p class="definition"><strong>Chain of Responsibility</strong> — передаёт запрос по цепочке обработчиков, каждый из которых решает, обработать его и/или передать дальше. <strong>Цепочка интерцепторов</strong> в Angular — именно это: каждый интерцептор вызывает <code>next()</code>, чтобы передать запрос следующему обработчику.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Order matters: each link calls next() to pass control along the chain.
+provideHttpClient(
+  withInterceptors([
+    authInterceptor,    // 1. adds token, then next()
+    loggingInterceptor, // 2. logs, then next()
+    errorInterceptor,   // 3. catches errors, then next()
+  ]),
+);</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Singleton</h4>
+        <p class="definition"><strong>Singleton</strong> — гарантирует, что у класса ровно один экземпляр с глобальной точкой доступа. <strong><code>providedIn: 'root'</code></strong> в Angular создаёт один общий экземпляр на всё приложение через корневой инжектор.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' }) // one instance, app-wide
+export class QuoteService {
+  private readonly quotes$ = new BehaviorSubject&lt;Quote[]&gt;([]);
+}
+// Every component that injects QuoteService gets the SAME instance.</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Template Method</h4>
+        <p class="definition"><strong>Template Method</strong> — определяет скелет алгоритма, откладывая конкретные шаги на подклассы/хуки. <strong>Хуки жизненного цикла</strong> в Angular (<code>ngOnInit</code>, <code>ngOnChanges</code>, <code>ngOnDestroy</code>…) — это точки-хуки, которые фреймворк вызывает в фиксированном порядке.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Angular runs a fixed sequence; you fill in the steps:
+export class ChartComponent implements OnInit, OnDestroy {
+  ngOnInit(): void { /* framework calls this step on init */ }
+  ngOnDestroy(): void { /* and this step on teardown */ }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Facade</h4>
+        <p class="definition"><strong>Facade</strong> — упрощённый единый интерфейс перед сложной подсистемой. В Angular это сервис, оборачивающий стор NgRx / несколько сервисов, так что компоненты зависят от одного чистого API. Подробно рассмотрено в следующем разделе.</p>
+      </div>
+    </section>
+
+    <!-- ===================== OOP PRINCIPLES ===================== -->
+    <section data-searchable>
+      <h2 id="oop">Принципы ООП в Angular</h2>
+      <p>Четыре столпа объектно-ориентированного программирования, каждый показан так, как он реально
+        проявляется в дизайне сервисов и компонентов Angular.</p>
+
+      <div class="card">
+        <h4>Encapsulation (Инкапсуляция)</h4>
+        <p class="definition"><strong>Encapsulation</strong> — объединение состояния с методами, которые с ним работают, и сокрытие внутреннего представления за публичным API. В Angular держите состояние сервиса <code>private</code>/<code>protected</code> и предоставляйте только API для чтения.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class QuoteStore {
+  // private internal state — nobody can next() into it from outside
+  private readonly quotes$ = new BehaviorSubject&lt;Quote[]&gt;([]);
+
+  // public read-only API — the only way in
+  getQuotes(): Observable&lt;Quote[]&gt; {
+    return this.quotes$.asObservable();
+  }
+
+  setQuotes(quotes: Quote[]): void {  // controlled mutation
+    this.quotes$.next(quotes);
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Abstraction (Абстракция)</h4>
+        <p class="definition"><strong>Abstraction</strong> — раскрытие того, <em>что</em> нечто делает, а не <em>как</em>. Определяйте интерфейсы как контракты и зависите от абстракции, а не от конкретного класса — так реализацию можно свободно подменять.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Contract — the abstraction
+export interface IOrderRepository {
+  getOrders(): Observable&lt;Order[]&gt;;
+  addOrder(order: Order): Observable&lt;Order&gt;;
+}
+
+// Consumers depend on IOrderRepository, NOT HttpOrderService.
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  // injected against the abstraction (see Repository section)
+  constructor(private readonly repo: IOrderRepository) {}
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Inheritance (Наследование)</h4>
+        <p class="definition"><strong>Inheritance</strong> — класс наследует состояние и поведение от базового класса через <code>extends</code>, переиспользуя общую логику. Полезно для базового компонента/сервиса, который разделяют несколько специализированных.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Base holds shared chart plumbing
+@Directive()
+export abstract class BaseChartComponent {
+  protected readonly ctx = inject(ChartContextService);
+  protected destroy(): void { /* shared teardown */ }
+  abstract render(data: Quote[]): void;   // each subtype implements
+}
+
+export class CandlestickChartComponent extends BaseChartComponent {
+  render(data: Quote[]): void { /* candlestick drawing */ }
+}
+
+export class LineChartComponent extends BaseChartComponent {
+  render(data: Quote[]): void { /* line drawing */ }
+}</code></pre></div>
+        <div class="warn"><p><strong>Осторожно:</strong> предпочитайте композицию глубоким деревьям наследования. Прибегайте к <code>extends</code> только когда подтипы разделяют действительно общее, стабильное поведение.</p></div>
+      </div>
+
+      <div class="card">
+        <h4>Polymorphism (Полиморфизм)</h4>
+        <p class="definition"><strong>Polymorphism</strong> — множество типов, реализующих один интерфейс, можно использовать взаимозаменяемо; вызывающий код работает против контракта, а во время выполнения запускается нужное конкретное поведение.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export interface IChart {
+  render(data: Quote[]): void;
+}
+
+class CandlestickChart implements IChart {
+  render(data: Quote[]): void { /* ... */ }
+}
+class LineChart implements IChart {
+  render(data: Quote[]): void { /* ... */ }
+}
+
+// Used interchangeably — same call, different behaviour.
+const charts: IChart[] = [new CandlestickChart(), new LineChart()];
+charts.forEach(chart =&gt; chart.render(quotes));</code></pre></div>
+      </div>
+    </section>
+
+    <!-- ===================== FACADE PATTERN ===================== -->
+    <section data-searchable>
+      <h2 id="facade">Паттерн Facade</h2>
+      <p class="definition"><strong>Facade</strong> — сервис, который оборачивает сложное управление состоянием (стор NgRx, эффекты, несколько сервисов) и предоставляет маленький, раскрывающий намерения API. Компоненты общаются <em>только</em> с фасадом: они читают готовые потоки и вызывают методы-действия, никогда не касаясь стора напрямую.</p>
+
+      <div class="tip"><p><strong>Зачем:</strong> компоненты остаются свободными от импортов и селекторов NgRx, стор можно рефакторить без правки UI, а публичная поверхность легко тестируется и мокается.</p></div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// order.facade.ts — wraps the store behind a clean API
+import { Injectable, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { Order } from './order.model';
+import * as OrderActions from './order.actions';
+import * as OrderSelectors from './order.selectors';
+
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  private readonly store = inject(Store);
+
+  // --- exposed state (selectors hidden behind simple streams) ---
+  readonly orders$: Observable&lt;Order[]&gt; =
+    this.store.select(OrderSelectors.selectAllOrders);
+
+  readonly loading$: Observable&lt;boolean&gt; =
+    this.store.select(OrderSelectors.selectOrdersLoading);
+
+  // --- exposed commands (dispatch hidden) ---
+  loadOrders(): void {
+    this.store.dispatch(OrderActions.loadOrders());
+  }
+
+  addOrder(order: Order): void {
+    this.store.dispatch(OrderActions.addOrder({ order }));
+  }
+
+  cancelOrder(orderId: string): void {
+    this.store.dispatch(OrderActions.cancelOrder({ orderId }));
+  }
+}</code></pre>
+      </div>
+
+      <p>Умный компонент из первого раздела потребляет этот фасад и никогда не импортирует
+        <code>Store</code>, селекторы или экшены — оставаясь тонким, а стор — заменяемым.</p>
+    </section>
+
+    <!-- ===================== REPOSITORY PATTERN ===================== -->
+    <section data-searchable>
+      <h2 id="repository">Паттерн Repository</h2>
+      <p class="definition"><strong>Repository</strong> — абстрагирует доступ к данным за интерфейсом, так что потребители зависят от <code>IOrderRepository</code>, а не от конкретного HTTP-сервиса. Реализацию (REST, GraphQL, WebSocket, in-memory мок) можно подменить без изменения хотя бы одного потребителя.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// 1. The contract (abstraction)
+export interface IOrderRepository {
+  getOrders(): Observable&lt;Order[]&gt;;
+  getPosition(symbol: string): Observable&lt;Position&gt;;
+  addOrder(order: Order): Observable&lt;Order&gt;;
+}
+
+// Position — FinTech domain type
+export interface Position {
+  readonly symbol: string;
+  readonly netQty: number;
+  readonly avgPrice: number;
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// 2. A concrete implementation
+@Injectable()
+export class HttpOrderRepository implements IOrderRepository {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/orders';
+
+  getOrders(): Observable&lt;Order[]&gt; {
+    return this.http.get&lt;Order[]&gt;(this.base);
+  }
+
+  getPosition(symbol: string): Observable&lt;Position&gt; {
+    return this.http.get&lt;Position&gt;(`/api/positions/${symbol}`);
+  }
+
+  addOrder(order: Order): Observable&lt;Order&gt; {
+    return this.http.post&lt;Order&gt;(this.base, order);
+  }
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// 3. DI token wiring — bind the abstraction to an implementation
+export const ORDER_REPOSITORY =
+  new InjectionToken&lt;IOrderRepository&gt;('OrderRepository');
+
+// app.config.ts
+providers: [
+  { provide: ORDER_REPOSITORY, useClass: HttpOrderRepository },
+];
+
+// Consumer depends ONLY on the token / interface:
+@Injectable({ providedIn: 'root' })
+export class OrderService {
+  private readonly repo = inject(ORDER_REPOSITORY);
+  orders(): Observable&lt;Order[]&gt; { return this.repo.getOrders(); }
+}</code></pre>
+      </div>
+
+      <div class="success"><p><strong>Тест на подмену:</strong> направьте токен на <code>useClass: MockOrderRepository</code> в тестах или <code>useClass: WsOrderRepository</code> для стриминга — без изменений у потребителей. В этом и вся ценность паттерна.</p></div>
+    </section>
+
+    <!-- ===================== BARREL EXPORTS ===================== -->
+    <section data-searchable>
+      <h2 id="barrel">Barrel-экспорты (index.ts)</h2>
+      <p class="definition"><strong>Barrel</strong> — файл <code>index.ts</code>, который реэкспортирует публичные члены папки/модуля, давая потребителям один чистый путь импорта и скрывая внутреннюю структуру файлов.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// features/orders/index.ts — the barrel (public API)
+export { OrderFacade } from './order.facade';
+export { OrdersContainerComponent } from './orders-container.component';
+export type { Order, OrderSide, OrderStatus } from './order.model';
+// internal helpers are intentionally NOT exported
+
+// Consumer — one tidy import instead of many deep paths
+import { OrderFacade, Order } from '@app/features/orders';</code></pre>
+      </div>
+
+      <div class="warn"><p><strong>Будьте внимательны:</strong> слишком широкие barrel-файлы могут навредить tree-shaking и создать циклические импорты. Держите их на уровне настоящих публичных границ (фича, общая библиотека), а не каждой папки.</p></div>
+    </section>
+
+    <!-- ===================== MONOREPO WITH NX ===================== -->
+    <section data-searchable>
+      <h2 id="nx">Монорепозиторий с Nx</h2>
+      <p class="definition"><strong>Nx</strong> — система сборки и инструментарий для монорепозиториев, который размещает множество приложений и библиотек в одном рабочем пространстве, с графом проектов, генераторами и кэшированием вычислений, заточенными под корпоративный Angular.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Workspace (рабочее пространство)</strong> — единый репозиторий, содержащий все проекты, с общим инструментарием, правилами линтинга и ограничениями зависимостей.</p>
+        <p class="definition"><strong>apps/</strong> — развёртываемые приложения (например, <code>trading-web</code>, <code>admin</code>). Это тонкие оболочки, которые компонуют библиотеки.</p>
+        <p class="definition"><strong>libs/</strong> — основная масса кода: библиотеки feature, data-access, UI и util, которые импортируют приложения и другие библиотеки. Nx обеспечивает, какие библиотеки могут зависеть от каких.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-text"># Scaffold a new lib or app with a generator
+nx generate @nx/angular:library orders-data-access
+
+# Build a single project (and only what it needs)
+nx build trading-web
+
+# Run tasks ONLY for projects affected by your changes
+nx affected --target=test
+nx affected --target=build --base=main</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Команда</th><th>Что делает</th></tr></thead>
+          <tbody>
+            <tr><td><code>nx generate</code></td><td>Скаффолдит приложения, библиотеки, компоненты через генераторы (единообразная структура)</td></tr>
+            <tr><td><code>nx build</code></td><td>Собирает проект; переиспользует кэшированный вывод, когда входные данные не изменились</td></tr>
+            <tr><td><code>nx affected</code></td><td>Запускает таргет только для проектов, затронутых текущим диффом</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Почему для корпоративного Angular:</strong> единый источник истины для общих библиотек, принудительные границы модулей между командами, кардинально более быстрый CI за счёт запусков только затронутого и кэширования вычислений, и единообразный скаффолдинг по десяткам проектов.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Вопросы с собеседования</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В чём разница между умным и глупым компонентом?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><strong>Умный (контейнерный)</strong> компонент знает о состоянии приложения: он внедряет сервисы или фасад, читает стор, диспатчит экшены и передаёт простые данные вниз. <strong>Глупый (презентационный)</strong> компонент ничего не знает о сервисах — он лишь принимает данные через <code>@Input()</code>, испускает намерения пользователя через <code>@Output()</code> и рендерит. Глупые компоненты чистые, переиспользуемые, дружелюбные к OnPush и тривиальны для тестирования; умных компонентов должно быть мало, и они должны быть тонкими.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Почему Angular описывают как MVVM-фреймворк и как реализуется ViewModel?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Angular разделяет <strong>Model</strong> (сервисы, интерфейсы, доменные типы), <strong>View</strong> (HTML-шаблон) и <strong>ViewModel</strong> (класс компонента). Класс компонента — это ViewModel: он предоставляет шаблону состояние и методы-команды. Движок привязок Angular — механизм синхронизации: привязки интерполяции/свойств проталкивают данные Model во View, привязки событий проталкивают намерения обратно, а <code>[(ngModel)]</code> делает и то и другое. В отличие от MVC, ViewModel никогда не ссылается на View; разводку выполняет привязка данных, поэтому он так хорошо тестируется.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Какую проблему решает сервис Facade по сравнению с использованием NgRx напрямую в компонентах?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Он скрывает сложность стора за маленьким, раскрывающим намерения API. Компоненты потребляют готовые потоки (<code>orders$</code>) и вызывают методы (<code>loadOrders()</code>, <code>addOrder()</code>) без импорта <code>Store</code>, селекторов или экшенов. Это держит компоненты тонкими и не зависящими от фреймворка, позволяет рефакторить или заменять управление состоянием без правки UI и делает фасад лёгким для мокинга в тестах.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Как паттерн Repository улучшает тестируемость и гибкость?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Потребители зависят от интерфейса (<code>IOrderRepository</code>), привязанного к конкретной реализации через DI-токен, а не от конкретного HTTP-сервиса. Поскольку зависимость — это абстракция, вы можете подменять реализации — <code>HttpOrderRepository</code> в продакшене, <code>MockOrderRepository</code> в тестах, <code>WsOrderRepository</code> для стриминга — изменив один провайдер, без изменений у потребителей. Это принцип инверсии зависимостей, применённый к доступу к данным.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Назовите три паттерна GoF, которые использует сам фреймворк Angular, и где.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Подходят многие примеры: <strong>Observer</strong> в RxJS Observables/Subjects; <strong>Decorator</strong> в <code>@Component</code>/<code>@Injectable</code>/<code>@Pipe</code>; <strong>Singleton</strong> через <code>providedIn: 'root'</code>; <strong>Strategy</strong> в <code>ChangeDetectionStrategy</code>; <strong>Proxy</strong> и <strong>Chain of Responsibility</strong> в цепочке HTTP-интерцепторов; <strong>Factory</strong> в DI <code>useFactory</code>; <strong>Command</strong> в NgRx Actions; и <strong>Template Method</strong> в хуках жизненного цикла.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Квиз</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какое утверждение корректно описывает глупый (презентационный) компонент?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он внедряет сервисы и диспатчит экшены стора</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Он использует только @Input/@Output и рендерит, без зависимостей от сервисов</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он всегда должен использовать ChangeDetectionStrategy.Default</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Ему принадлежит состояние приложения</button>
+        <div class="quiz-explain">Глупые компоненты чистые: данные внутрь через @Input, намерения наружу через @Output, без сервисов или стора. Это делает их переиспользуемыми, дружелюбными к OnPush и тривиальными для тестирования. Состоянием владеют умные/контейнерные компоненты.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. В отображении MVVM в Angular что играет роль ViewModel?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">HTML-шаблон</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Внедряемый сервис</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Класс компонента</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Конфигурация роутера</button>
+        <div class="quiz-explain">Класс компонента — это ViewModel: он предоставляет состояние и методы-команды, к которым привязывается шаблон (View). Model — это сервисы/интерфейсы; двусторонняя привязка [(ngModel)] — механизм синхронизации.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Цепочка HTTP-интерцепторов Angular — пример какого паттерна(ов) GoF?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Singleton</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Только Observer</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Proxy и Chain of Responsibility</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Factory</button>
+        <div class="quiz-explain">Каждый интерцептор — это Proxy, который может проинспектировать/изменить/замкнуть запрос, а упорядоченный список, где каждый вызывает next(), — это Chain of Responsibility.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="http.html" class="btn-nav">← HTTP и интерцепторы</a>
+      <a href="solid-dry.html" class="btn-nav">SOLID и DRY →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

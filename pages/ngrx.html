@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NgRx — управление состоянием — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>NgRx</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>NgRx — управление состоянием</h1>
+      <p class="page-desc">Реактивное управление состоянием в стиле Redux для Angular: однонаправленный поток данных,
+        иммутабельное состояние, чистые редьюсеры, мемоизированные селекторы и обработка побочных эффектов — на сквозном примере
+        FinTech-фичи <code>Orders</code> (заявки).</p>
+      <button class="btn-done" data-page="ngrx" onclick="markDone('ngrx')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== WHAT IS NGRX ===================== -->
+    <section data-searchable>
+      <h2 id="what-is-ngrx">Что такое NgRx и когда его применять</h2>
+      <p class="definition"><strong>NgRx</strong> — библиотека реактивного управления состоянием для Angular, основанная на паттерне Redux. Она обеспечивает три принципа: <strong>однонаправленный поток данных</strong> (данные движутся только в одном направлении), <strong>иммутабельное состояние</strong> (состояние никогда не мутируется, а только заменяется) и <strong>чистые функции</strong> (редьюсеры и селекторы не имеют побочных эффектов). Состояние хранится в едином наблюдаемом хранилище, построенном на RxJS.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Единый источник истины</strong> — всё состояние приложения хранится в одном иммутабельном дереве объектов внутри хранилища.</p>
+        <p class="definition"><strong>Однонаправленный поток данных</strong> — компоненты диспетчеризуют экшены, редьюсеры формируют новое состояние, селекторы его читают, и цикл повторяется. Данные никогда не текут в обратную сторону.</p>
+        <p class="definition"><strong>Redux DevTools</strong> — каждый экшен и каждый переход состояния записываются, что обеспечивает отладку с «путешествием во времени» и полную трассируемость.</p>
+      </div>
+
+      <h3 id="when-to-use">Когда его применять</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Сценарий</th><th>NgRx?</th><th>Почему</th></tr></thead>
+          <tbody>
+            <tr><td>Сложное состояние, разделяемое между многими компонентами</td><td>✅</td><td>Единое хранилище устраняет прокидывание пропсов и дублирование состояния</td></tr>
+            <tr><td>Большие команды</td><td>✅</td><td>Предсказуемые паттерны и трассируемость DevTools масштабируются на множество разработчиков</td></tr>
+            <tr><td>Сложные асинхронные потоки / оптимистичные обновления</td><td>✅</td><td>Эффекты изолируют побочные эффекты; экшены моделируют каждый шаг</td></tr>
+            <tr><td>Небольшие приложения с локальным состоянием</td><td>❌</td><td>Сервис на <code>BehaviorSubject</code> или Signals проще — NgRx избыточен</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Эмпирическое правило:</strong> используйте NgRx, когда состояние разделяемое, долгоживущее и изменяется из многих мест. Для временного UI-состояния одного компонента подходящий инструмент — Signal или небольшой сервис.</p></div>
+    </section>
+
+    <!-- ===================== CORE CONCEPTS ===================== -->
+    <section data-searchable>
+      <h2 id="core-concepts">Основные концепции</h2>
+      <p>NgRx строится из пяти строительных блоков: <strong>Actions (экшены)</strong>, <strong>Reducers (редьюсеры)</strong>, <strong>Store (хранилище)</strong>, <strong>Selectors (селекторы)</strong> и <strong>Effects (эффекты)</strong>. Мы моделируем фичу <code>Orders</code> для торгового деска.</p>
+
+      <div class="card">
+        <h3 id="domain-types">Доменные типы</h3>
+        <p>Все примеры ниже строятся на этих FinTech-типах — нигде нет <code>any</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export type Side = 'BUY' | 'SELL';
+export type OrderStatus = 'pending' | 'filled' | 'cancelled' | 'rejected';
+
+export interface Order {
+  id: string;
+  symbol: string;
+  side: Side;
+  quantity: number;
+  price: number;
+  status: OrderStatus;
+}
+
+export interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+export interface Instrument {
+  symbol: string;
+  name: string;
+  exchange: string;
+  tickSize: number;
+}
+
+export interface Position {
+  symbol: string;
+  netQuantity: number;
+  averagePrice: number;
+}</code></pre></div>
+      </div>
+
+      <!-- ACTION -->
+      <div class="card">
+        <h3 id="action">Action (экшен)</h3>
+        <p class="definition"><strong>Action</strong> — простой объект со строкой <code>type</code>, описывающей <em>что произошло</em>, плюс необязательные свойства-полезная нагрузка. Экшены — единственный способ выразить намерение или сообщить о событии; их диспетчеризуют, а не вызывают напрямую. Соглашение <code>'[Источник] Событие'</code> делает их читаемыми в DevTools.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.actions.ts
+import { createAction, props } from '@ngrx/store';
+import { Order } from './orders.state';
+
+export const loadOrders = createAction('[Orders] Load');
+
+export const loadOrdersSuccess = createAction(
+  '[Orders] Load Success',
+  props&lt;{ orders: Order[] }&gt;()
+);
+
+export const loadOrdersFailure = createAction(
+  '[Orders] Load Failure',
+  props&lt;{ error: string }&gt;()
+);</code></pre></div>
+        <div class="tip"><p><strong>props&lt;T&gt;()</strong> привязывает строго типизированную полезную нагрузку. <code>loadOrdersSuccess({ orders })</code> полностью проверяется типами — передача неверной формы вызывает ошибку компиляции.</p></div>
+      </div>
+
+      <!-- REDUCER -->
+      <div class="card">
+        <h3 id="reducer">Reducer (редьюсер)</h3>
+        <p class="definition"><strong>Reducer</strong> — чистая функция <code>(state, action) =&gt; newState</code>. У неё <em>нет</em> побочных эффектов (никакого HTTP, логирования, <code>Date.now()</code>) и она <strong>обязана возвращать совершенно новый объект</strong> — никогда не мутировать существующее состояние. При одинаковых входных данных она всегда даёт одинаковый результат.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.reducer.ts
+import { createReducer, on } from '@ngrx/store';
+import { OrdersState, initialOrdersState } from './orders.state';
+import { loadOrders, loadOrdersSuccess, loadOrdersFailure } from './orders.actions';
+
+export const ordersReducer = createReducer(
+  initialOrdersState,
+  on(loadOrders, (state): OrdersState =&gt; ({
+    ...state,
+    loading: true,
+    error: null,
+  })),
+  on(loadOrdersSuccess, (state, { orders }): OrdersState =&gt; ({
+    ...state,
+    orders,
+    loading: false,
+  })),
+  on(loadOrdersFailure, (state, { error }): OrdersState =&gt; ({
+    ...state,
+    loading: false,
+    error,
+  }))
+);</code></pre></div>
+        <div class="danger"><p><strong>Подводный камень:</strong> <code>state.orders.push(order)</code> мутирует существующий массив и ломает обнаружение изменений, «путешествие во времени» в DevTools и мемоизированные селекторы. Всегда используйте spread: <code>{ ...state, orders: [...state.orders, order] }</code>.</p></div>
+      </div>
+
+      <!-- STORE -->
+      <div class="card">
+        <h3 id="store">Store (хранилище)</h3>
+        <p class="definition"><strong>Store</strong> — единое иммутабельное дерево состояния, представленное как RxJS Observable. Вы <em>читаете</em> из него через <code>store.select(selector)</code> и <em>записываете</em>, диспетчеризуя экшены через <code>store.dispatch(action)</code>. Напрямую присваивать значение хранилищу нельзя.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { Order } from './state/orders.state';
+import { loadOrders } from './state/orders.actions';
+import { selectAllOrders } from './state/orders.selectors';
+
+@Component({ selector: 'app-orders', standalone: true, template: '' })
+export class OrdersComponent {
+  private readonly store = inject(Store);
+
+  // READ — a live, memoized stream of orders
+  readonly orders$: Observable&lt;Order[]&gt; = this.store.select(selectAllOrders);
+
+  // WRITE — express intent; the effect + reducer do the work
+  load(): void {
+    this.store.dispatch(loadOrders());
+  }
+}</code></pre></div>
+      </div>
+
+      <!-- SELECTOR -->
+      <div class="card">
+        <h3 id="selector">Selector (селектор)</h3>
+        <p class="definition"><strong>Selector</strong> — чистая, <em>мемоизированная</em> функция, которая извлекает и выводит срез состояния. Она пересчитывается только при изменении своих входных срезов, поэтому вывод «дорогих» данных дёшев. <code>createFeatureSelector</code> берёт срез фичи верхнего уровня; <code>createSelector</code> комбинирует селекторы и добавляет проектор.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.selectors.ts
+import { createFeatureSelector, createSelector } from '@ngrx/store';
+import { OrdersState } from './orders.state';
+import { Order } from './orders.state';
+
+export const selectOrdersState =
+  createFeatureSelector&lt;OrdersState&gt;('orders');
+
+export const selectAllOrders = createSelector(
+  selectOrdersState,
+  (state: OrdersState): Order[] =&gt; state.orders
+);
+
+export const selectPendingOrders = createSelector(
+  selectAllOrders,
+  (orders: Order[]): Order[] =&gt;
+    orders.filter((o) =&gt; o.status === 'pending')
+);
+
+export const selectOrdersLoading = createSelector(
+  selectOrdersState,
+  (state: OrdersState): boolean =&gt; state.loading
+);</code></pre></div>
+        <div class="tip"><p><strong>Мемоизация:</strong> <code>selectPendingOrders</code> повторно выполняет <code>filter</code> только тогда, когда <code>selectAllOrders</code> возвращает новую ссылку. Если состояние изменилось в другом месте, переиспользуется кэшированный результат — большое преимущество для OnPush-компонентов.</p></div>
+      </div>
+
+      <!-- EFFECT -->
+      <div class="card">
+        <h3 id="effect">Effect (эффект)</h3>
+        <p class="definition"><strong>Effect</strong> — изолированный обработчик <em>побочных эффектов</em> (HTTP, WebSocket, навигация, хранилище). Он слушает поток экшенов, выполняет асинхронную работу и диспетчеризует новый экшен с результатом. Контракт простой: <strong>экшены на входе → экшены на выходе</strong>. Редьюсеры остаются чистыми, потому что вся «нечистота» живёт здесь.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.effects.ts
+import { inject } from '@angular/core';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { of } from 'rxjs';
+import { switchMap, map, catchError } from 'rxjs/operators';
+import { OrderService } from './order.service';
+import { loadOrders, loadOrdersSuccess, loadOrdersFailure } from './orders.actions';
+
+export class OrdersEffects {
+  private readonly actions$ = inject(Actions);
+  private readonly orderService = inject(OrderService);
+
+  loadOrders$ = createEffect(() =&gt;
+    this.actions$.pipe(
+      ofType(loadOrders),
+      switchMap(() =&gt;
+        this.orderService.getAll().pipe(
+          map((orders) =&gt; loadOrdersSuccess({ orders })),
+          catchError((error: Error) =&gt;
+            of(loadOrdersFailure({ error: error.message }))
+          )
+        )
+      )
+    )
+  );
+}</code></pre></div>
+        <div class="warn"><p><strong>Выбор оператора уплощения имеет значение:</strong> <code>switchMap</code> отменяет предыдущий запрос (отлично для перезагрузок/автодополнения), <code>concatMap</code> ставит их в очередь по порядку (отлично для записи), <code>mergeMap</code> выполняет все параллельно, <code>exhaustMap</code> игнорирует новые, пока занят (отлично для логина/отправки).</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== DATA FLOW DIAGRAM ===================== -->
+    <section data-searchable>
+      <h2 id="data-flow">Диаграмма потока данных</h2>
+      <p>NgRx — это замкнутый однонаправленный цикл. Экшен входит в цикл, проходит через эффекты и редьюсеры, и результирующее состояние проецируется обратно во вью селекторами.</p>
+
+      <div class="code-block"><pre><code class="language-text"> ┌────────────────────────────────────────────────────────────────┐
+ │                                                                  │
+ │   ┌─────────────┐   dispatch(action)    ┌──────────────────┐     │
+ │   │  Component  │ ────────────────────► │      Store       │     │
+ │   └─────────────┘                       └──────────────────┘     │
+ │          ▲                                  │         │          │
+ │          │ selector                action   │         │ action   │
+ │          │ (derived data)                   ▼         ▼          │
+ │   ┌─────────────┐                  ┌──────────┐  ┌──────────┐    │
+ │   │  Selector   │ ◄── new State ── │ Reducer  │  │  Effect  │    │
+ │   │ (memoized)  │                  │ (pure)   │  │ (async)  │    │
+ │   └─────────────┘                  └──────────┘  └──────────┘    │
+ │                                         ▲              │         │
+ │                                         │  Success /   │ HTTP /  │
+ │                                         └── Failure ───┘ WS      │
+ │                                            action                │
+ └────────────────────────────────────────────────────────────────┘</code></pre></div>
+
+      <div class="card">
+        <p>Читайте цикл как нумерованные шаги:</p>
+        <ol>
+          <li><strong>Компонент диспетчеризует Action</strong> — например <code>store.dispatch(loadOrders())</code>.</li>
+          <li><strong>Effect выполняет асинхронную работу</strong> — перехватывает <code>loadOrders</code>, вызывает HTTP/WebSocket-сервис.</li>
+          <li><strong>Effect диспетчеризует Action успеха или неудачи</strong> — <code>loadOrdersSuccess({ orders })</code> или <code>loadOrdersFailure({ error })</code>.</li>
+          <li><strong>Reducer обновляет состояние</strong> — чистая функция возвращает новый иммутабельный объект состояния.</li>
+          <li><strong>Selector выводит данные</strong> — мемоизированная проекция (например, ожидающие заявки) пересчитывается только при изменении входных данных.</li>
+          <li><strong>Компонент перерисовывается</strong> — выбранный поток эмитит, срабатывает обнаружение изменений OnPush, вью обновляется.</li>
+        </ol>
+      </div>
+      <div class="success"><p><strong>Почему это масштабируется:</strong> поскольку каждое изменение состояния — явный сериализуемый экшен, вся история воспроизводима в DevTools, и рассуждать о том, «как состояние пришло к этому?», становится тривиально.</p></div>
+    </section>
+
+    <!-- ===================== FOLDER STRUCTURE ===================== -->
+    <section data-searchable>
+      <h2 id="folder-structure">Структура папок состояния фичи</h2>
+      <p>Срез фичи держит все артефакты NgRx вместе и рядом с обслуживаемой фичей, благодаря чему срез лениво загружаем и самодостаточен.</p>
+
+      <div class="code-block"><pre><code class="language-text">src/app/features/orders/
+├── state/
+│   ├── orders.actions.ts      # createAction / props
+│   ├── orders.reducer.ts      # createReducer + on(...)
+│   ├── orders.effects.ts      # createEffect (HTTP / WebSocket)
+│   ├── orders.selectors.ts    # createFeatureSelector + createSelector
+│   └── orders.state.ts        # OrdersState interface + initialState + domain types
+├── orders.component.ts        # dispatches actions, selects state
+└── orders.routes.ts           # lazy route config with providers</code></pre></div>
+
+      <div class="card">
+        <h3 id="state-file">orders.state.ts</h3>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export interface OrdersState {
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+}
+
+export const initialOrdersState: OrdersState = {
+  orders: [],
+  loading: false,
+  error: null,
+};</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h3 id="registration">Регистрация</h3>
+        <p>NgRx регистрируется через standalone-провайдеры — либо глобально (root), либо лениво (на маршрут фичи).</p>
+        <p class="definition"><strong>Корневая регистрация</strong> — регистрирует всё хранилище и эффекты один раз при старте приложения.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// main.ts / app.config.ts (root)
+import { provideStore } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { ordersReducer } from './features/orders/state/orders.reducer';
+import { OrdersEffects } from './features/orders/state/orders.effects';
+
+export const appConfig = {
+  providers: [
+    provideStore({ orders: ordersReducer }),
+    provideEffects([OrdersEffects]),
+  ],
+};</code></pre></div>
+        <p class="definition"><strong>Ленивая (фичевая) регистрация</strong> — регистрирует один срез фичи только при загрузке его маршрута, через <code>provideState</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.routes.ts (lazy feature)
+import { Routes } from '@angular/router';
+import { provideState } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { ordersReducer } from './state/orders.reducer';
+import { OrdersEffects } from './state/orders.effects';
+
+export const ordersRoutes: Routes = [
+  {
+    path: '',
+    providers: [
+      provideState('orders', ordersReducer),
+      provideEffects([OrdersEffects]),
+    ],
+    loadComponent: () =&gt;
+      import('./orders.component').then((m) =&gt; m.OrdersComponent),
+  },
+];</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>provideStore vs provideState:</strong> используйте <code>provideStore</code> один раз в корне для глобальной формы состояния, а <code>provideState</code> внутри ленивых маршрутов, чтобы подключать срезы фич по требованию — сохраняя начальный бандл небольшим.</p></div>
+    </section>
+
+    <!-- ===================== ENTITY ADAPTER ===================== -->
+    <section data-searchable>
+      <h2 id="entity-adapter">EntityAdapter (@ngrx/entity)</h2>
+      <p class="definition"><strong>EntityAdapter</strong> — утилита из <code>@ngrx/entity</code> для управления <em>нормализованными</em> коллекциями объектов, индексированными по ID. Вместо массива состояние хранит <code>{ ids: string[], entities: Record&lt;string, Order&gt; }</code>, что даёт поиск за O(1) и CRUD-помощники без шаблонного кода.</p>
+
+      <div class="card">
+        <p class="definition"><strong>getInitialState()</strong> — возвращает пустую форму <code>{ ids, entities }</code> с местом для дополнительных полей.</p>
+        <p class="definition"><strong>addOne(entity, state)</strong> — добавляет одну сущность (ничего не делает, если ID уже существует).</p>
+        <p class="definition"><strong>addMany(entities, state)</strong> — добавляет несколько сущностей за раз.</p>
+        <p class="definition"><strong>setAll(entities, state)</strong> — заменяет всю коллекцию (идеально для свежей загрузки).</p>
+        <p class="definition"><strong>updateOne({ id, changes }, state)</strong> — поверхностно сливает частичные изменения в одну сущность.</p>
+        <p class="definition"><strong>removeOne(id, state)</strong> — удаляет одну сущность по ID.</p>
+        <p class="definition"><strong>getSelectors()</strong> — возвращает готовые мемоизированные селекторы: <code>selectAll</code>, <code>selectEntities</code>, <code>selectIds</code>, <code>selectTotal</code>.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.state.ts (entity version)
+import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
+import { Order } from './orders.state';
+
+export interface OrdersState extends EntityState&lt;Order&gt; {
+  loading: boolean;
+  error: string | null;
+}
+
+export const ordersAdapter: EntityAdapter&lt;Order&gt; =
+  createEntityAdapter&lt;Order&gt;({
+    selectId: (order: Order) =&gt; order.id,
+    sortComparer: (a: Order, b: Order) =&gt; a.symbol.localeCompare(b.symbol),
+  });
+
+export const initialOrdersState: OrdersState =
+  ordersAdapter.getInitialState({ loading: false, error: null });</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.reducer.ts (entity version)
+import { createReducer, on } from '@ngrx/store';
+import { ordersAdapter, initialOrdersState, OrdersState } from './orders.state';
+import { loadOrdersSuccess, updateOrderStatus, removeOrder } from './orders.actions';
+
+export const ordersReducer = createReducer(
+  initialOrdersState,
+  on(loadOrdersSuccess, (state, { orders }): OrdersState =&gt;
+    ordersAdapter.setAll(orders, { ...state, loading: false })
+  ),
+  on(updateOrderStatus, (state, { id, status }): OrdersState =&gt;
+    ordersAdapter.updateOne({ id, changes: { status } }, state)
+  ),
+  on(removeOrder, (state, { id }): OrdersState =&gt;
+    ordersAdapter.removeOne(id, state)
+  )
+);</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.selectors.ts — reuse the adapter's selectors
+import { createFeatureSelector } from '@ngrx/store';
+import { ordersAdapter, OrdersState } from './orders.state';
+
+export const selectOrdersState =
+  createFeatureSelector&lt;OrdersState&gt;('orders');
+
+const { selectAll, selectEntities, selectTotal } =
+  ordersAdapter.getSelectors();
+
+export const selectAllOrders =
+  createSelectorWrapper(selectOrdersState, selectAll);
+// In practice:
+// export const selectAllOrders = createSelector(selectOrdersState, selectAll);</code></pre></div>
+      <div class="success"><p><strong>Зачем нормализовать:</strong> обновление одной заявки выполняется за O(1) (<code>entities[id]</code>) вместо обхода массива, и при этом никогда нет риска дублирующихся записей.</p></div>
+    </section>
+
+    <!-- ===================== SIGNAL STORE ===================== -->
+    <section data-searchable>
+      <h2 id="signal-store">@ngrx/signals (SignalStore)</h2>
+      <p class="definition"><strong>SignalStore</strong> — современная, лёгкая альтернатива NgRx, построенная на Angular Signals вместо RxJS и Redux-церемоний. Состояние — это сигнал; вы собираете хранилище из фич: <code>withState</code> (начальное состояние), <code>withComputed</code> (производные сигналы, как селекторы) и <code>withMethods</code> (обновления и асинхронная логика, как редьюсеры и эффекты вместе).</p>
+
+      <div class="card">
+        <p class="definition"><strong>withState(initial)</strong> — объявляет реактивное состояние в виде сигналов.</p>
+        <p class="definition"><strong>withComputed(store =&gt; ...)</strong> — объявляет мемоизированные производные сигналы из состояния.</p>
+        <p class="definition"><strong>withMethods(store =&gt; ...)</strong> — объявляет методы, которые обновляют состояние через <code>patchState</code> и выполняют побочные эффекты.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// orders.store.ts
+import { computed, inject } from '@angular/core';
+import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { OrderService } from './order.service';
+import { Order } from './orders.state';
+
+interface OrdersState {
+  orders: Order[];
+  loading: boolean;
+}
+
+export const OrdersStore = signalStore(
+  { providedIn: 'root' },
+  withState&lt;OrdersState&gt;({ orders: [], loading: false }),
+  withComputed(({ orders }) =&gt; ({
+    pendingOrders: computed(() =&gt;
+      orders().filter((o) =&gt; o.status === 'pending')
+    ),
+    orderCount: computed(() =&gt; orders().length),
+  })),
+  withMethods((store, orderService = inject(OrderService)) =&gt; ({
+    async load(): Promise&lt;void&gt; {
+      patchState(store, { loading: true });
+      const orders = await orderService.getAllAsync();
+      patchState(store, { orders, loading: false });
+    },
+  }))
+);</code></pre></div>
+      <div class="tip"><p><strong>Когда выбирать SignalStore:</strong> он убирает шаблонный код экшенов, редьюсеров и эффектов и нативно интегрируется с Signals — идеален для новых приложений и состояния, локального для фичи. Классический <code>@ngrx/store</code> по-прежнему хорош для очень больших приложений, которым нужна строгая трассируемость экшенов и полный лог экшенов в DevTools.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — вопросы с собеседований</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Почему редьюсер обязан быть чистой функцией?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Чистота гарантирует, что одна и та же пара <code>(state, action)</code> всегда даёт одно и то же новое состояние без побочных эффектов. Это делает переходы состояния детерминированными и воспроизводимыми, что как раз и обеспечивает «путешествие во времени» в Redux DevTools. Это также означает, что редьюсеры никогда не запускают HTTP и не мутируют существующий объект — поэтому мемоизированные селекторы и обнаружение изменений OnPush (которые сравнивают ссылки) работают корректно. Побочные эффекты — в эффектах, а не в редьюсерах.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. В чём разница между селектором и прямым чтением состояния?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Селектор — <em>мемоизированная</em>, композируемая, чистая функция. Он кэширует свой последний результат и пересчитывает только при изменении входных срезов, поэтому вывод «дорогих» данных (например, фильтрация ожидающих заявок) дёшев и эмитит стабильную ссылку, когда ничего значимого не изменилось. Прямое чтение состояния пропускает мемоизацию, пересчитывает при каждой эмиссии и связывает компоненты с формой состояния. Селекторы также централизуют логику вывода, делая её тестируемой и переиспользуемой.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Какова роль эффекта и почему побочные эффекты держат вне редьюсеров?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Эффект слушает поток экшенов и выполняет побочные эффекты — HTTP-вызовы, подписки на WebSocket, навигацию, хранилище — затем диспетчеризует результирующий экшен (<em>экшены на входе → экшены на выходе</em>). Удержание «нечистоты» здесь позволяет редьюсерам оставаться чистыми и детерминированными. Например, <code>loadOrders$</code> перехватывает <code>loadOrders</code>, вызывает сервис и мапит ответ в <code>loadOrdersSuccess</code> или <code>loadOrdersFailure</code>. Выбор <code>switchMap</code>/<code>concatMap</code>/<code>exhaustMap</code> определяет, как обрабатываются конкурентные запросы.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Когда НЕ стоит использовать NgRx?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Для небольших приложений или состояния, локального для одного компонента и короткоживущего, NgRx добавляет шаблонный код и косвенность без выгоды. Сервис на базе <code>BehaviorSubject</code> или Angular Signals проще. NgRx оправдывает свою сложность, когда состояние разделяется между многими компонентами, изменяется из многих мест, включает сложные асинхронные/оптимистичные потоки или когда большая команда выигрывает от предсказуемых паттернов и трассируемости DevTools. Для современных приложений, которым нужно меньше церемоний, <code>@ngrx/signals</code> — золотая середина.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Какую проблему решает @ngrx/entity?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Он управляет нормализованными коллекциями, индексированными по ID — состояние становится <code>{ ids: string[], entities: Record&lt;string, Order&gt; }</code> вместо сырого массива. Это даёт поиск и обновления за O(1), предотвращает дублирующиеся записи и убирает CRUD-шаблон через методы адаптера (<code>addOne</code>, <code>setAll</code>, <code>updateOne</code>, <code>removeOne</code>). <code>getSelectors()</code> предоставляет готовые мемоизированные селекторы (<code>selectAll</code>, <code>selectEntities</code>, <code>selectIds</code>, <code>selectTotal</code>). Обновление одной заявки по ID гораздо дешевле, чем обход массива.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какое утверждение о редьюсере верно?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он может делать HTTP-вызовы для загрузки данных</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он мутирует существующий объект состояния на месте</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Это чистая функция, возвращающая новый объект состояния</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он подписывается на поток экшенов и диспетчеризует экшены</button>
+        <div class="quiz-explain">Редьюсеры — чистые функции <code>(state, action) =&gt; newState</code> без побочных эффектов. HTTP и диспетчеризация принадлежат эффектам; состояние нужно заменять, а не мутировать.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. В чём основное преимущество селектора?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он выполняет HTTP-запрос для среза</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Он мемоизирован и пересчитывается только при изменении входных данных</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он мутирует состояние, чтобы синхронизировать производные значения</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Он заменяет необходимость в редьюсере</button>
+        <div class="quiz-explain">Селекторы — мемоизированные чистые функции. Они кэшируют последний результат и пересчитывают только при изменении входного среза — дешёвый вывод и стабильные ссылки для OnPush.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. В <code>loadOrders$</code> какой оператор <strong>отменяет</strong> предыдущий выполняющийся запрос при поступлении нового <code>loadOrders</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">concatMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">mergeMap</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">switchMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">exhaustMap</button>
+        <div class="quiz-explain"><code>switchMap</code> отписывается от предыдущего внутреннего observable при поступлении нового экшена — идеально для перезагрузок. <code>concatMap</code> ставит в очередь, <code>mergeMap</code> распараллеливает, <code>exhaustMap</code> игнорирует новые, пока занят.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Какой провайдер подключает срез фичи лениво внутри маршрута?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">provideStore('orders', ordersReducer)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">provideState('orders', ordersReducer)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">provideReducer('orders', ordersReducer)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">forFeature('orders', ordersReducer)</button>
+        <div class="quiz-explain"><code>provideStore</code> регистрирует корневое хранилище один раз; <code>provideState</code> подключает срез фичи в <code>providers</code> ленивого маршрута, в паре с <code>provideEffects([OrdersEffects])</code>.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="rxjs.html" class="btn-nav">← RxJS</a>
+      <a href="websocket.html" class="btn-nav">WebSocket →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

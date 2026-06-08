@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeScript — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>TypeScript</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>TypeScript</h1>
+      <p class="page-desc">Система типов, на которой работает Angular: дженерики, утилитарные типы, размеченные
+        объединения, защитники типов, декораторы и инструментарий <code>keyof</code> / mapped-типов.</p>
+      <button class="btn-done" data-page="typescript" onclick="markDone('typescript')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= GENERICS ============================= -->
+    <section data-searchable>
+      <h2 id="generics">Дженерики</h2>
+      <p class="definition"><strong>Дженерик (обобщённый тип)</strong> — параметр типа (заполнитель вроде <code>T</code>), который подставляется в момент использования, позволяя одному определению безопасно работать с множеством конкретных типов без потери информации о типе.</p>
+
+      <p>Дженерики заменяют <code>any</code>: вместо того чтобы выбрасывать информацию о типе, вы <em>проносите её сквозь код</em>.
+        Вызывающая сторона решает, какой конкретный тип использовать, а компилятор проверяет каждое использование по нему.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// The canonical identity function — T is inferred from the argument
+function identity&lt;T&gt;(value: T): T {
+  return value;
+}
+
+const a = identity&lt;number&gt;(42);   // a: number
+const b = identity('EURUSD');      // b: string (T inferred as string)
+
+// Without generics you lose the type:
+function bad(value: any): any { return value; } // ❌ no safety</code></pre></div>
+
+      <h3 id="generic-constraints">Ограничения дженериков</h3>
+      <p class="definition"><strong>Ограничение дженерика</strong> — выражение <code>T extends X</code>, которое ограничивает допустимые типы параметра, чтобы тело функции могло безопасно полагаться на члены <code>X</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>&lt;T extends object&gt;</strong> — допускает только объектные типы, блокируя примитивы.</p>
+        <p class="definition"><strong>&lt;K extends keyof T&gt;</strong> — ограничивает <code>K</code> литеральными ключами <code>T</code>, обеспечивая типобезопасный доступ к свойствам.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface Order {
+  id: number;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  price: number;
+  status: 'NEW' | 'FILLED' | 'CANCELLED';
+}
+
+// Constrain to objects only
+function logKeys&lt;T extends object&gt;(obj: T): (keyof T)[] {
+  return Object.keys(obj) as (keyof T)[];
+}
+
+// K must be a real key of T → return type is precise
+function getProp&lt;T, K extends keyof T&gt;(obj: T, key: K): T[K] {
+  return obj[key];
+}
+
+const order: Order = { id: 1, symbol: 'EURUSD', side: 'BUY', quantity: 100, price: 1.07, status: 'NEW' };
+const side = getProp(order, 'side');   // side: 'BUY' | 'SELL'
+// getProp(order, 'foo');              // ❌ compile error — 'foo' is not a key</code></pre></div>
+      </div>
+
+      <h3 id="generic-defaults">Значения по умолчанию для дженериков</h3>
+      <p class="definition"><strong>Значение дженерика по умолчанию</strong> — резервный тип (<code>&lt;T = string&gt;</code>), используемый, когда вызывающая сторона не передаёт аргумент типа или компилятор не может его вывести.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface ApiResponse&lt;T = unknown&gt; {
+  data: T;
+  status: number;
+}
+
+const r1: ApiResponse = { data: 'ok', status: 200 };          // T defaults to unknown
+const r2: ApiResponse&lt;Order[]&gt; = { data: [], status: 200 };    // explicit T</code></pre></div>
+
+      <h3 id="generics-interfaces-classes">Дженерики в интерфейсах и классах</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Generic interface
+interface Repository&lt;T&gt; {
+  getById(id: number): T | undefined;
+  add(item: T): void;
+}
+
+// Generic class implementing it
+class InMemoryStore&lt;T extends { id: number }&gt; implements Repository&lt;T&gt; {
+  private items = new Map&lt;number, T&gt;();
+  getById(id: number): T | undefined { return this.items.get(id); }
+  add(item: T): void { this.items.set(item.id, item); }
+}
+
+const orders = new InMemoryStore&lt;Order&gt;();
+orders.add(order);
+const found = orders.getById(1); // found: Order | undefined</code></pre></div>
+
+      <h3 id="generics-angular">Дженерики в Angular</h3>
+      <p>Весь публичный API Angular — обобщённый, и именно здесь концепция окупается каждый день.</p>
+      <div class="card">
+        <p class="definition"><strong>Observable&lt;T&gt;</strong> — поток, излучаемые значения которого типизированы как <code>T</code>.</p>
+        <p class="definition"><strong>HttpClient.get&lt;User[]&gt;()</strong> — аргумент дженерика сообщает <code>HttpClient</code> форму тела ответа, чтобы возвращаемый <code>Observable</code> был типизирован.</p>
+        <p class="definition"><strong>signal&lt;number&gt;(0)</strong> — записываемый сигнал, тип значения которого — <code>number</code>.</p>
+        <p class="definition"><strong>BehaviorSubject&lt;Order[]&gt;</strong> — субъект, который хранит и переигрывает текущее значение типа <code>Order[]</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { HttpClient } from '@angular/common/http';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { signal, inject } from '@angular/core';
+
+class OrderService {
+  private http = inject(HttpClient);
+
+  // The &lt;Order[]&gt; flows all the way to the subscriber
+  getOrders(): Observable&lt;Order[]&gt; {
+    return this.http.get&lt;Order[]&gt;('/api/orders');
+  }
+
+  // Holds current value, typed Order[]
+  private orders$ = new BehaviorSubject&lt;Order[]&gt;([]);
+
+  // A signal of number, fully typed
+  count = signal&lt;number&gt;(0);
+}</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>Сигнал на собеседовании:</strong> всегда передавайте дженерик в <code>http.get&lt;T&gt;()</code>. Если его забыть, ответ станет <code>Object</code>, и каждый последующий <code>.map()</code> потеряет типобезопасность.</p></div>
+    </section>
+
+    <!-- ============================= UTILITY TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="utility-types">Утилитарные типы</h2>
+      <p class="definition"><strong>Утилитарный тип</strong> — встроенный обобщённый тип, который преобразует существующий тип в новый (делает поля необязательными, выбирает ключи, выводит типы возврата и т. д.), так что вам не приходится вручную писать производные формы.</p>
+
+      <div class="card">
+        <h4><code>Partial&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Partial&lt;T&gt;</strong> — делает каждое свойство <code>T</code> необязательным.</p>
+        <p><strong>Когда использовать:</strong> DTO для обновления и PATCH-запросы, где вызывающая сторона отправляет только изменённые поля.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">function updateOrder(id: number, changes: Partial&lt;Order&gt;): void { /* ... */ }
+updateOrder(1, { price: 1.085, status: 'FILLED' }); // only the fields that changed</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Required&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Required&lt;T&gt;</strong> — делает каждое свойство <code>T</code> обязательным (убирает <code>?</code>).</p>
+        <p><strong>Когда использовать:</strong> проверка, что объект конфигурации, собранный из необязательных частей, теперь полностью заполнен.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface ChartConfig { theme?: string; gridlines?: boolean; }
+function render(cfg: Required&lt;ChartConfig&gt;): void { /* theme & gridlines guaranteed */ }</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Readonly&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Readonly&lt;T&gt;</strong> — помечает каждое свойство <code>T</code> как <code>readonly</code>, блокируя переприсваивание.</p>
+        <p><strong>Когда использовать:</strong> неизменяемые объекты состояния (NgRx), где мутация — это баг.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">const frozenOrder: Readonly&lt;Order&gt; = order;
+// frozenOrder.price = 2; // ❌ Cannot assign to 'price' because it is read-only</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Pick&lt;T, K&gt;</code></h4>
+        <p class="definition"><strong>Pick&lt;T, K&gt;</strong> — создаёт тип, содержащий только ключи <code>K</code> из <code>T</code>.</p>
+        <p><strong>Когда использовать:</strong> облегчённое представление/сводка более крупной модели.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type OrderSummary = Pick&lt;Order, 'id' | 'symbol' | 'status'&gt;;
+const summary: OrderSummary = { id: 1, symbol: 'EURUSD', status: 'NEW' };</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Omit&lt;T, K&gt;</code></h4>
+        <p class="definition"><strong>Omit&lt;T, K&gt;</strong> — создаёт тип со всеми ключами <code>T</code> <em>кроме</em> <code>K</code>.</p>
+        <p><strong>Когда использовать:</strong> DTO для создания, который опускает поля, генерируемые сервером, например <code>id</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Client sends everything except the server-assigned id
+type CreateOrder = Omit&lt;Order, 'id'&gt;;
+const draft: CreateOrder = { symbol: 'BTCUSD', side: 'BUY', quantity: 2, price: 65000, status: 'NEW' };</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Record&lt;K, V&gt;</code></h4>
+        <p class="definition"><strong>Record&lt;K, V&gt;</strong> — строит объектный тип, ключи которого — <code>K</code>, а все значения — <code>V</code>.</p>
+        <p><strong>Когда использовать:</strong> словари / справочные карты по идентификатору или символу.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+
+// A live price map keyed by symbol
+const priceMap: Record&lt;string, Quote&gt; = {
+  EURUSD: { symbol: 'EURUSD', bid: 1.07, ask: 1.0702, timestamp: Date.now() },
+  BTCUSD: { symbol: 'BTCUSD', bid: 64990, ask: 65010, timestamp: Date.now() },
+};
+const eur = priceMap['EURUSD']; // Quote</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>NonNullable&lt;T&gt;</code></h4>
+        <p class="definition"><strong>NonNullable&lt;T&gt;</strong> — удаляет <code>null</code> и <code>undefined</code> из <code>T</code>.</p>
+        <p><strong>Когда использовать:</strong> после защитника типа, чтобы выразить, что значение больше не может быть нулевым.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type MaybeQuote = Quote | null | undefined;
+type DefiniteQuote = NonNullable&lt;MaybeQuote&gt;; // Quote</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ReturnType&lt;F&gt;</code></h4>
+        <p class="definition"><strong>ReturnType&lt;F&gt;</strong> — извлекает тип возврата функционального типа <code>F</code>.</p>
+        <p><strong>Когда использовать:</strong> вывод типа из фабрики/селектора вместо его дублирования.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">function buildPosition(symbol: string, qty: number) {
+  return { symbol, quantity: qty, avgPrice: 0, unrealizedPnl: 0 };
+}
+type Position = ReturnType&lt;typeof buildPosition&gt;; // { symbol; quantity; avgPrice; unrealizedPnl }</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Parameters&lt;F&gt;</code></h4>
+        <p class="definition"><strong>Parameters&lt;F&gt;</strong> — извлекает типы параметров функционального типа <code>F</code> в виде кортежа.</p>
+        <p><strong>Когда использовать:</strong> обёртывание/декорирование функции с сохранением её точного списка аргументов.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type BuildArgs = Parameters&lt;typeof buildPosition&gt;; // [symbol: string, qty: number]
+
+function logged(...args: BuildArgs): Position {
+  console.log('building', args);
+  return buildPosition(...args);
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Exclude&lt;T, U&gt;</code></h4>
+        <p class="definition"><strong>Exclude&lt;T, U&gt;</strong> — удаляет из объединения <code>T</code> члены, присваиваемые к <code>U</code>.</p>
+        <p><strong>Когда использовать:</strong> сужение объединения статусов до подмножества состояний.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type Status = 'NEW' | 'FILLED' | 'CANCELLED';
+type ActiveStatus = Exclude&lt;Status, 'CANCELLED'&gt;; // 'NEW' | 'FILLED'</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Extract&lt;T, U&gt;</code></h4>
+        <p class="definition"><strong>Extract&lt;T, U&gt;</strong> — оставляет из объединения <code>T</code> только члены, присваиваемые к <code>U</code>. Противоположность <code>Exclude</code>.</p>
+        <p><strong>Когда использовать:</strong> извлечение одной формы из размеченного объединения по его тегу.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type Side = 'BUY' | 'SELL' | 'HOLD';
+type Tradable = Extract&lt;Side, 'BUY' | 'SELL'&gt;; // 'BUY' | 'SELL'</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>InstanceType&lt;T&gt;</code></h4>
+        <p class="definition"><strong>InstanceType&lt;T&gt;</strong> — извлекает тип экземпляра, создаваемого конструкторным типом <code>T</code>.</p>
+        <p><strong>Когда использовать:</strong> типизация значения, созданного из ссылки на класс (например, класса DI-токена).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">class OrderBook { orders: Order[] = []; }
+type Book = InstanceType&lt;typeof OrderBook&gt;; // OrderBook
+const b: Book = new OrderBook();</code></pre></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Утилита</th><th>Преобразование</th><th>Типичное применение в FinTech</th></tr></thead>
+          <tbody>
+            <tr><td><code>Partial&lt;T&gt;</code></td><td>Все необязательны</td><td>DTO обновления</td></tr>
+            <tr><td><code>Required&lt;T&gt;</code></td><td>Все обязательны</td><td>Разрешённая конфигурация</td></tr>
+            <tr><td><code>Readonly&lt;T&gt;</code></td><td>Все только для чтения</td><td>Неизменяемое состояние</td></tr>
+            <tr><td><code>Pick&lt;T,K&gt;</code></td><td>Подмножество ключей</td><td>Сводка по ордеру</td></tr>
+            <tr><td><code>Omit&lt;T,K&gt;</code></td><td>Все, кроме ключей</td><td>DTO создания (без id)</td></tr>
+            <tr><td><code>Record&lt;K,V&gt;</code></td><td>Карта ключ→значение</td><td>Карта цен котировок</td></tr>
+            <tr><td><code>NonNullable&lt;T&gt;</code></td><td>Убрать null/undefined</td><td>Значение после защитника</td></tr>
+            <tr><td><code>ReturnType&lt;F&gt;</code></td><td>Результат функции</td><td>Тип результата селектора</td></tr>
+            <tr><td><code>Parameters&lt;F&gt;</code></td><td>Кортеж аргументов функции</td><td>Функции-обёртки</td></tr>
+            <tr><td><code>Exclude&lt;T,U&gt;</code></td><td>Удалить члены объединения</td><td>Активные статусы</td></tr>
+            <tr><td><code>Extract&lt;T,U&gt;</code></td><td>Оставить члены объединения</td><td>Торгуемые стороны</td></tr>
+            <tr><td><code>InstanceType&lt;T&gt;</code></td><td>Конструктор → экземпляр</td><td>Типизация класса-токена</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================= TYPE VS INTERFACE ============================= -->
+    <section data-searchable>
+      <h2 id="type-vs-interface">type против interface</h2>
+      <p class="definition"><strong>interface</strong> — именованный контракт, описывающий форму объекта или класса, который поддерживает слияние объявлений и <code>extends</code>.</p>
+      <p class="definition"><strong>псевдоним типа (type alias)</strong> — имя для <em>любого</em> типа, включая объединения, пересечения, кортежи, примитивы и mapped-типы.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Возможность</th><th><code>type</code></th><th><code>interface</code></th></tr></thead>
+          <tbody>
+            <tr><td>Форма объекта</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Типы-объединения</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Пересечение</td><td><code>&amp;</code></td><td><code>extends</code></td></tr>
+            <tr><td>Слияние объявлений</td><td>❌</td><td>✅</td></tr>
+            <tr><td>Псевдоним примитива</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Кортеж</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Mapped-типы</td><td>✅</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// interface — object/class contracts, can be merged & extended
+interface Instrument {
+  symbol: string;
+  type: 'FOREX' | 'STOCK' | 'CRYPTO';
+  price: number;
+  change: number;
+}
+interface Instrument { exchange?: string; } // declaration merging — now also has exchange
+
+// type — unions, intersections, tuples, primitives
+type Side = 'BUY' | 'SELL';                       // union (interface cannot)
+type PricedInstrument = Instrument &amp; { vwap: number }; // intersection
+type OHLC = [number, number, number, number];     // tuple
+type Symbol = string;                             // primitive alias</code></pre></div>
+
+      <div class="success"><p><strong>Правило большого пальца:</strong> используйте <strong>interface</strong> для моделей и контрактов классов (расширяемый, поддерживает слияние, понятнее ошибки); используйте <strong>type</strong> для объединений, пересечений, кортежей и псевдонимов утилитарных типов.</p></div>
+    </section>
+
+    <!-- ============================= DISCRIMINATED UNIONS ============================= -->
+    <section data-searchable>
+      <h2 id="discriminated-unions">Размеченные объединения</h2>
+      <p class="definition"><strong>Размеченное объединение</strong> — объединение объектных типов, которые все разделяют общее литеральное свойство-«тег», что позволяет компилятору сузить тип до одного конкретного члена, как только вы проверите тег.</p>
+
+      <p>Общее литеральное поле (здесь <code>type</code>) — это <em>дискриминант</em>. <code>switch</code> по нему
+        сужает каждую ветвь до одного члена, так что <code>payload</code> корректно типизирован в каждом случае — идеально для
+        обработки WebSocket-сообщений в торговой платформе.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+interface Order { id: number; symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number; status: string; }
+
+// Each member shares a literal `type` discriminant
+type ApiEvent =
+  | { type: 'quote'; payload: Quote }
+  | { type: 'order'; payload: Order }
+  | { type: 'error'; message: string };
+
+function handle(event: ApiEvent): void {
+  switch (event.type) {
+    case 'quote':
+      // event narrowed to { type: 'quote'; payload: Quote }
+      updateTicker(event.payload.symbol, event.payload.bid);
+      break;
+    case 'order':
+      // event.payload is Order here
+      console.log('order filled', event.payload.id);
+      break;
+    case 'error':
+      // no payload on this member — only message
+      console.error(event.message);
+      break;
+  }
+}
+
+// Real usage: parse incoming WebSocket frames
+socket.onmessage = (e: MessageEvent) =&gt; handle(JSON.parse(e.data) as ApiEvent);</code></pre></div>
+      <div class="tip"><p><strong>За что это любят сеньорские команды:</strong> добавление нового варианта сообщения заставляет каждый <code>switch</code> его обработать (с исчерпывающим <code>never</code> по умолчанию — см. ниже), превращая баг времени выполнения в ошибку компиляции.</p></div>
+    </section>
+
+    <!-- ============================= NEVER / UNKNOWN / ANY ============================= -->
+    <section data-searchable>
+      <h2 id="never-unknown-any">never, unknown, any</h2>
+      <div class="card">
+        <p class="definition"><strong>any</strong> — полностью отключает проверку типов; разрешена любая операция, а ошибки типов подавляются. Избегайте его — это дыра в системе типов.</p>
+        <p class="definition"><strong>unknown</strong> — типобезопасный аналог <code>any</code>: он принимает любое значение, но не даёт вам делать с ним <em>ничего</em>, пока вы не сузите его защитником типа.</p>
+        <p class="definition"><strong>never</strong> — тип без возможных значений; используется для функций, которые никогда не возвращают управление (бросают исключение/зацикливаются), и для доказательства исчерпывающести switch.</p>
+      </div>
+
+      <div class="danger"><p><strong>Почему <code>any</code> — это плохо:</strong> он распространяется незаметно — один <code>any</code> может отключить проверку типов по всей цепочке вызовов.</p></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">const raw: any = JSON.parse('{}');
+raw.foo.bar.baz();        // compiles, then explodes at runtime — no safety
+
+// unknown forces you to check first
+const safe: unknown = JSON.parse('{}');
+// safe.foo;              // ❌ compile error — must narrow
+if (typeof safe === 'object' &amp;&amp; safe !== null &amp;&amp; 'symbol' in safe) {
+  console.log((safe as Quote).symbol); // ✅ only after narrowing
+}</code></pre></div>
+
+      <h3 id="exhaustive-never">Исчерпывающие проверки с <code>never</code></h3>
+      <p>Паттерн <code>assertNever</code>: в ветке <code>default</code> присвойте значение к <code>never</code>.
+        Если добавлен новый член объединения, но он не обработан, присваивание не скомпилируется.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">function assertNever(x: never): never {
+  throw new Error('Unhandled case: ' + JSON.stringify(x));
+}
+
+function describe(event: ApiEvent): string {
+  switch (event.type) {
+    case 'quote': return 'quote ' + event.payload.symbol;
+    case 'order': return 'order ' + event.payload.id;
+    case 'error': return 'error ' + event.message;
+    default:
+      // If a new ApiEvent variant is added, `event` is no longer `never`
+      // here and this line fails to compile — forcing you to handle it.
+      return assertNever(event);
+  }
+}</code></pre></div>
+      <div class="success"><p><strong>Ход сеньора:</strong> сочетайте размеченные объединения с <code>assertNever</code>, чтобы компилятор гарантировал обработку каждого случая — проверка исчерпывающести бесплатно.</p></div>
+    </section>
+
+    <!-- ============================= DECORATORS ============================= -->
+    <section data-searchable>
+      <h2 id="decorators">Декораторы</h2>
+      <p class="definition"><strong>Декоратор</strong> — функция с префиксом <code>@</code>, которая получает метаданные о классе, методе, свойстве или параметре, который она аннотирует, и может читать или изменять его поведение.</p>
+      <p>Angular читает метаданные декораторов на этапе сборки/во время выполнения, чтобы связать компоненты, внедрение, входы и привязки DOM.</p>
+
+      <h3 id="class-decorators">Декораторы классов</h3>
+      <div class="card">
+        <p class="definition"><strong>@Component</strong> — объявляет класс компонентом с шаблоном, селектором и стилями.</p>
+        <p class="definition"><strong>@Directive</strong> — объявляет класс директивой, которая добавляет поведение к существующему элементу.</p>
+        <p class="definition"><strong>@Injectable</strong> — помечает класс как доступный для внедрения зависимостей (и где он предоставляется).</p>
+        <p class="definition"><strong>@Pipe</strong> — объявляет класс пайпом шаблона, который преобразует значение для отображения.</p>
+        <p class="definition"><strong>@NgModule</strong> — объявляет NgModule, группируя объявления, импорты и провайдеры (устаревшее в standalone-приложениях).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({
+  selector: 'app-ticker',
+  standalone: true,
+  template: `{{ symbol }}: {{ price | number }}`,
+})
+export class TickerComponent {
+  symbol = 'EURUSD';
+  price = 1.07;
+}
+
+@Directive({ selector: '[appHighlight]', standalone: true })
+export class HighlightDirective {}
+
+@Injectable({ providedIn: 'root' })
+export class OrderService {}
+
+@Pipe({ name: 'pnl', standalone: true })
+export class PnlPipe {
+  transform(value: number): string { return (value &gt;= 0 ? '+' : '') + value.toFixed(2); }
+}
+
+@NgModule({ declarations: [], imports: [], providers: [] })
+export class LegacyModule {}</code></pre></div>
+      </div>
+
+      <h3 id="property-method-decorators">Декораторы свойств и методов</h3>
+      <div class="card">
+        <p class="definition"><strong>@Input</strong> — помечает свойство как привязываемый вход, который может установить родитель.</p>
+        <p class="definition"><strong>@Output</strong> — предоставляет <code>EventEmitter</code>, который дочерний компонент использует для излучения событий родителю.</p>
+        <p class="definition"><strong>@ViewChild</strong> — запрашивает один элемент/компонент/директиву из собственного шаблона компонента.</p>
+        <p class="definition"><strong>@ContentChild</strong> — запрашивает один спроецированный элемент из <code>ng-content</code> компонента.</p>
+        <p class="definition"><strong>@ViewChildren</strong> — запрашивает все совпадающие элементы во view как <code>QueryList</code>.</p>
+        <p class="definition"><strong>@ContentChildren</strong> — запрашивает все совпадающие спроецированные элементы как <code>QueryList</code>.</p>
+        <p class="definition"><strong>@HostListener</strong> — привязывает метод к DOM-событию на хост-элементе.</p>
+        <p class="definition"><strong>@HostBinding</strong> — привязывает свойство/атрибут/класс хост-элемента к полю компонента.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({ selector: 'app-order-row', standalone: true, template: `...` })
+export class OrderRowComponent {
+  @Input() order!: Order;
+  @Output() cancel = new EventEmitter&lt;number&gt;();
+
+  @ViewChild('priceCell') priceCell!: ElementRef&lt;HTMLElement&gt;;
+  @ViewChildren(TickerComponent) tickers!: QueryList&lt;TickerComponent&gt;;
+  @ContentChild('footer') footer?: ElementRef&lt;HTMLElement&gt;;
+  @ContentChildren(OrderRowComponent) rows!: QueryList&lt;OrderRowComponent&gt;;
+
+  @HostBinding('class.filled') get isFilled() { return this.order.status === 'FILLED'; }
+
+  @HostListener('click', ['$event'])
+  onClick(e: MouseEvent): void {
+    this.cancel.emit(this.order.id);
+  }
+}</code></pre></div>
+      </div>
+
+      <h3 id="ts-decorators">Обычные декораторы классов и методов TS</h3>
+      <p>Вне Angular декораторы — это просто функции. Декоратор класса получает конструктор; декоратор метода
+        получает цель, ключ и дескриптор свойства и может обернуть исходный метод.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Method decorator that logs every call
+function log(_target: object, key: string, desc: PropertyDescriptor): void {
+  const original = desc.value as (...args: unknown[]) =&gt; unknown;
+  desc.value = function (...args: unknown[]): unknown {
+    console.log('call', key, args);
+    return original.apply(this, args);
+  };
+}
+
+class PriceCalc {
+  @log
+  spread(q: Quote): number { return q.ask - q.bid; }
+}</code></pre></div>
+      <div class="warn"><p>Angular использует устаревшую (экспериментальную) семантику декораторов, включаемую через <code>experimentalDecorators</code> в <code>tsconfig.json</code>. Новые декораторы TC39 Stage-3 отличаются по сигнатуре.</p></div>
+    </section>
+
+    <!-- ============================= TYPE GUARDS ============================= -->
+    <section data-searchable>
+      <h2 id="type-guards">Защитники типов</h2>
+      <p class="definition"><strong>Защитник типа (type guard)</strong> — проверка во время выполнения, которую понимает компилятор, сужающая значение до более конкретного типа внутри защищённого блока.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Защитник typeof</strong> — сужает примитивы (<code>string</code>, <code>number</code>, <code>boolean</code>, <code>symbol</code>, <code>undefined</code>, <code>function</code>, <code>bigint</code>).</p>
+        <p class="definition"><strong>Защитник instanceof</strong> — сужает до класса, проверяя цепочку прототипов.</p>
+        <p class="definition"><strong>Защитник in</strong> — сужает, проверяя, существует ли свойство в объекте.</p>
+        <p class="definition"><strong>Пользовательский предикат типа</strong> — функция, возвращающая <code>value is SomeType</code>, которая учит компилятор, как сужать тип.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// 1. typeof — primitives
+function format(price: number | string): string {
+  if (typeof price === 'number') return price.toFixed(2); // price: number here
+  return price.trim();                                     // price: string here
+}
+
+// 2. instanceof — classes
+function report(err: unknown): void {
+  if (err instanceof Error) console.error(err.message);   // err: Error
+}
+
+// 3. in — object property presence (discriminate two shapes)
+type Result = { data: Order } | { error: string };
+function show(r: Result): void {
+  if ('error' in r) console.error(r.error);               // r: { error: string }
+  else console.log(r.data.id);                            // r: { data: Order }
+}
+
+// 4. Custom type predicate — `x is Order`
+function isOrder(x: unknown): x is Order {
+  return typeof x === 'object' &amp;&amp; x !== null
+    &amp;&amp; 'id' in x &amp;&amp; 'symbol' in x &amp;&amp; 'side' in x;
+}
+
+function process(payload: unknown): void {
+  if (isOrder(payload)) {
+    // payload is now typed Order across this block
+    console.log(payload.symbol, payload.side);
+  }
+}</code></pre></div>
+      <div class="tip"><p><strong>Сигнал на собеседовании:</strong> пользовательский предикат возвращает <code>x is Order</code>, а не <code>boolean</code>. С обычным <code>boolean</code> компилятор <em>не</em> сужает тип после вызова.</p></div>
+    </section>
+
+    <!-- ============================= KEYOF / TYPEOF / MAPPED ============================= -->
+    <section data-searchable>
+      <h2 id="keyof-typeof-mapped">keyof, typeof, Mapped-типы</h2>
+      <div class="card">
+        <p class="definition"><strong>keyof T</strong> — порождает объединение литералов ключей свойств <code>T</code>.</p>
+        <p class="definition"><strong>typeof variable</strong> — в позиции типа выводит статический тип из значения времени выполнения или константы.</p>
+        <p class="definition"><strong>Mapped-тип</strong> — итерирует по ключам типа (<code>{ [K in keyof T]: ... }</code>), чтобы преобразовать каждое свойство сразу.</p>
+      </div>
+
+      <h3 id="keyof">keyof</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">type OrderKey = keyof Order; // 'id' | 'symbol' | 'side' | 'quantity' | 'price' | 'status'
+
+function pluck&lt;T, K extends keyof T&gt;(rows: T[], key: K): T[K][] {
+  return rows.map(r =&gt; r[key]);
+}
+const symbols = pluck(orders, 'symbol'); // string[]</code></pre></div>
+
+      <h3 id="typeof-operator">typeof</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Derive a type from a runtime config constant — single source of truth
+const defaultQuote = { symbol: 'EURUSD', bid: 0, ask: 0, timestamp: 0 };
+type Quote = typeof defaultQuote; // { symbol: string; bid: number; ask: number; timestamp: number }
+
+// Combine with keyof for literal-union enums
+const SIDES = { buy: 'BUY', sell: 'SELL' } as const;
+type SideValue = (typeof SIDES)[keyof typeof SIDES]; // 'BUY' | 'SELL'</code></pre></div>
+
+      <h3 id="mapped-types">Mapped-типы</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Make every field optional (this is literally how Partial is defined)
+type MyPartial&lt;T&gt; = { [K in keyof T]?: T[K] };
+
+// Make every field readonly
+type Immutable&lt;T&gt; = { readonly [K in keyof T]: T[K] };
+
+// Transform value types: wrap each field of Quote in a signal
+import { Signal } from '@angular/core';
+type Signalify&lt;T&gt; = { [K in keyof T]: Signal&lt;T[K]&gt; };
+type QuoteSignals = Signalify&lt;Quote&gt;;
+// { symbol: Signal&lt;string&gt;; bid: Signal&lt;number&gt;; ask: Signal&lt;number&gt;; timestamp: Signal&lt;number&gt; }</code></pre></div>
+      <div class="tip"><p>Большинство утилитарных типов (<code>Partial</code>, <code>Readonly</code>, <code>Record</code>, <code>Pick</code>) сами являются mapped-типами — понимание mapped-типов означает, что вы можете читать исходный код стандартной библиотеки.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Вопросы с собеседований</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В чём разница между <code>unknown</code> и <code>any</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Оба принимают любое значение, но <code>any</code> отключает проверку типов — вы можете вызывать/обращаться к чему угодно без ошибки, поэтому баги просачиваются в рантайм. <code>unknown</code> типобезопасен: компилятор запрещает любую операцию над ним, пока вы не сузите его защитником (<code>typeof</code>, <code>instanceof</code>, <code>in</code> или предикатом). Используйте <code>unknown</code> для значений неопределённой формы (например, <code>JSON.parse</code>, пойманные ошибки) и оставьте <code>any</code> для демонстрации, почему он опасен.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Когда вы бы использовали <code>interface</code> вместо <code>type</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Используйте <code>interface</code> для форм объектов/моделей и контрактов классов: он поддерживает слияние объявлений, <code>extends</code> и выдаёт более понятные сообщения об ошибках, а соглашения Angular предпочитают его для моделей. Используйте <code>type</code>, когда вам нужно объединение, пересечение, кортеж, псевдоним примитива или mapped/утилитарный тип — возможности, которых нет у <code>interface</code>. Оба могут описывать формы объектов, поэтому для простых моделей это в основном вопрос стиля.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Как размеченное объединение обеспечивает исчерпывающую проверку?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Каждый член объединения разделяет литеральный дискриминант (например, <code>type: 'quote'</code>). <code>switch</code> по этому полю сужает каждую ветвь до одного члена. В ветке <code>default</code>, если каждый случай обработан, тип значения — <code>never</code>; передача его в <code>assertNever(x: never)</code> компилируется. Добавьте новый вариант и забудьте случай, и значение больше не будет <code>never</code>, так что вызов не скомпилируется — компилятор заставляет вас обработать его.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Что возвращает пользовательский защитник типа и почему не просто <code>boolean</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Он возвращает предикат типа <code>value is SomeType</code>. Эта сигнатура сообщает компилятору, что когда функция возвращает <code>true</code>, аргумент можно сузить до <code>SomeType</code> в вызывающем блоке. Если бы он возвращал обычный <code>boolean</code>, вызов бы отработал, но компилятор <em>не</em> сузил бы переменную после него, так что вам всё равно пришлось бы делать приведение типа.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Зачем передавать дженерик в <code>HttpClient.get&lt;T&gt;()</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>get&lt;Order[]&gt;('/api/orders')</code> типизирует возвращаемый <code>Observable&lt;Order[]&gt;</code>, так что каждый подписчик, <code>map</code> и привязка в шаблоне проверяются по реальной форме. Если его опустить, ответ по умолчанию станет <code>Object</code>, что стирает типобезопасность и IntelliSense для остальной части цепочки. Учтите, что это утверждение времени компиляции, а не валидация во время выполнения — сервер всё ещё может прислать другую форму.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какой утилитарный тип создаёт DTO для обновления, где каждое поле <code>Order</code> необязательно?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Required&lt;Order&gt;</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Partial&lt;Order&gt;</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Readonly&lt;Order&gt;</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Pick&lt;Order, 'id'&gt;</button>
+        <div class="quiz-explain">Partial&lt;T&gt; делает каждое свойство необязательным — идеально для PATCH/обновляющих запросов. Required делает противоположное; Readonly блокирует переприсваивание; Pick выбирает подмножество.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Что может выразить псевдоним <code>type</code>, чего не может <code>interface</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Форму объекта</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Расширение другого типа</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Объединение вроде 'BUY' | 'SELL'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Слияние объявлений</button>
+        <div class="quiz-explain">Только `type` может быть псевдонимом типов-объединений. Интерфейсы обрабатывают формы объектов и расширение и уникально поддерживают слияние объявлений — но не могут быть объединением.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Каков тип <code>x</code> в ветке <code>default</code> исчерпывающего switch по размеченному объединению?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">unknown</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">any</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">never</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">void</button>
+        <div class="quiz-explain">Если каждый случай обработан, не остаётся возможных значений, поэтому суженный тип — `never`. Передача его в assertNever(x: never) компилируется только пока switch остаётся исчерпывающим.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Что порождает <code>keyof Order</code> для <code>Order { id; symbol; side; quantity; price; status }</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Значения каждого свойства</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">'id' | 'symbol' | 'side' | 'quantity' | 'price' | 'status'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">number</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">string</button>
+        <div class="quiz-explain">keyof T порождает объединение литералов ключей свойств T — здесь шесть имён ключей — а не типы их значений.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="js-core.html" class="btn-nav">← Основы JS</a>
+      <a href="angular-core.html" class="btn-nav">Основы Angular →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

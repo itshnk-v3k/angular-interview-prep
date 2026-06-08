@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Маршрутизация (Router) — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Маршрутизация</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Маршрутизация (Router)</h1>
+      <p class="page-desc">Router в Angular сопоставляет URL-адреса с деревьями компонентов: конфигурация, навигация,
+        параметры маршрута, ленивая загрузка, гарды, резолверы и события — плюс CDK
+        <code>BreakpointObserver</code> для адаптивных макетов.</p>
+      <button class="btn-done" data-page="routing" onclick="markDone('routing')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= CONFIGURATION ============================= -->
+    <section data-searchable>
+      <h2 id="configuration">Конфигурация</h2>
+      <p>Массив <code>Routes</code> сопоставляет пути URL с компонентами или лениво загружаемыми чанками. Вы регистрируете его
+        либо через API <code>NgModule</code> (классический подход), либо через standalone-API <code>provideRouter</code> (современный подход).</p>
+
+      <div class="card">
+        <p class="definition"><strong>RouterModule.forRoot(routes)</strong> — вызывается <em>один раз</em> в корневом модуле приложения. Создаёт singleton-сервис <code>Router</code>, регистрирует маршруты верхнего уровня и настраивает глобальные параметры (предзагрузку, восстановление прокрутки, навигацию в памяти).</p>
+        <p class="definition"><strong>RouterModule.forChild(routes)</strong> — используется в <em>функциональных</em> модулях. Регистрирует дополнительные маршруты, но <em>не</em> создаёт сервис <code>Router</code> повторно, избегая дублирования экземпляров провайдера.</p>
+        <p class="definition"><strong>provideRouter(routes)</strong> — современный standalone-API для начальной загрузки (Angular 14+). Передаётся в <code>bootstrapApplication</code> через <code>ApplicationConfig</code>; заменяет <code>RouterModule.forRoot</code> компонуемыми возможностями, такими как <code>withPreloading</code>, <code>withComponentInputBinding</code>, <code>withRouterConfig</code>.</p>
+      </div>
+
+      <h3>Стиль NgModule (классический)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+const routes: Routes = [
+  { path: 'orders', component: OrderListComponent },
+  { path: 'instruments/:symbol', component: InstrumentComponent },
+  { path: '', redirectTo: 'orders', pathMatch: 'full' },
+  { path: '**', component: NotFoundComponent },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],   // once, at the root
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+
+// Feature module
+@NgModule({
+  imports: [RouterModule.forChild(featureRoutes)], // child routes
+})
+export class OrdersRoutingModule {}</code></pre>
+      </div>
+
+      <h3>Стиль standalone (современный)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { bootstrapApplication } from '@angular/platform-browser';
+import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes, withPreloading(PreloadAllModules)),
+  ],
+});</code></pre>
+      </div>
+
+      <h3>Свойства маршрута</h3>
+      <p>Каждый объект <code>Route</code> настраивается через эти свойства:</p>
+      <div class="card">
+        <p class="definition"><strong>path</strong> — сегмент URL для сопоставления (<code>'orders'</code>, <code>'instruments/:symbol'</code>, <code>''</code> пустой или <code>'**'</code> wildcard). Без ведущего слеша.</p>
+        <p class="definition"><strong>component</strong> — компонент, который отрисовывается при совпадении пути.</p>
+        <p class="definition"><strong>loadChildren</strong> — функция, возвращающая динамический <code>import()</code> лениво загружаемого модуля (или массив дочерних маршрутов).</p>
+        <p class="definition"><strong>loadComponent</strong> — функция, возвращающая динамический <code>import()</code> standalone-компонента (ленивая загрузка на уровне компонента).</p>
+        <p class="definition"><strong>children</strong> — массив вложенных дочерних маршрутов, отрисовываемых в дочерний <code>&lt;router-outlet&gt;</code>.</p>
+        <p class="definition"><strong>redirectTo</strong> — путь, на который происходит переадресация при совпадении этого маршрута.</p>
+        <p class="definition"><strong>pathMatch</strong> — <code>'full'</code> (весь URL должен равняться пути) или <code>'prefix'</code> (по умолчанию; путь является префиксом). Обязателен для переадресаций с пустым путём.</p>
+        <p class="definition"><strong>data</strong> — статический неизменяемый объект произвольных метаданных, доступный через <code>ActivatedRoute.data</code> (например, <code>{ roles: ['trader'] }</code>).</p>
+        <p class="definition"><strong>resolve</strong> — карта резолверов, которые предзагружают данные <em>до</em> активации маршрута.</p>
+        <p class="definition"><strong>canActivate</strong> — гарды, решающие, разрешена ли навигация <em>к</em> этому маршруту.</p>
+        <p class="definition"><strong>canActivateChild</strong> — гарды, применяемые ко всем дочерним маршрутам этого маршрута.</p>
+        <p class="definition"><strong>canDeactivate</strong> — гарды, решающие, разрешена ли навигация <em>прочь</em> от этого маршрута.</p>
+        <p class="definition"><strong>canLoad</strong> — гарды, решающие, можно ли загрузить ленивый модуль (устаревший; заменён на <code>canMatch</code>).</p>
+        <p class="definition"><strong>canMatch</strong> — гарды, решающие, <em>совпадает ли маршрут вообще</em>; позволяет роутеру пробовать альтернативные маршруты, когда возвращается false.</p>
+        <p class="definition"><strong>outlet</strong> — имя именованного <code>&lt;router-outlet&gt;</code>, в который выполняется отрисовка (для вторичных/вспомогательных маршрутов).</p>
+        <p class="definition"><strong>title</strong> — строка или резолвер, устанавливающий <code>document.title</code> при активации маршрута.</p>
+      </div>
+    </section>
+
+    <!-- ============================= NAVIGATION ============================= -->
+    <section data-searchable>
+      <h2 id="navigation">Навигация</h2>
+      <p>Навигацию выполняют либо <strong>декларативно</strong> из шаблона с помощью <code>routerLink</code>, либо
+        <strong>императивно</strong> из класса с помощью сервиса <code>Router</code>.</p>
+
+      <p class="definition"><strong>routerLink</strong> — директива, связывающая элемент с маршрутом. Принимает строку или «массив параметров ссылки» из сегментов пути и параметров.</p>
+      <p class="definition"><strong>routerLinkActive</strong> — добавляет CSS-класс(ы) к элементу, пока маршрут его ссылки активен. Используйте <code>[routerLinkActiveOptions]="{ exact: true }"</code> для точного совпадения.</p>
+
+      <h3>Декларативно — ссылки в шаблоне</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-html">&lt;!-- Static path --&gt;
+&lt;a routerLink="/orders" routerLinkActive="active-class"&gt;Orders&lt;/a&gt;
+
+&lt;!-- Dynamic segment via parameters array --&gt;
+&lt;a [routerLink]="['/orders', order.id]"&gt;View order&lt;/a&gt;
+
+&lt;!-- With query params and a fragment --&gt;
+&lt;a [routerLink]="['/instruments', symbol]"
+   [queryParams]="{ tf: '1h' }"
+   fragment="depth"
+   routerLinkActive="active-class"&gt;
+  {{ symbol }}
+&lt;/a&gt;</code></pre>
+      </div>
+
+      <p class="definition"><strong>Router.navigate(commands, extras?)</strong> — императивно навигирует с использованием массива параметров; возвращает <code>Promise&lt;boolean&gt;</code>.</p>
+      <p class="definition"><strong>Router.navigateByUrl(url, extras?)</strong> — императивно навигирует с использованием строки абсолютного URL (игнорирует текущий маршрут).</p>
+
+      <h3>Императивно — сервис Router</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+
+@Component({ /* ... */ })
+export class OrderActionsComponent {
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  openOrder(id: string): void {
+    // Absolute, parameters array
+    this.router.navigate(['/orders', id]);
+  }
+
+  goToSibling(): void {
+    // Relative navigation — resolves against the current route
+    this.router.navigate(['../sibling'], { relativeTo: this.route });
+  }
+
+  openByUrl(): void {
+    // Absolute URL string
+    this.router.navigateByUrl('/orders/123');
+  }
+}</code></pre>
+      </div>
+
+      <h3>Параметры навигации (<code>NavigationExtras</code>)</h3>
+      <div class="card">
+        <p class="definition"><strong>queryParams</strong> — объект параметров строки запроса для добавления (<code>?tf=1h&amp;side=BUY</code>).</p>
+        <p class="definition"><strong>fragment</strong> — хеш-фрагмент URL (<code>#depth</code>), часто используется для якорей внутри страницы.</p>
+        <p class="definition"><strong>replaceUrl</strong> — при значении <code>true</code> заменяет текущую запись истории вместо добавления новой (без записи для кнопки «Назад»).</p>
+        <p class="definition"><strong>skipLocationChange</strong> — навигирует и отрисовывает цель, но <em>не</em> меняет URL в браузере.</p>
+        <p class="definition"><strong>queryParamsHandling</strong> — <code>'merge'</code> (объединить новые с текущими), <code>'preserve'</code> (сохранить текущие, игнорировать новые) или <code>null</code> (заменить, по умолчанию).</p>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">this.router.navigate(['/instruments', symbol], {
+  queryParams: { tf: '1h' },
+  queryParamsHandling: 'merge',
+  fragment: 'depth',
+  replaceUrl: true,
+});</code></pre>
+      </div>
+      <div class="tip"><p><strong>Совет по относительной навигации:</strong> всегда передавайте <code>{ relativeTo: this.route }</code> с относительными командами вроде <code>['../sibling']</code> — без этого роутер разрешает путь относительно корня, и вы получаете неправильный URL.</p></div>
+    </section>
+
+    <!-- ============================= ACTIVATEDROUTE ============================= -->
+    <section data-searchable>
+      <h2 id="activated-route">ActivatedRoute</h2>
+      <p class="definition"><strong>ActivatedRoute</strong> — внедряемый сервис, предоставляющий информацию о маршруте, связанном с текущим отрисованным компонентом: его параметры, параметры запроса, статические/резолвленные данные и сегменты URL — в основном в виде <code>Observable</code>, чтобы компонент реагировал на изменения.</p>
+
+      <div class="card">
+        <p class="definition"><strong>params</strong> — <code>Observable&lt;Params&gt;</code> параметров пути маршрута. Излучает снова, когда меняются только параметры, но компонент переиспользуется (например, <code>/orders/1</code> → <code>/orders/2</code>). Предпочитайте <code>paramMap</code> для типизированного API карты.</p>
+        <p class="definition"><strong>queryParams</strong> — <code>Observable&lt;Params&gt;</code> параметров строки запроса URL.</p>
+        <p class="definition"><strong>data</strong> — <code>Observable&lt;Data&gt;</code>, объединяющий статические <code>route.data</code> со всем, что возвращают резолверы.</p>
+        <p class="definition"><strong>snapshot.params</strong> — <em>синхронный</em> снимок параметров на момент активации. Удобно, но он <em>не</em> обновляется при переиспользовании компонента, поэтому используйте его только тогда, когда компонент не может быть переиспользован для того же маршрута.</p>
+        <p class="definition"><strong>ActivatedRouteSnapshot</strong> — неизменяемый снимок состояния маршрута на конкретный момент времени (<code>params</code>, <code>queryParams</code>, <code>data</code>, <code>url</code>) — также передаётся в гарды и резолверы.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+interface Instrument { symbol: string; tickSize: number; }
+
+@Component({ /* ... */ })
+export class InstrumentComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(InstrumentService);
+  instrument?: Instrument;
+
+  ngOnInit(): void {
+    // Reactive — re-fetches when :symbol changes and the component is reused
+    this.route.paramMap.pipe(
+      switchMap(pm =&gt; this.api.getBySymbol(pm.get('symbol')!)),
+      takeUntilDestroyed(),
+    ).subscribe(i =&gt; this.instrument = i);
+
+    // Synchronous snapshot — fine only if this route is never reused
+    const symbol = this.route.snapshot.params['symbol'];
+
+    // Resolved data combined with static data
+    this.route.data.subscribe(d =&gt; console.log(d['quote']));
+  }
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Ловушка снимка:</strong> переход с <code>/instruments/EURUSD</code> на <code>/instruments/BTCUSD</code> переиспользует компонент, поэтому <code>snapshot.params</code> остаётся на <em>первом</em> значении. Подписывайтесь на <code>paramMap</code> вместо этого.</p></div>
+    </section>
+
+    <!-- ============================= LAZY LOADING ============================= -->
+    <section data-searchable>
+      <h2 id="lazy-loading">Ленивая загрузка</h2>
+      <p class="definition"><strong>Ленивая загрузка</strong> — отложенная загрузка кода маршрута до момента, когда пользователь к нему перейдёт, с помощью динамического <code>import()</code>. Уменьшает начальный бандл и ускоряет первую отрисовку.</p>
+
+      <h3>На основе модулей (<code>loadChildren</code>)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">const routes: Routes = [
+  {
+    path: 'orders',
+    loadChildren: () =&gt;
+      import('./feature/feature.module').then(m =&gt; m.FeatureModule),
+  },
+];</code></pre>
+      </div>
+
+      <h3>Standalone-компонент (<code>loadComponent</code>)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">const routes: Routes = [
+  {
+    path: 'instruments/:symbol',
+    loadComponent: () =&gt;
+      import('./page.component').then(c =&gt; c.PageComponent),
+  },
+];</code></pre>
+      </div>
+
+      <h3>Стратегии предзагрузки</h3>
+      <p>Предзагрузка скачивает ленивые чанки <em>в фоновом режиме</em> после загрузки начального приложения, благодаря чему навигация ощущается мгновенной без раздувания первого бандла.</p>
+      <div class="card">
+        <p class="definition"><strong>NoPreloading</strong> — по умолчанию. Ленивые чанки загружаются только при навигации; ничего не предзагружается.</p>
+        <p class="definition"><strong>PreloadAllModules</strong> — заранее предзагружает каждый ленивый маршрут в фоне после загрузки приложения.</p>
+        <p class="definition"><strong>Пользовательская стратегия</strong> — реализуйте <code>PreloadingStrategy</code>, чтобы решать для каждого маршрута, обычно на основе флага в <code>route.data</code>.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Стратегия</th><th>Предзагружает</th><th>Лучше всего для</th></tr></thead>
+          <tbody>
+            <tr><td>NoPreloading</td><td>❌ Ничего</td><td>Множество редко посещаемых маршрутов</td></tr>
+            <tr><td>PreloadAllModules</td><td>✅ Всё</td><td>Малые/средние приложения, быстрые сети</td></tr>
+            <tr><td>Пользовательская</td><td>✅ Выбранное (по флагу в data)</td><td>Большие приложения — предзагрузка только ключевых маршрутов</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Пример пользовательской стратегии предзагрузки</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Injectable } from '@angular/core';
+import { PreloadingStrategy, Route } from '@angular/router';
+import { Observable, of } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class CustomPreloadStrategy implements PreloadingStrategy {
+  // Preload only routes flagged with data: { preload: true }
+  preload(route: Route, load: () =&gt; Observable&lt;unknown&gt;): Observable&lt;unknown&gt; {
+    return route.data?.['preload'] ? load() : of(null);
+  }
+}
+
+// Usage with the route definition
+const routes: Routes = [
+  {
+    path: 'orders',
+    data: { preload: true },                 // this one preloads
+    loadChildren: () =&gt; import('./orders/orders.module').then(m =&gt; m.OrdersModule),
+  },
+  {
+    path: 'reports',
+    data: { preload: false },                // this one waits
+    loadChildren: () =&gt; import('./reports/reports.module').then(m =&gt; m.ReportsModule),
+  },
+];
+
+// Register it
+provideRouter(routes, withPreloading(CustomPreloadStrategy));</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================= GUARDS ============================= -->
+    <section data-searchable>
+      <h2 id="guards">Гарды</h2>
+      <p>Гарды — это функции, которые роутер запускает во время навигации, чтобы разрешить, заблокировать или перенаправить её.
+        Каждая возвращает <code>boolean</code>, <code>UrlTree</code> (переадресацию) или асинхронную обёртку
+        (<code>Promise</code> / <code>Observable</code>) над ними. Начиная с Angular 14+, идиоматичной формой является
+        <strong>функциональный гард</strong> с использованием <code>inject()</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>canActivate</strong> — решает, разрешена ли навигация <em>к</em> маршруту. Возврат <code>false</code> отменяет навигацию; возврат <code>UrlTree</code> перенаправляет.</p>
+        <p class="definition"><strong>canActivateChild</strong> — выполняет ту же проверку для <em>дочерних</em> маршрутов перед активацией каждого дочернего.</p>
+        <p class="definition"><strong>canDeactivate</strong> — решает, разрешена ли навигация <em>прочь</em> от текущего маршрута. Классическое применение — предупреждение о несохранённых изменениях в форме.</p>
+        <p class="definition"><strong>canLoad / canMatch</strong> — предотвращают скачивание лениво загружаемого модуля. <code>canMatch</code> (новее) также может отклонить маршрут, чтобы роутер попробовал следующий подходящий маршрут.</p>
+        <p class="definition"><strong>resolve</strong> — не гард как таковой, но выполняется в том же конвейере, чтобы предзагрузить данные <em>до</em> активации компонента, чтобы вид отрисовался с готовыми данными.</p>
+      </div>
+
+      <h3>Функциональные гарды (Angular 14+)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+
+// Minimal inline guard
+export const authGuard: CanActivateFn = () =&gt; inject(AuthService).isLoggedIn();
+
+// Guard that redirects via a UrlTree instead of just returning false
+export const tradingGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.isLoggedIn() ? true : router.createUrlTree(['/login']);
+};
+
+// Registered on a route
+const routes: Routes = [
+  { path: 'orders', component: OrderListComponent, canActivate: [authGuard] },
+];</code></pre>
+      </div>
+
+      <h3>canActivateChild</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanActivateChildFn } from '@angular/router';
+
+export const childAuthGuard: CanActivateChildFn = () =&gt; inject(AuthService).isLoggedIn();
+
+const routes: Routes = [
+  {
+    path: 'orders',
+    canActivateChild: [childAuthGuard],     // applies to every child below
+    children: [
+      { path: '', component: OrderListComponent },
+      { path: ':id', component: OrderDetailComponent },
+    ],
+  },
+];</code></pre>
+      </div>
+
+      <h3>canDeactivate — предупреждение о несохранённых изменениях</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanDeactivateFn } from '@angular/router';
+
+// Contract the guarded component must satisfy
+export interface CanComponentDeactivate {
+  canDeactivate(): boolean;
+}
+
+// Generic functional guard
+export const unsavedChangesGuard: CanDeactivateFn&lt;CanComponentDeactivate&gt; =
+  (component) =&gt; component.canDeactivate();
+
+// Component implementing the contract
+@Component({ /* ... */ })
+export class OrderFormComponent implements CanComponentDeactivate {
+  private readonly form = inject(FormBuilder).group({ symbol: [''], qty: [0] });
+
+  canDeactivate(): boolean {
+    // Block navigation if there are unsaved edits
+    return this.form.pristine
+      ? true
+      : confirm('You have unsaved changes. Leave anyway?');
+  }
+}
+
+const routes: Routes = [
+  { path: 'orders/new', component: OrderFormComponent, canDeactivate: [unsavedChangesGuard] },
+];</code></pre>
+      </div>
+
+      <h3>canMatch — гард для ленивой загрузки</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanMatchFn } from '@angular/router';
+
+export const adminMatchGuard: CanMatchFn = () =&gt; inject(AuthService).isAdmin();
+
+const routes: Routes = [
+  {
+    path: 'reports',
+    canMatch: [adminMatchGuard],   // chunk is not even downloaded if false
+    loadChildren: () =&gt; import('./reports/reports.module').then(m =&gt; m.ReportsModule),
+  },
+];</code></pre>
+      </div>
+
+      <h3>resolve — предзагрузка данных</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { ResolveFn } from '@angular/router';
+
+interface Order { id: string; symbol: string; qty: number; }
+
+export const orderResolver: ResolveFn&lt;Order&gt; = (route) =&gt; {
+  const api = inject(OrderService);
+  return api.getById(route.paramMap.get('id')!);
+};
+
+const routes: Routes = [
+  {
+    path: 'orders/:id',
+    component: OrderDetailComponent,
+    resolve: { order: orderResolver },   // available via route.data['order']
+  },
+];</code></pre>
+      </div>
+      <div class="success"><p><strong>Чем полезны резолверы:</strong> компонент активируется только после готовности данных, поэтому вы избегаете мерцания пустого состояния и проверок на <code>undefined</code> в шаблоне.</p></div>
+    </section>
+
+    <!-- ============================= ROUTER EVENTS ============================= -->
+    <section data-searchable>
+      <h2 id="router-events">События роутера</h2>
+      <p class="definition"><strong>Router.events</strong> — <code>Observable&lt;Event&gt;</code>, излучающий события жизненного цикла при каждой навигации. Подпишитесь, чтобы управлять спиннерами загрузки, аналитикой или поведением прокрутки. Используйте <code>instanceof</code> (или оператор <code>filter</code>), чтобы реагировать на конкретный тип события.</p>
+
+      <div class="card">
+        <p class="definition"><strong>NavigationStart</strong> — навигация началась; обрабатывается новый URL.</p>
+        <p class="definition"><strong>RoutesRecognized</strong> — URL разобран и сопоставлен с конфигурацией маршрутов; целевое дерево маршрутов известно.</p>
+        <p class="definition"><strong>RouteConfigLoadStart</strong> — конфигурация лениво загружаемого маршрута вот-вот будет получена (начинается скачивание).</p>
+        <p class="definition"><strong>RouteConfigLoadEnd</strong> — конфигурация ленивого маршрута завершила скачивание.</p>
+        <p class="definition"><strong>NavigationEnd</strong> — навигация завершилась успешно; новый маршрут активен. Самое используемое событие (аналитика, прокрутка наверх).</p>
+        <p class="definition"><strong>NavigationCancel</strong> — навигация была отменена, обычно гардом, вернувшим <code>false</code>, или переадресацией через <code>UrlTree</code>.</p>
+        <p class="definition"><strong>NavigationError</strong> — навигация завершилась неудачей из-за непредвиденной ошибки (например, резолвер выбросил исключение или ленивый чанк не загрузился).</p>
+        <p class="definition"><strong>ActivationEnd</strong> — гарды/резолверы маршрута отработали, и маршрут активируется (срабатывает для каждого активируемого маршрута, самый глубокий последним).</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import {
+  Router, NavigationStart, NavigationEnd,
+  NavigationCancel, NavigationError, Event as RouterEvent,
+} from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ /* ... */ })
+export class ShellComponent {
+  private readonly router = inject(Router);
+  loading = false;
+
+  constructor() {
+    this.router.events
+      .pipe(takeUntilDestroyed())
+      .subscribe((e: RouterEvent) =&gt; {
+        if (e instanceof NavigationStart) this.loading = true;
+        if (e instanceof NavigationEnd) this.loading = false;
+        if (e instanceof NavigationCancel) this.loading = false;
+        if (e instanceof NavigationError) {
+          this.loading = false;
+          console.error('Navigation failed:', e.error);
+        }
+      });
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================= BREAKPOINTOBSERVER ============================= -->
+    <section data-searchable>
+      <h2 id="breakpoint-observer">BreakpointObserver</h2>
+      <p class="definition"><strong>BreakpointObserver</strong> — сервис Angular CDK (<code>@angular/cdk/layout</code>), который реактивно наблюдает за одной или несколькими CSS media-query брейкпоинтами. <code>observe(...)</code> возвращает <code>Observable&lt;BreakpointState&gt;</code>, который излучает всякий раз, когда отслеживаемый брейкпоинт начинает или перестаёт совпадать — идеально для переключения между мобильным и десктопным макетами (например, сворачивания боковой панели роутера на маленьких экранах).</p>
+
+      <h3>Один брейкпоинт → поток boolean</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { map } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ /* ... */ })
+export class LayoutComponent {
+  private readonly bp = inject(BreakpointObserver);
+
+  readonly isMobile$ = this.bp.observe([Breakpoints.Handset]).pipe(
+    map(result =&gt; result.matches),
+    takeUntilDestroyed(),
+  );
+}</code></pre>
+      </div>
+
+      <h3>Несколько брейкпоинтов → именованный результат</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">readonly layout$ = this.bp
+  .observe(['(max-width: 768px)', '(min-width: 1400px)'])
+  .pipe(
+    map(result =&gt; ({
+      isMobile: result.breakpoints['(max-width: 768px)'],
+      isWide: result.breakpoints['(min-width: 1400px)'],
+    })),
+  );</code></pre>
+      </div>
+
+      <h3>Константы Breakpoints</h3>
+      <div class="card">
+        <p class="definition"><strong>Breakpoints.Handset</strong> — устройства размером с телефон (портретная + альбомная ориентация).</p>
+        <p class="definition"><strong>Breakpoints.Tablet</strong> — устройства размером с планшет.</p>
+        <p class="definition"><strong>Breakpoints.Web</strong> — десктоп / большие экраны.</p>
+        <p class="definition"><strong>Breakpoints.HandsetPortrait</strong> — телефоны только в портретной ориентации.</p>
+        <p class="definition"><strong>Breakpoints.XSmall</strong> — вьюпорты уже 600px.</p>
+        <p class="definition"><strong>Breakpoints.Small</strong> — вьюпорты шириной 600px–959px.</p>
+        <p class="definition"><strong>Breakpoints.Medium</strong> — вьюпорты шириной 960px–1279px.</p>
+        <p class="definition"><strong>Breakpoints.Large</strong> — вьюпорты шириной 1280px–1919px.</p>
+        <p class="definition"><strong>Breakpoints.XLarge</strong> — вьюпорты шириной 1920px и больше.</p>
+      </div>
+      <div class="tip"><p><strong>Очистка:</strong> пропускайте через <code>takeUntilDestroyed()</code> (или используйте пайп <code>async</code> в шаблоне), чтобы слушатель media-query был удалён при уничтожении компонента.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — собеседование</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В чём разница между <code>RouterModule.forRoot</code> и <code>forChild</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>forRoot</code> вызывается ровно <strong>один раз</strong> в корневом модуле. Он регистрирует маршруты верхнего уровня <em>и</em> создаёт singleton-сервис <code>Router</code> вместе с глобальными провайдерами (предзагрузка, восстановление прокрутки). <code>forChild</code> используется в функциональных модулях для регистрации дополнительных маршрутов <em>без</em> повторного создания сервиса <code>Router</code> — двойной вызов <code>forRoot</code> создал бы дублирующиеся экземпляры роутера и сломал бы навигацию. В standalone-приложениях <code>provideRouter(routes)</code> заменяет <code>forRoot</code>, а маршруты функций предоставляются напрямую через <code>loadChildren</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Когда следует подписываться на <code>paramMap</code> вместо чтения <code>snapshot.params</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Используйте <code>snapshot.params</code> только когда компонент уничтожается и создаётся заново при каждой навигации. Когда вы переходите между двумя экземплярами <em>одного и того же</em> маршрута — например, <code>/instruments/EURUSD</code> → <code>/instruments/BTCUSD</code> — Angular переиспользует компонент, поэтому <code>ngOnInit</code> не запускается снова, и снимок сохраняет старое значение. Подписка на <code>paramMap</code> (Observable) излучает новый <code>symbol</code> и позволяет повторно загрузить данные, обычно через <code>switchMap</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. В чём разница между <code>canLoad</code> и <code>canMatch</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Оба могут предотвратить скачивание ленивого чанка. <code>canLoad</code> (устаревший) только блокирует загрузку — если он возвращает false, навигация просто завершается неудачей. <code>canMatch</code> (Angular 14.1+) мощнее: он решает, <em>совпадает ли маршрут вообще</em>, поэтому при возврате false роутер двигается дальше и пробует следующий подходящий маршрут. Это даёт паттерны вроде отдачи разных компонентов по одному пути в зависимости от роли или фичефлага. <code>canMatch</code> также работает для немедленно загружаемых (не ленивых) маршрутов, поэтому это рекомендуемая современная замена.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Как выполнить переадресацию из гарда?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Верните <code>UrlTree</code> вместо <code>false</code>. Внедрите <code>Router</code> и постройте дерево с помощью <code>router.createUrlTree(['/login'])</code>. Возврат <code>UrlTree</code> отменяет текущую навигацию и запускает новую к этому URL — для исходной навигации срабатывает событие <code>NavigationCancel</code>. Возврат простого <code>false</code> лишь блокирует навигацию без переадресации, что обычно оставляет пользователя на пустой или предыдущей странице.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Что делает резолвер и в чём его компромисс?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Резолвер (<code>ResolveFn</code>) предзагружает данные <em>до</em> активации маршрута, предоставляя их через <code>route.data</code>, чтобы компонент отрисовался с уже присутствующими данными — без мерцания пустого состояния и проверок на <code>undefined</code> в шаблоне. Компромисс — воспринимаемая задержка: навигация <em>блокируется</em>, пока резолвер не завершится, поэтому медленный API делает весь переход медленным. Для некритичных данных предпочитайте загрузку внутри компонента с состоянием загрузки; резервируйте резолверы для данных, без которых страница действительно не может отрисоваться.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какой API регистрирует маршруты в <strong>standalone</strong> начальной загрузке?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.forRoot(routes)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.forChild(routes)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">provideRouter(routes)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.register(routes)</button>
+        <div class="quiz-explain">provideRouter(routes) передаётся в bootstrapApplication через ApplicationConfig. forRoot/forChild — это API NgModule; forChild для функциональных модулей, а не для начальной загрузки.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Какой гард предотвращает навигацию <strong>прочь</strong> от маршрута с несохранёнными изменениями?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">canActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">canDeactivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">canMatch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">resolve</button>
+        <div class="quiz-explain">canDeactivate срабатывает при уходе с маршрута — классическое применение это подтверждение перед сбросом несохранённых правок формы. canActivate охраняет вход; canMatch охраняет совпадение/загрузку; resolve предзагружает данные.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Какая стратегия предзагрузки используется <strong>по умолчанию</strong>?</div>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">NoPreloading</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">PreloadAllModules</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">QuicklinkStrategy</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">PreloadOnHover</button>
+        <div class="quiz-explain">NoPreloading используется по умолчанию — ленивые чанки загружаются только при навигации. PreloadAllModules заранее предзагружает всё; пользовательская PreloadingStrategy может предзагружать выборочно на основе данных маршрута.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Какое событие сигнализирует, что навигация <strong>завершилась успешно</strong>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NavigationStart</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RoutesRecognized</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">NavigationEnd</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NavigationCancel</button>
+        <div class="quiz-explain">NavigationEnd срабатывает, когда новый маршрут активен — используется для аналитики и прокрутки наверх. NavigationStart начинает её, RoutesRecognized сопоставляет URL, NavigationCancel означает, что гард её заблокировал.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="forms.html" class="btn-nav">← Формы</a>
+      <a href="rxjs.html" class="btn-nav">RxJS →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

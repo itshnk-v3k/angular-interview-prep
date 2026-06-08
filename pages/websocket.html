@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket для trading платформы — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>WebSocket</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>WebSocket для trading платформы</h1>
+      <p class="page-desc">Двунаправленный потоковый обмен данными в реальном времени для торговых
+        интерфейсов: нативный API, RxJS <code>webSocket()</code>, продакшен-сервис переподключения,
+        а также как сохранить плавность таблицы на 20 тыс. инструментов с помощью батчинга, зон и
+        web worker'ов.</p>
+      <button class="btn-done" data-page="websocket" onclick="markDone('websocket')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== WEBSOCKET FUNDAMENTALS ===================== -->
+    <section data-searchable>
+      <h2 id="fundamentals">Основы WebSocket</h2>
+      <p class="definition"><strong>WebSocket</strong> — протокол, обеспечивающий <em>полнодуплексную</em> связь по одному TCP-соединению. В отличие от модели «запрос-ответ» HTTP, он сохраняет <strong>постоянное соединение</strong> после начального рукопожатия, поэтому и клиент, и сервер могут отправлять сообщения в любой момент без поллинга.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Полный дуплекс</strong> — обе стороны могут передавать данные одновременно по одному соединению, в отличие от одноразового цикла «запрос → ответ» в HTTP.</p>
+        <p class="definition"><strong>Рукопожатие (handshake)</strong> — соединение открывается как HTTP-запрос с заголовком <code>Upgrade: websocket</code>, затем протокол переключается на WebSocket-фреймы, а TCP-сокет остаётся открытым.</p>
+        <p class="definition"><strong><code>ws://</code> vs <code>wss://</code></strong> — <code>ws://</code> работает без шифрования, <code>wss://</code> шифруется через TLS. В продакшен торговых системах всегда используйте <code>wss://</code>.</p>
+      </div>
+
+      <h3 id="ready-states">Состояния готовности (ready states)</h3>
+      <p>Свойство <code>readyState</code> сообщает текущую фазу жизненного цикла соединения:</p>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Состояние</th><th>Значение</th><th>Смысл</th></tr></thead>
+          <tbody>
+            <tr><td><code>CONNECTING</code></td><td>0</td><td>Сокет создан, рукопожатие ещё не завершено.</td></tr>
+            <tr><td><code>OPEN</code></td><td>1</td><td>Соединение установлено — можно вызывать <code>send()</code> и получать данные.</td></tr>
+            <tr><td><code>CLOSING</code></td><td>2</td><td>Идёт закрывающее рукопожатие.</td></tr>
+            <tr><td><code>CLOSED</code></td><td>3</td><td>Соединение закрыто или не удалось открыть.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="native-api">Нативный WebSocket API</h3>
+      <p class="definition"><strong>Нативный <code>WebSocket</code></strong> — встроенный в браузер API. Вы создаёте его с URL, навешиваете обработчики событий (<code>onopen</code>, <code>onmessage</code>, <code>onclose</code>, <code>onerror</code>) и используете <code>send()</code> / <code>close()</code>.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+const socket = new WebSocket('wss://stream.exchange.example/marketdata');
+
+// Fired once the handshake completes and readyState becomes OPEN (1)
+socket.onopen = (): void =&gt; {
+  // Only safe to send after OPEN
+  socket.send(JSON.stringify({ action: 'subscribe', symbol: 'BTCUSD' }));
+};
+
+// Fired for every inbound frame — data arrives as a string for text frames
+socket.onmessage = (event: MessageEvent&lt;string&gt;): void =&gt; {
+  const quote = JSON.parse(event.data) as Quote;
+  console.log(quote.symbol, quote.bid, quote.ask);
+};
+
+// Fired when the connection closes — inspect code &amp; reason
+socket.onclose = (event: CloseEvent): void =&gt; {
+  console.warn(`closed: code=${event.code} reason=${event.reason} clean=${event.wasClean}`);
+};
+
+// Fired on transport error (no detail for security reasons) — close usually follows
+socket.onerror = (): void =&gt; {
+  console.error('socket error');
+};
+
+// Graceful shutdown — 1000 is the normal-closure code
+function disconnect(): void {
+  socket.send(JSON.stringify({ action: 'unsubscribe', symbol: 'BTCUSD' }));
+  socket.close(1000, 'client navigating away');
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Подводный камень:</strong> вызов <code>send()</code> до того, как <code>readyState === OPEN</code>, выбрасывает <code>InvalidStateError</code>. Всегда дожидайтесь <code>onopen</code> (или буферизуйте исходящие сообщения до этого момента).</p></div>
+      <div class="tip"><p><strong>Коды закрытия:</strong> <code>1000</code> = нормальное, <code>1001</code> = уход (going away), <code>1006</code> = аномальное (без close-фрейма — обычно обрыв сети). Любой код, отличный от <code>1000</code>, как правило означает, что нужно переподключиться.</p></div>
+    </section>
+
+    <!-- ===================== RXJS webSocket() ===================== -->
+    <section data-searchable>
+      <h2 id="rxjs-websocket">RxJS <code>webSocket()</code></h2>
+      <p class="definition"><strong><code>webSocket()</code></strong> — RxJS <code>Subject</code>, оборачивающий нативный WebSocket. Он предоставляет интерфейс <strong>Observable</strong> для входящих сообщений (подпишитесь, чтобы получать) и интерфейс <strong>Observer</strong> для исходящих сообщений (<code>.next()</code> для отправки). Сериализация/десериализация JSON по умолчанию выполняется за вас.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Ленивое подключение</strong> — сокет открывается только при первом <code>subscribe()</code> и закрывается, когда отписывается последний подписчик.</p>
+        <p class="definition"><strong>Мультиплексирование</strong> — несколько логических потоков (подписки по символам) могут разделять один физический сокет через оператор <code>multiplex()</code>.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
+import { retry } from 'rxjs';
+
+interface TradeEvent {
+  symbol: string;
+  price: number;
+  size: number;
+  timestamp: number;
+}
+
+// Typed subject — Observable&lt;TradeEvent&gt; out, accepts outgoing messages in
+const connection$: WebSocketSubject&lt;TradeEvent&gt; =
+  webSocket&lt;TradeEvent&gt;('wss://stream.exchange.example/trades');
+
+// Send a subscribe message through the Observer interface
+connection$.next({ symbol: 'EURUSD', price: 0, size: 0, timestamp: Date.now() });
+
+// Subscribe to receive; retry reconnects 3s after an error/close
+connection$
+  .pipe(
+    retry({ delay: 3000 }), // re-subscribe → reopens the socket after 3s
+  )
+  .subscribe((event: TradeEvent) =&gt; this.handleEvent(event));</code></pre>
+      </div>
+
+      <div class="tip"><p><strong>Предпочитайте <code>retry({ delay })</code>:</strong> более старый оператор <code>retryWhen</code> устарел. Используйте <code>retry({ delay: 3000 })</code> для фиксированной задержки или <code>retry({ delay: (err, count) =&gt; timer(backoff(count)) })</code> для кастомного/экспоненциального backoff.</p></div>
+      <div class="warn"><p><strong>Примечание:</strong> <code>retry</code> переподписывается на источник, что заново запускает фабрику <code>webSocket()</code> и открывает <em>новый</em> сокет. Любые сообщения подписки нужно отправить заново при переподключении (см. сервис ниже).</p></div>
+    </section>
+
+    <!-- ===================== RECONNECTION SERVICE ===================== -->
+    <section data-searchable>
+      <h2 id="reconnection-service">Сервис переподключения</h2>
+      <p>Продакшен-сервису рыночных данных нужно больше, чем просто голый сокет: <strong>автоматическое переподключение с экспоненциальным backoff</strong>, <strong>повтор подписок</strong> (повторная отправка подписок после переподключения), <strong>типобезопасная обработка сообщений</strong> через размеченное объединение и <strong>детерминированная очистка</strong> с <code>takeUntilDestroyed</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Экспоненциальный backoff</strong> — каждая неудачная попытка переподключения ждёт дольше предыдущей (<code>base · 2^attempt</code>), с ограничением сверху, часто со случайным джиттером, чтобы избежать лавины одновременных переподключений (thundering herd).</p>
+        <p class="definition"><strong>Размеченное объединение (discriminated union)</strong> — объединение объектных типов с общим литеральным полем <code>type</code>, позволяющее TypeScript сужать тип до точной формы внутри <code>switch</code> — без <code>any</code>.</p>
+        <p class="definition"><strong><code>takeUntilDestroyed</code></strong> — оператор Angular, завершающий поток при уничтожении контекста инъекции (компонента/сервиса), автоматически отписываясь без ручного учёта <code>Subscription</code>.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Injectable, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
+import { Observable, Subject, retry, timer, filter, map } from 'rxjs';
+
+// ---- Domain types (no `any` anywhere) ----
+interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+// Outbound commands the client sends to the server
+type OutboundMessage =
+  | { type: 'subscribe'; symbol: string }
+  | { type: 'unsubscribe'; symbol: string }
+  | { type: 'heartbeat' };
+
+// Inbound messages — a discriminated union keyed on `type`
+type InboundMessage =
+  | { type: 'quote'; payload: Quote }
+  | { type: 'ack'; symbol: string }
+  | { type: 'error'; code: number; message: string };
+
+@Injectable({ providedIn: 'root' })
+export class MarketDataService {
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** The underlying RxJS WebSocket subject (recreated on each reconnect). */
+  private socket$: WebSocketSubject&lt;InboundMessage | OutboundMessage&gt; | null = null;
+
+  /** Symbols we are currently subscribed to — replayed after a reconnect. */
+  private readonly activeSymbols = new Set&lt;string&gt;();
+
+  /** Single multicast stream of all decoded inbound messages. */
+  private readonly messages$ = new Subject&lt;InboundMessage&gt;();
+
+  private readonly url = 'wss://stream.exchange.example/marketdata';
+
+  constructor() {
+    this.connect();
+  }
+
+  /** Opens the socket and wires reconnection with exponential backoff. */
+  private connect(): void {
+    this.socket$ = webSocket&lt;InboundMessage | OutboundMessage&gt;({
+      url: this.url,
+      // On (re)open, replay every active subscription so we don't miss data.
+      openObserver: {
+        next: () =&gt; this.activeSymbols.forEach((symbol) =&gt;
+          this.socket$?.next({ type: 'subscribe', symbol })),
+      },
+    });
+
+    this.socket$
+      .pipe(
+        // Reconnect with exponential backoff + jitter, capped at 30s.
+        retry({
+          delay: (_error: unknown, attempt: number) =&gt; {
+            const backoff = Math.min(1000 * 2 ** attempt, 30_000);
+            const jitter = Math.random() * 1000;
+            return timer(backoff + jitter);
+          },
+        }),
+        // Auto-cleanup when the service/injection context is destroyed.
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (msg) =&gt; this.messages$.next(msg as InboundMessage),
+        error: (err: unknown) =&gt; console.error('market data stream failed', err),
+      });
+  }
+
+  /** Subscribe to a symbol; remembers it for replay after reconnects. */
+  subscribe(symbol: string): void {
+    this.activeSymbols.add(symbol);
+    this.socket$?.next({ type: 'subscribe', symbol });
+  }
+
+  /** Unsubscribe from a symbol. */
+  unsubscribe(symbol: string): void {
+    this.activeSymbols.delete(symbol);
+    this.socket$?.next({ type: 'unsubscribe', symbol });
+  }
+
+  /** Type-safe stream of quotes for one symbol (uses the discriminant). */
+  quotes(symbol: string): Observable&lt;Quote&gt; {
+    return this.messages$.pipe(
+      // `msg.type === 'quote'` narrows `msg` to the quote variant — no cast.
+      filter((msg): msg is Extract&lt;InboundMessage, { type: 'quote' }&gt; =&gt;
+        msg.type === 'quote'),
+      map((msg) =&gt; msg.payload),
+      filter((quote) =&gt; quote.symbol === symbol),
+    );
+  }
+}</code></pre>
+      </div>
+      <div class="success"><p><strong>Почему это готово к продакшену:</strong> сокет переоткрывается автоматически с ограниченным backoff, подписки повторяются при каждом переподключении, поэтому ни один символ не теряется незаметно, каждое сообщение сужается по своему дискриминанту (ноль <code>any</code>), а <code>takeUntilDestroyed</code> разбирает всё при уничтожении сервиса.</p></div>
+      <div class="tip"><p>Добавьте на уровне приложения <strong>heartbeat</strong> (<code>{ type: 'heartbeat' }</code> по интервалу) плюс таймаут на стороне сервера, чтобы обнаруживать полуоткрытые TCP-соединения, для которых <code>onclose</code> никогда не срабатывает.</p></div>
+    </section>
+
+    <!-- ===================== PERFORMANCE ===================== -->
+    <section data-searchable>
+      <h2 id="performance">Производительность для 20 тыс. инструментов</h2>
+      <p>Живая торговая таблица может получать десятки тысяч тиков в секунду. Рендеринг каждого тика по отдельности расплавил бы основной поток. Стратегия — <strong>уменьшить количество обновлений</strong>, <strong>рендерить только то, что видно</strong>, и <strong>держать тяжёлую работу и обнаружение изменений вне критического пути</strong>.</p>
+
+      <div class="card">
+        <h4><code>bufferTime(100)</code> — батчинг обновлений</h4>
+        <p class="definition"><strong><code>bufferTime</code></strong> — собирает эмиссии в массив и выдаёт батч с фиксированным интервалом, поэтому UI обновляется один раз за окно, а не на каждый тик.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { bufferTime, filter } from 'rxjs';
+
+// Apply ~10 batched updates per second instead of thousands of ticks
+quotes$
+  .pipe(
+    bufferTime(100),                  // collect 100ms of quotes
+    filter((batch: Quote[]) =&gt; batch.length &gt; 0),
+  )
+  .subscribe((batch: Quote[]) =&gt; this.applyBatch(batch));</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>throttleTime(50, …)</code> — ограничение частоты по символу</h4>
+        <p class="definition"><strong><code>throttleTime</code></strong> — выдаёт значение, затем игнорирует последующие значения в течение заданной длительности. С <code>{ leading: true, trailing: true }</code> вы получаете и первый тик сразу, и последний тик каждого окна.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { throttleTime, asyncScheduler } from 'rxjs';
+
+// Cap one symbol's stream to ~20 updates/sec, keeping first &amp; last
+quoteForSymbol$
+  .pipe(
+    throttleTime(50, asyncScheduler, { leading: true, trailing: true }),
+  )
+  .subscribe((quote: Quote) =&gt; this.render(quote));</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>distinctUntilChanged(…)</code> — пропуск холостых обновлений</h4>
+        <p class="definition"><strong><code>distinctUntilChanged</code></strong> — подавляет эмиссию, если она равна предыдущей (по компаратору, который вы предоставляете), избегая лишних рендеров, когда ничего значимого не изменилось.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { distinctUntilChanged } from 'rxjs';
+
+interface PricePoint { symbol: string; price: number; }
+
+priceStream$
+  .pipe(
+    distinctUntilChanged((a: PricePoint, b: PricePoint) =&gt; a.price === b.price),
+  )
+  .subscribe((p: PricePoint) =&gt; this.flashCell(p));</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Виртуальный скролл и Web Worker</h4>
+        <p class="definition"><strong>Виртуальный скролл</strong> — рендерит только строки, видимые во вьюпорте в данный момент (плюс небольшой буфер), переиспользуя DOM-узлы при прокрутке. С 20 тыс. инструментов в DOM одновременно существует лишь ~30 строк (Angular CDK <code>cdk-virtual-scroll-viewport</code>).</p>
+        <p class="definition"><strong>Web Worker</strong> — выполняет JavaScript в фоновом потоке. Вынесите парсинг сообщений и расчёт индикаторов (VWAP, скользящие средние, P&amp;L) в worker, чтобы основной поток оставался свободным для рендеринга.</p>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th>Техника</th><th>Что снижает</th><th>Когда использовать</th></tr></thead>
+            <tbody>
+              <tr><td><code>bufferTime</code></td><td>Частоту рендеринга</td><td>Высокая общая частота тиков ✅</td></tr>
+              <tr><td><code>throttleTime</code></td><td>Частоту обновлений по символу</td><td>Один «горячий» символ заваливает потоком ✅</td></tr>
+              <tr><td><code>distinctUntilChanged</code></td><td>Избыточные рендеры</td><td>Частые идентичные значения ✅</td></tr>
+              <tr><td>Виртуальный скролл</td><td>Количество DOM-узлов</td><td>Тысячи строк ✅</td></tr>
+              <tr><td>Web Worker</td><td>Нагрузку CPU на основной поток</td><td>Тяжёлый парсинг / индикаторы ✅</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3 id="run-outside-angular"><code>ngZone.runOutsideAngular()</code></h3>
+      <p class="definition"><strong><code>ngZone.runOutsideAngular(fn)</code></strong> — выполняет код <em>вне</em> патча Zone.js Angular. Асинхронная работа, запланированная внутри <code>fn</code>, <strong>не</strong> запускает обнаружение изменений. Это предотвращает полный цикл CD на каждое отдельное WebSocket-сообщение. Вызывайте <code>ngZone.run()</code> только в тот момент, когда UI действительно нужно обновить.</p>
+      <div class="danger"><p><strong>Проблема:</strong> Zone.js патчит коллбэки WebSocket. Без вмешательства <em>каждое</em> входящее сообщение запускает обнаружение изменений по всему приложению — при тысячах тиков/сек UI зависает.</p></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Component, NgZone, OnInit, inject } from '@angular/core';
+
+interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+@Component({ selector: 'app-blotter', template: '...' })
+export class BlotterComponent implements OnInit {
+  private readonly ngZone = inject(NgZone);
+  private readonly ws = inject(MarketDataService);
+
+  /** Hot cache updated outside Angular — no CD on write. */
+  private readonly latestQuotes = new Map&lt;string, Quote&gt;();
+
+  /** Bound in the template — only reassigned inside ngZone.run(). */
+  displayQuote: Quote | null = null;
+
+  ngOnInit(): void {
+    // Subscribe OUTSIDE Angular: incoming ticks won't trigger change detection.
+    this.ngZone.runOutsideAngular(() =&gt; {
+      this.ws.quotes('EURUSD').subscribe((quote: Quote) =&gt; {
+        // Cheap, CD-free bookkeeping for all ticks.
+        this.latestQuotes.set(quote.symbol, quote);
+
+        // Re-enter Angular ONLY when the UI genuinely needs to refresh.
+        if (this.shouldUpdateUI(quote)) {
+          this.ngZone.run(() =&gt; {
+            this.displayQuote = quote; // assignment inside run() → CD runs
+          });
+        }
+      });
+    });
+  }
+
+  /** Throttle UI: e.g. update at most ~10x/sec or on meaningful moves. */
+  private shouldUpdateUI(quote: Quote): boolean {
+    const prev = this.displayQuote;
+    return !prev || quote.bid !== prev.bid || quote.ask !== prev.ask;
+  }
+}</code></pre>
+      </div>
+      <div class="success"><p><strong>Результат:</strong> тысячи тиков/сек дёшево поглощаются в <code>Map</code> с нулевым обнаружением изменений; UI перерисовывается только при вызове <code>ngZone.run()</code>. Дополните это сигналом или <code>OnPush</code> для финального минимального рендера.</p></div>
+      <div class="tip"><p>В современном <strong>zoneless</strong> Angular нет зоны, из которой нужно выходить — используйте <code>signal()</code> и обновляйте их напрямую; только чтения сигналов в шаблоне запускают точечное обновление.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Собеседование</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Чем WebSocket отличается от HTTP-поллинга?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>HTTP-поллинг постоянно открывает новые циклы «запрос-ответ» по интервалу — высокая задержка, расточительные заголовки, и сервер не может пушить. WebSocket выполняет одно HTTP-рукопожатие <code>Upgrade</code>, затем держит одно TCP-соединение открытым для <strong>полнодуплексного</strong> обмена: обе стороны отправляют фреймы в любой момент с минимальными накладными расходами. Для рыночных данных вы получаете субмиллисекундный пуш вместо задержки поллинга.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Почему в Angular предпочтительнее RxJS <code>webSocket()</code>, а не нативный API?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>webSocket()</code> возвращает <code>Subject</code>: Observable для входящих сообщений и Observer (<code>.next()</code>) для исходящих. Это открывает весь конвейер операторов — <code>retry</code> для переподключения, <code>bufferTime</code>/<code>throttleTime</code> для управления back-pressure, <code>filter</code>/<code>map</code> для маршрутизации — плюс ленивое подключение при подписке, автозакрытие при отписке и чистый teardown с <code>takeUntilDestroyed</code>. Также по умолчанию обрабатывается (де)сериализация JSON.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Как реализовать переподключение с экспоненциальным backoff?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Пропустите сокет через <code>retry({ delay })</code>, где функция задержки возвращает <code>timer(Math.min(base * 2 ** attempt, cap) + jitter)</code>. Каждая неудача ждёт дольше (1с, 2с, 4с, 8с…) до предела (например, 30с), а случайный джиттер не даёт всем клиентам переподключаться одновременно. Поскольку <code>retry</code> переподписывается и открывает свежий сокет, нужно <strong>повторить активные подписки</strong> при переподключении — сделайте это в <code>openObserver</code> из запомненного <code>Set</code> символов.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Таблица на 20 тыс. инструментов подвешивает UI. Что вы сделаете?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Наслаивайте несколько техник: <code>bufferTime(100)</code> для батчинга обновлений ~10x/сек, <code>throttleTime</code> для ограничения частоты «горячего» символа, <code>distinctUntilChanged</code> для отбрасывания неизменившихся цен, CDK <strong>виртуальный скролл</strong>, чтобы в DOM были только видимые строки, и <strong>Web Worker</strong> для парсинга и расчёта индикаторов. Главное — подписывайтесь внутри <code>ngZone.runOutsideAngular()</code>, чтобы тики не запускали обнаружение изменений, переходя обратно через <code>ngZone.run()</code> только когда UI должен обновиться. Используйте <code>OnPush</code> или сигналы для финального рендера.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Что делает <code>ngZone.runOutsideAngular()</code> и когда это критично?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Он выполняет код вне зоны Angular, поэтому асинхронные коллбэки, запланированные внутри, не уведомляют Zone.js и потому не запускают обнаружение изменений. Это критично для высокочастотных источников — WebSocket-тиков, циклов <code>requestAnimationFrame</code>, <code>mousemove</code> — где запуск CD на каждое событие убил бы производительность. Вы делаете дешёвую работу вне зоны и вызываете <code>ngZone.run()</code> только в тот точный момент, когда UI нужно обновить. (Zoneless Angular полностью устраняет эту необходимость с помощью сигналов.)</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Квиз</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Каково числовое значение состояния готовности <code>OPEN</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">0</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">1</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">2</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">3</button>
+        <div class="quiz-explain">CONNECTING = 0, OPEN = 1, CLOSING = 2, CLOSED = 3. Безопасно вызывать send() можно только когда readyState равен 1 (OPEN).</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Какие интерфейсы предоставляет subject RxJS <code>webSocket()</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Только Observable для получения</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Только Observer для отправки</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Оба — Observable для получения и Observer (.next) для отправки</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Promise, который резолвится всеми сообщениями</button>
+        <div class="quiz-explain">webSocket() возвращает Subject: подпишитесь для входящих сообщений, вызывайте .next() для отправки исходящих сообщений по тому же сокету.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Какой оператор батчит тики, чтобы UI обновлялся ~10 раз в секунду?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">distinctUntilChanged()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">bufferTime(100)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">debounceTime(100)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">map()</button>
+        <div class="quiz-explain">bufferTime(100) собирает эмиссии в течение 100мс и выдаёт их одним массивом, поэтому вы применяете ~10 батчированных обновлений в секунду вместо тысяч.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Зачем подписываться на WebSocket внутри <code>ngZone.runOutsideAngular()</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Чтобы сокет подключался быстрее</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Чтобы зашифровать соединение</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Чтобы не запускать обнаружение изменений на каждое входящее сообщение</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Чтобы выполнять коллбэк в потоке Web Worker</button>
+        <div class="quiz-explain">Вне зоны Angular Zone.js не уведомляет Angular об асинхронном коллбэке, поэтому обнаружение изменений не запускается на каждое сообщение. Вы возвращаетесь через ngZone.run() только когда UI должен обновиться.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="ngrx.html" class="btn-nav">← NgRx</a>
+      <a href="canvas.html" class="btn-nav">Canvas →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

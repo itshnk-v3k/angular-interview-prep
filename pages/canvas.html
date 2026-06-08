@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas API и графики — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Canvas и графики</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Canvas API и графики</h1>
+      <p class="page-desc">Отрисовка высокочастотных торговых графиков в браузере: Canvas 2D API,
+        полноценный рендерер свечей и объёмов, а также приёмы производительности (rAF, частичная
+        перерисовка, <code>devicePixelRatio</code>, <code>OffscreenCanvas</code>), которые держат живой
+        ценовой график плавным на 60 fps.</p>
+      <button class="btn-done" data-page="canvas" onclick="markDone('canvas')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== CANVAS VS SVG VS WEBGL ===================== -->
+    <section data-searchable>
+      <h2 id="canvas-svg-webgl">Canvas против SVG против WebGL</h2>
+      <p>Три способа отрисовки графики в вебе. Выбор правильного — первый вопрос, который задаёт
+        интервьюер про построение графиков: какая технология и почему.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Canvas</strong> — растровая поверхность непосредственного режима (immediate-mode). Вы отдаёте команды рисования, и они закрашивают пиксели на битмапе. Здесь нет сохраняемых объектов и нет DOM-узлов — после отрисовки фигура остаётся лишь набором пикселей. Идеально для тысяч часто обновляющихся элементов, например ценовых графиков.</p>
+        <p class="definition"><strong>SVG</strong> — векторный формат сохраняемого режима (retained-mode). Каждая фигура — это настоящий DOM-элемент, который можно стилизовать через CSS, навешивать на него события и инспектировать. Не зависит от разрешения, но производительность падает, когда в документе тысячи узлов.</p>
+        <p class="definition"><strong>WebGL</strong> — низкоуровневый API с GPU-ускорением (на базе OpenGL ES). Рендерит через шейдеры, выполняемые на видеокарте; лучший выбор для огромных наборов данных, 3D и тяжёлых визуальных эффектов ценой гораздо большей сложности.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th>Canvas</th><th>SVG</th><th>WebGL</th></tr></thead>
+          <tbody>
+            <tr><td>Тип</td><td>Растровые пиксели</td><td>Вектор</td><td>3D с GPU-ускорением</td></tr>
+            <tr><td>Взаимодействие с DOM</td><td>❌ пиксели</td><td>✅ элементы</td><td>❌</td></tr>
+            <tr><td>Производительность (много элементов)</td><td>✅</td><td>❌ DOM</td><td>✅✅</td></tr>
+            <tr><td>Анимация</td><td>requestAnimationFrame</td><td>CSS / SMIL</td><td>✅✅</td></tr>
+            <tr><td>Применение в трейдинге</td><td>Ценовые графики, тепловые карты</td><td>Простые иконки</td><td>3D-визуализация</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Эмпирическое правило:</strong> несколько интерактивных фигур, которым нужны доступность и CSS → SVG. Живая тепловая карта стакана заявок или график свечей, перерисовывающийся на каждом тике → Canvas. Десятки миллионов точек или 3D-поверхности глубины → WebGL.</p></div>
+    </section>
+
+    <!-- ===================== CANVAS API BASICS ===================== -->
+    <section data-searchable>
+      <h2 id="canvas-basics">Основы Canvas API</h2>
+
+      <h3 id="getting-context">Получение контекста</h3>
+      <p class="definition"><strong>Контекст рендеринга</strong> — объект, открывающий доступ ко всем методам рисования. 2D-контекст получают через <code>canvas.getContext('2d')</code>. Он возвращает <code>CanvasRenderingContext2D | null</code>, поэтому всегда сужайте тип перед использованием.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">const canvas = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (!canvas) throw new Error('canvas not found');
+
+const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+if (!ctx) throw new Error('2d context unavailable');
+
+// ctx is now narrowed to CanvasRenderingContext2D
+ctx.fillStyle = '#0a0';</code></pre></div>
+
+      <h3 id="coordinate-system">Система координат</h3>
+      <p class="definition"><strong>Система координат</strong> — начало координат <code>(0, 0)</code> находится в левом верхнем углу. <code>x</code> растёт вправо, <code>y</code> растёт <em>вниз</em>. Для графиков это важно: более высокие цены — это <em>меньшие</em> значения y, поэтому отображение цены в y должно инвертировать ось.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// (0,0) ──────────────▶ +x
+//   │
+//   │   canvas pixels
+//   ▼
+//  +y         a higher price → a SMALLER y (closer to the top)</code></pre></div>
+
+      <h3 id="drawing-primitives">Примитивы рисования</h3>
+      <div class="card">
+        <p class="definition"><strong>fillRect(x, y, w, h)</strong> — рисует залитый прямоугольник текущим <code>fillStyle</code>. Рабочая лошадка для тел свечей и столбцов объёма.</p>
+        <p class="definition"><strong>strokeRect(x, y, w, h)</strong> — рисует только контур прямоугольника, используя <code>strokeStyle</code> и <code>lineWidth</code>.</p>
+        <p class="definition"><strong>clearRect(x, y, w, h)</strong> — стирает прямоугольную область до прозрачности. Ключевой метод для перерисовки и частичного рендеринга.</p>
+        <p class="definition"><strong>beginPath()</strong> — начинает новый путь, отбрасывая все ранее записанные подпути. Вызывайте перед каждой независимой фигурой.</p>
+        <p class="definition"><strong>moveTo(x, y)</strong> — перемещает «перо» в точку без рисования, начиная новый подпуть.</p>
+        <p class="definition"><strong>lineTo(x, y)</strong> — добавляет прямой отрезок от текущей точки до <code>(x, y)</code>.</p>
+        <p class="definition"><strong>arc(x, y, r, start, end, ccw?)</strong> — добавляет дугу окружности; полная окружность задаётся от <code>0</code> до <code>2 * Math.PI</code>. Используется для маркеров и точек.</p>
+        <p class="definition"><strong>quadraticCurveTo(cpx, cpy, x, y)</strong> — добавляет квадратичную кривую Безье с одной контрольной точкой.</p>
+        <p class="definition"><strong>bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)</strong> — добавляет кубическую кривую Безье с двумя контрольными точками; более гладкие линейные графики.</p>
+        <p class="definition"><strong>fill()</strong> — заливает текущий путь цветом <code>fillStyle</code>.</p>
+        <p class="definition"><strong>stroke()</strong> — обводит текущий путь цветом <code>strokeStyle</code>.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Filled candle body
+ctx.fillStyle = '#16a34a';
+ctx.fillRect(40, 100, 8, 60);
+
+// A wick (high → low) as a stroked line
+ctx.strokeStyle = '#16a34a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(44, 80);
+ctx.lineTo(44, 180);
+ctx.stroke();
+
+// A smooth line-chart segment with a Bézier curve
+ctx.beginPath();
+ctx.moveTo(0, 200);
+ctx.bezierCurveTo(50, 120, 100, 260, 150, 180);
+ctx.stroke();
+
+// A circular marker
+ctx.beginPath();
+ctx.arc(150, 180, 3, 0, 2 * Math.PI);
+ctx.fill();</code></pre></div>
+
+      <h3 id="drawing-text">Рисование текста</h3>
+      <div class="card">
+        <p class="definition"><strong>fillText(text, x, y)</strong> — рисует залитый текст, используя <code>font</code>, <code>fillStyle</code>, <code>textAlign</code> и <code>textBaseline</code>. Применяется для подписей осей и ценовых меток.</p>
+        <p class="definition"><strong>strokeText(text, x, y)</strong> — рисует только контур текста.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ctx.font = '12px monospace';
+ctx.fillStyle = '#475569';
+ctx.textAlign = 'right';
+ctx.textBaseline = 'middle';
+ctx.fillText('1.0850', 60, 100); // a price-axis label</code></pre></div>
+
+      <h3 id="drawing-images">Рисование изображений</h3>
+      <p class="definition"><strong>drawImage(source, dx, dy, dw?, dh?)</strong> — рисует изображение, кадр видео или <em>другой canvas</em> на текущем, при необходимости масштабируя. Именно так <code>OffscreenCanvas</code> или закешированный слой переносится на видимый canvas.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Blit a pre-rendered grid layer onto the main canvas
+ctx.drawImage(gridLayer, 0, 0);
+
+// Draw a scaled logo watermark
+const logo = new Image();
+logo.onload = () =&gt; ctx.drawImage(logo, 10, 10, 48, 48);
+logo.src = '/assets/mark.png';</code></pre></div>
+
+      <h3 id="transformations">Трансформации</h3>
+      <div class="card">
+        <p class="definition"><strong>translate(dx, dy)</strong> — сдвигает начало системы координат. Рисование в <code>(0,0)</code> после этого попадёт в <code>(dx, dy)</code>.</p>
+        <p class="definition"><strong>rotate(angle)</strong> — поворачивает систему координат на <code>angle</code> радиан вокруг текущего начала. Используется для повёрнутых подписей оси времени.</p>
+        <p class="definition"><strong>scale(sx, sy)</strong> — масштабирует последующее рисование. Передача <code>devicePixelRatio</code> по обеим осям даёт чёткий вывод на Retina.</p>
+        <p class="definition"><strong>save()</strong> — кладёт текущее состояние рисования (трансформация, стили, клип) в стек.</p>
+        <p class="definition"><strong>restore()</strong> — снимает последнее сохранённое состояние, отменяя все трансформации и изменения стилей с момента соответствующего <code>save()</code>. Всегда используйте их в паре.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">ctx.save();                 // remember the clean state
+ctx.translate(80, 200);     // move origin to the label anchor
+ctx.rotate(-Math.PI / 4);   // tilt 45° for a dense time axis
+ctx.fillText('09:30', 0, 0);
+ctx.restore();              // undo translate + rotate</code></pre></div>
+      <div class="warn"><p><strong>Подводный камень:</strong> трансформации накапливаются. Если забыть <code>restore()</code> после <code>translate</code>/<code>rotate</code>, весь canvas окажется смещён на следующем кадре. Всегда оборачивайте трансформированное рисование в пару <code>save()</code>/<code>restore()</code>.</p></div>
+    </section>
+
+    <!-- ===================== CANDLESTICK CHART ===================== -->
+    <section data-searchable>
+      <h2 id="candlestick-chart">График свечей</h2>
+      <p class="definition"><strong>Свеча</strong> — один бар OHLCV: цены открытия, максимума, минимума, закрытия и торговый объём за фиксированный интервал времени. Зелёная (бычья), когда <code>close &gt;= open</code>, красная (медвежья) в остальных случаях.</p>
+      <p>Полноценный, хорошо прокомментированный рендерер, который рисует фитили свечей, тела и гистограмму
+        объёмов из массива <code>Candle[]</code>, отображая цену → y (с инверсией) и индекс → x.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface Candle {
+  time: number;   // epoch ms at the start of the interval
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface ChartTheme {
+  bull: string;   // colour for close &gt;= open
+  bear: string;   // colour for close &lt; open
+  volume: string;
+  axis: string;
+}
+
+const DEFAULT_THEME: ChartTheme = {
+  bull: '#16a34a',
+  bear: '#dc2626',
+  volume: 'rgba(100, 116, 139, 0.4)',
+  axis: '#94a3b8',
+};
+
+class CandlestickChart {
+  private readonly ctx: CanvasRenderingContext2D;
+
+  // Layout: the price panel sits on top, the volume panel below it.
+  private readonly padding = { top: 12, right: 64, bottom: 24, left: 12 };
+  private readonly volumeRatio = 0.2; // volume panel takes 20% of the height
+
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly theme: ChartTheme = DEFAULT_THEME,
+  ) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('2d context unavailable');
+    this.ctx = ctx;
+  }
+
+  /** Draw the whole chart for the given candles. */
+  render(candles: Candle[]): void {
+    if (candles.length === 0) return;
+    const { width, height } = this.canvas;
+    const { top, right, bottom, left } = this.padding;
+
+    // ---- Panel geometry ----
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const volumeHeight = plotHeight * this.volumeRatio;
+    const priceHeight = plotHeight - volumeHeight;
+    const priceTop = top;
+    const volumeTop = top + priceHeight;
+
+    // ---- Price scale: map a price to a y pixel (inverted axis) ----
+    const highest = Math.max(...candles.map(c =&gt; c.high));
+    const lowest = Math.min(...candles.map(c =&gt; c.low));
+    const priceRange = highest - lowest || 1; // guard against flat series
+    const priceToY = (price: number): number =&gt;
+      priceTop + (highest - price) / priceRange * priceHeight;
+
+    // ---- Time axis: map a candle index to an x pixel ----
+    const slot = plotWidth / candles.length;      // px per candle
+    const bodyWidth = Math.max(1, slot * 0.6);    // leave a gap between candles
+    const indexToX = (i: number): number =&gt; left + i * slot + slot / 2;
+
+    // ---- Volume scale ----
+    const maxVolume = Math.max(...candles.map(c =&gt; c.volume)) || 1;
+
+    // Clear the frame before redrawing.
+    this.ctx.clearRect(0, 0, width, height);
+
+    // ---- Draw each candle ----
+    for (let i = 0; i &lt; candles.length; i++) {
+      const candle = candles[i];
+      const x = indexToX(i);
+      const bullish = candle.close &gt;= candle.open;
+      const colour = bullish ? this.theme.bull : this.theme.bear;
+
+      // Wick: a vertical line from high to low.
+      this.ctx.strokeStyle = colour;
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, priceToY(candle.high));
+      this.ctx.lineTo(x, priceToY(candle.low));
+      this.ctx.stroke();
+
+      // Body: a filled rectangle between open and close.
+      const yOpen = priceToY(candle.open);
+      const yClose = priceToY(candle.close);
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyHeight = Math.max(1, Math.abs(yClose - yOpen)); // min 1px (doji)
+      this.ctx.fillStyle = colour;
+      this.ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+
+      // Volume bar at the bottom panel.
+      const vH = candle.volume / maxVolume * volumeHeight;
+      this.ctx.fillStyle = this.theme.volume;
+      this.ctx.fillRect(x - bodyWidth / 2, volumeTop + volumeHeight - vH, bodyWidth, vH);
+    }
+
+    // ---- Price axis labels on the right ----
+    this.drawPriceAxis(highest, lowest, priceToY, width - right + 6);
+  }
+
+  /** Draw a handful of evenly-spaced price labels. */
+  private drawPriceAxis(
+    highest: number,
+    lowest: number,
+    priceToY: (p: number) =&gt; number,
+    labelX: number,
+  ): void {
+    const ticks = 5;
+    this.ctx.fillStyle = this.theme.axis;
+    this.ctx.font = '11px monospace';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    for (let t = 0; t &lt;= ticks; t++) {
+      const price = lowest + (highest - lowest) * (t / ticks);
+      this.ctx.fillText(price.toFixed(4), labelX, priceToY(price));
+    }
+  }
+}
+
+// Usage
+const el = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (el) {
+  const chart = new CandlestickChart(el);
+  chart.render(candles); // candles: Candle[]
+}</code></pre></div>
+      <div class="tip"><p><strong>Почему <code>priceToY</code> инвертирует:</strong> ось y у canvas растёт вниз, а цены растут вверх. Формула <code>(highest - price) / range</code> отображает самую высокую цену в верх (малое y), а самую низкую — в низ (большое y).</p></div>
+      <div class="warn"><p><strong>Обработанные краевые случаи:</strong> плоский ряд (<code>priceRange</code> откатывается к <code>1</code>), доджи, где открытие равно закрытию (тело принудительно делается <code>1px</code>, чтобы оставаться видимым), и нулевой объём (<code>maxVolume</code> откатывается к <code>1</code>).</p></div>
+    </section>
+
+    <!-- ===================== PERFORMANCE ===================== -->
+    <section data-searchable>
+      <h2 id="performance">Производительность</h2>
+
+      <h3 id="raf">requestAnimationFrame</h3>
+      <p class="definition"><strong>requestAnimationFrame(cb)</strong> — планирует запуск <code>cb</code> прямо перед следующей перерисовкой браузера (~60 fps, в такт частоте обновления дисплея). Колбэк получает высокоточную метку времени. Предпочитайте его вместо <code>setTimeout</code> для анимации: он приостанавливается в фоновых вкладках, синхронизируется с дисплеем и избегает пропущенных или сдвоенных кадров.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">class RenderLoop {
+  private rafId = 0;
+  private running = false;
+
+  constructor(private readonly draw: (timestamp: number) =&gt; void) {}
+
+  start(): void {
+    if (this.running) return;
+    this.running = true;
+    const frame = (timestamp: number): void =&gt; {
+      if (!this.running) return;
+      this.draw(timestamp);                       // render one frame
+      this.rafId = requestAnimationFrame(frame);  // queue the next
+    };
+    this.rafId = requestAnimationFrame(frame);
+  }
+
+  stop(): void {
+    this.running = false;
+    cancelAnimationFrame(this.rafId);
+  }
+}
+
+// Drive the chart from live quotes
+const loop = new RenderLoop(() =&gt; chart.render(latestCandles));
+loop.start();
+// loop.stop(); // call on ngOnDestroy</code></pre></div>
+      <div class="warn"><p><strong>Замечание про Angular:</strong> запускайте цикл через <code>NgZone.runOutsideAngular()</code>, чтобы каждый кадр не запускал обнаружение изменений, и всегда вызывайте <code>cancelAnimationFrame</code> в <code>ngOnDestroy</code>, чтобы избежать утечки цикла.</p></div>
+
+      <h3 id="dirty-rendering">Частичная перерисовка</h3>
+      <p class="definition"><strong>Частичная перерисовка (dirty rendering)</strong> — вместо очистки и перерисовки всего canvas на каждом кадре перерисовывайте только изменившуюся область («грязный прямоугольник»). На широком графике, где на каждом тике обновляется лишь новейшая свеча, это резко сокращает работу на кадр.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Only the last candle moves on each tick → repaint just its column.
+function redrawLastCandle(
+  ctx: CanvasRenderingContext2D,
+  column: { x: number; width: number; top: number; height: number },
+  drawColumn: () =&gt; void,
+): void {
+  // Clear ONLY the dirty rectangle, not the entire canvas.
+  ctx.clearRect(column.x, column.top, column.width, column.height);
+  drawColumn(); // repaint that single column
+}</code></pre></div>
+      <div class="tip"><p><strong>Альтернатива со слоями:</strong> держите статичный контент (сетку, оси) на фоновом canvas, нарисованном один раз, а на прозрачном верхнем canvas — только динамический ряд. Дорогой слой никогда не перерисовывается.</p></div>
+
+      <h3 id="device-pixel-ratio">devicePixelRatio</h3>
+      <p class="definition"><strong>devicePixelRatio (DPR)</strong> — отношение физических пикселей устройства к CSS-пикселям. На Retina/HiDPI-дисплее оно равно <code>2</code> (или больше). Canvas, размер которого задан только в CSS, рендерится размыто; нужно задать его буфер отрисовки в размере <code>cssSize × DPR</code> и масштабировать контекст, чтобы одна единица рисования соответствовала одному физическому пикселю.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">function setupHiDpiCanvas(
+  canvas: HTMLCanvasElement,
+  cssWidth: number,
+  cssHeight: number,
+): CanvasRenderingContext2D {
+  const dpr = window.devicePixelRatio || 1;
+
+  // Backing store in physical pixels (sharp).
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+
+  // Display size stays in CSS pixels.
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2d context unavailable');
+
+  // Scale so all drawing code can use CSS-pixel coordinates.
+  ctx.scale(dpr, dpr);
+  return ctx;
+}</code></pre></div>
+      <div class="danger"><p><strong>Подводный камень:</strong> если задать <code>canvas.width</code>/<code>height</code>, но забыть <code>canvas.style.width</code>/<code>height</code> (или наоборот), график будет либо размытым, либо неправильно растянутым. Обе пары должны быть заданы, а <code>scale(dpr, dpr)</code> применён один раз после установки размеров.</p></div>
+
+      <h3 id="offscreen-canvas">OffscreenCanvas</h3>
+      <p class="definition"><strong>OffscreenCanvas</strong> — canvas, отвязанный от DOM, который можно рендерить из Web Worker. Тяжёлая отрисовка графика происходит вне основного потока, сохраняя UI отзывчивым; результат передаётся на видимый canvas через <code>transferControlToOffscreen()</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// --- main thread ---
+const canvas = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (!canvas) throw new Error('canvas not found');
+
+const offscreen: OffscreenCanvas = canvas.transferControlToOffscreen();
+const worker = new Worker(new URL('./chart.worker', import.meta.url), { type: 'module' });
+
+// Transfer ownership of the offscreen canvas to the worker (zero-copy).
+worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+
+// Stream live candles to the worker for rendering.
+worker.postMessage({ type: 'candles', candles: latestCandles });
+
+// --- chart.worker.ts ---
+let ctx: OffscreenCanvasRenderingContext2D | null = null;
+
+onmessage = (e: MessageEvent): void =&gt; {
+  const data = e.data as
+    | { type: 'init'; canvas: OffscreenCanvas }
+    | { type: 'candles'; candles: Candle[] };
+
+  if (data.type === 'init') {
+    ctx = data.canvas.getContext('2d');
+  } else if (data.type === 'candles' &amp;&amp; ctx) {
+    drawCandles(ctx, data.candles); // runs entirely off the main thread
+  }
+};</code></pre></div>
+      <div class="tip"><p><strong>Когда это окупается:</strong> плотные графики (тысячи свечей) или несколько панелей, перерисовывающихся на каждом тике. Для одного лёгкого графика накладные расходы на обмен с воркером и сериализацию могут перевесить выгоду — сначала измеряйте.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — собеседование</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Когда вы выберете Canvas вместо SVG для графика?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Когда есть много часто обновляющихся элементов — живой график свечей, тепловая карта стакана заявок, тысячи точек. SVG создаёт DOM-узел на каждую фигуру, поэтому график с тысячами элементов раздувает документ, и узким местом становится перекомпоновка/перерисовка. Canvas — это растр непосредственного режима: он просто закрашивает пиксели, поэтому перерисовка тысяч свечей на каждом тике остаётся дешёвой. Компромисс в том, что у Canvas нет DOM — нет стилизации через CSS, нет обработчиков событий на фигурах, слабее доступность. SVG выигрывает для небольшого числа интерактивных, стилизуемых и доступных фигур (иконки, одна аннотированная линия).</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Почему <code>requestAnimationFrame</code> предпочтительнее <code>setTimeout</code> для анимации?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>requestAnimationFrame</code> синхронизирован с частотой обновления дисплея (~60 fps) и срабатывает прямо перед следующей перерисовкой, поэтому кадры никогда не пропускаются и не дублируются, а анимация выглядит плавной. Он автоматически приостанавливается в фоновых или скрытых вкладках, экономя CPU и батарею. <code>setTimeout(fn, 16)</code> дрейфует относительно реальной частоты обновления, продолжает срабатывать в фоновых вкладках и может рисовать частичные кадры. rAF также передаёт высокоточную метку времени, которую можно использовать для вычисления дельт по времени.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Почему canvas выглядит размытым на экране Retina и как это исправить?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>На HiDPI-дисплее <code>devicePixelRatio</code> равен 2 или больше: каждый CSS-пиксель соответствует нескольким физическим. Если буфер отрисовки canvas задан только в CSS-пикселях, браузер увеличивает битмап, и он выглядит мягким. Решение: задать <code>canvas.width = cssWidth * dpr</code> и <code>canvas.height = cssHeight * dpr</code> для буфера отрисовки, оставить <code>canvas.style.width/height</code> равными CSS-размеру, затем один раз вызвать <code>ctx.scale(dpr, dpr)</code>, чтобы код рисования мог продолжать использовать CSS-пиксельные координаты. Теперь одна единица рисования равна одному физическому пикселю, и линии чёткие.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Что такое <code>OffscreenCanvas</code> и какую проблему он решает?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Это canvas, отвязанный от DOM, который можно рендерить из Web Worker. Вы вызываете <code>transferControlToOffscreen()</code> на видимом canvas и через <code>postMessage</code> передаёте offscreen-дескриптор воркеру (как transferable, поэтому без копирования). Воркер затем выполняет всю дорогую отрисовку вне основного потока, поэтому прокрутка, ввод и обнаружение изменений Angular остаются отзывчивыми даже во время перерисовки плотного графика. Это решает проблему конкуренции за основной поток; ценой является настройка воркера и сериализация сообщений, поэтому это окупается в основном для тяжёлых или многопанельных графиков — измеряйте перед внедрением.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Вам нужен ценовой график, перерисовывающий тысячи свечей на каждом тике. Какая технология подходит лучше всего?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">SVG — один элемент на свечу</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Canvas — растр непосредственного режима</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Обычные HTML-блоки div с абсолютным позиционированием</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Фоновые градиенты CSS</button>
+        <div class="quiz-explain">Canvas закрашивает пиксели без создания DOM-узлов, поэтому перерисовка тысяч часто обновляющихся свечей остаётся дешёвой. SVG/div создают по узлу на фигуру и захлёбываются на перекомпоновке.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Где в системе координат canvas находится начало координат <code>(0, 0)</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Внизу слева, y растёт вверх</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">В центре canvas</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Вверху слева, x вправо и y вниз</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Вверху справа, x влево и y вниз</button>
+        <div class="quiz-explain">Начало координат canvas — вверху слева; x растёт вправо, y растёт вниз. Именно поэтому отображение цены→y должно инвертировать ось, помещая более высокие цены в меньшие значения y.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Чтобы отрисовать чёткий canvas на экране с <code>devicePixelRatio === 2</code>, нужно:</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Задать только <code>canvas.style.width/height</code></button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Задать буфер отрисовки в размере × dpr и вызвать <code>ctx.scale(dpr, dpr)</code></button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Вручную делить все координаты пополам</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Использовать <code>image-rendering: pixelated</code> в CSS</button>
+        <div class="quiz-explain">Задайте буфер отрисовки в размере cssSize × dpr, оставьте CSS-размер для отображения, затем один раз масштабируйте контекст на dpr, чтобы код рисования продолжал использовать CSS-пиксельные координаты. Тогда одна единица равна одному физическому пикселю.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="websocket.html" class="btn-nav">← WebSocket</a>
+      <a href="workers.html" class="btn-nav">SW + WebWorker →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

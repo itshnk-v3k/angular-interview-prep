@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Внедрение зависимостей (DI) — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Внедрение зависимостей</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Внедрение зависимостей (DI)</h1>
+      <p class="page-desc">Система DI в Angular — одна из её определяющих особенностей: иерархическое дерево
+        инжекторов, которое разрешает зависимости, поднимаясь вверх от запрашивающего класса. Освойте <code>providedIn</code>,
+        типы провайдеров, <code>InjectionToken</code>, декораторы разрешения и современную функцию <code>inject()</code>.</p>
+      <button class="btn-done" data-page="di" onclick="markDone('di')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= HOW DI WORKS ============================= -->
+    <section data-searchable>
+      <h2 id="how-di-works">Как работает DI</h2>
+      <p>Angular строит <strong>дерево инжекторов, которое повторяет дерево компонентов</strong>. Когда класс запрашивает
+        зависимость, Angular поднимается <em>вверх</em> по этому дереву от запрашивающего инжектора, пока не найдёт ближайший
+        провайдер для этого токена. Побеждает первый найденный провайдер; если ни одного нет, Angular выбрасывает
+        <code>NullInjectorError: No provider for X</code>.</p>
+
+      <p class="definition"><strong>Инжектор (Injector)</strong> — контейнер, который умеет создавать и кэшировать зависимости для заданного набора токенов. У каждого инжектора есть родитель, что образует дерево.</p>
+      <p class="definition"><strong>Токен (Token)</strong> — ключ, который Angular использует для поиска провайдера. Обычно это тип класса, но может быть <code>InjectionToken</code> или строкой.</p>
+      <p class="definition"><strong>Провайдер (Provider)</strong> — рецепт, который сообщает инжектору, как произвести значение для токена (<code>useClass</code>, <code>useValue</code>, <code>useFactory</code>, <code>useExisting</code>).</p>
+      <p class="definition"><strong>Разрешение (Resolution)</strong> — подъём вверх по родительским инжекторам в поисках первого подходящего провайдера. После разрешения экземпляр кэшируется на этом инжекторе и переиспользуется всеми, кто находится ниже него.</p>
+
+      <h3 id="injector-hierarchy">Иерархия инжекторов (сверху вниз)</h3>
+      <div class="card">
+        <p class="definition"><strong>1. Платформенный инжектор (Platform Injector)</strong> — самый верхний инжектор, создаваемый <code>platformBrowserDynamic()</code>/<code>bootstrapApplication</code>. Хранит синглтоны уровня платформы, общие для всех Angular-приложений, запущенных на одной странице (например, нескольких приложений в одной вкладке браузера).</p>
+        <p class="definition"><strong>2. Корневой инжектор (Root Injector)</strong> — создаётся при загрузке приложения. Всё, что объявлено как <code>providedIn: 'root'</code>, живёт здесь единственным экземпляром на всё приложение. Дом по умолчанию для сервисов уровня приложения.</p>
+        <p class="definition"><strong>3. Инжектор модуля (Module Injector)</strong> — создаётся для каждого (загруженного сразу или лениво) <code>@NgModule</code>. Сервисы, перечисленные в <code>@NgModule.providers</code>, живут здесь. Лениво загружаемые модули получают собственный дочерний инжектор модуля.</p>
+        <p class="definition"><strong>4. Инжектор компонента (Element Injector)</strong> — создаётся для каждого компонента, объявляющего <code>@Component.providers</code>. Производит <em>новый экземпляр на каждое поддерево компонента</em>, поэтому каждый компонент (и его потомки) получает собственную копию.</p>
+        <p class="definition"><strong>5. Инжектор элемента (директивы)</strong> — самый мелкозернистый инжектор, создаваемый для элементов, на которых размещена <code>@Directive</code> с <code>providers</code>. Используется для зависимостей в области видимости директивы.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Инжектор</th><th>Кем создаётся</th><th>Время жизни / область</th></tr></thead>
+          <tbody>
+            <tr><td>Платформенный</td><td>Загрузка платформы</td><td>Все приложения на странице</td></tr>
+            <tr><td>Корневой</td><td>Загрузка приложения</td><td>Всё приложение (синглтон)</td></tr>
+            <tr><td>Модуля</td><td>Каждый <code>@NgModule</code></td><td>Этот модуль (ленивый = свой дочерний)</td></tr>
+            <tr><td>Компонента</td><td><code>@Component.providers</code></td><td>Компонент + его поддерево</td></tr>
+            <tr><td>Элемента / директивы</td><td><code>@Directive.providers</code></td><td>Этот элемент/хост</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// Root-level singleton: ONE PriceService for the whole app
+@Injectable({ providedIn: 'root' })
+export class PriceService {
+  getQuote(symbol: string): Quote { /* ... */ }
+}
+
+// Component-level: a NEW instance per OrderPanel subtree
+@Component({
+  selector: 'app-order-panel',
+  standalone: true,
+  providers: [OrderDraftService],   // not shared across panels
+  template: `...`,
+})
+export class OrderPanelComponent {
+  // Angular walks up from THIS component's injector:
+  // OrderDraftService found here → fresh instance;
+  // PriceService not here → keeps walking up to the root injector.
+  private readonly draft = inject(OrderDraftService);
+  private readonly prices = inject(PriceService);
+}</code></pre>
+      </div>
+      <div class="tip"><p><strong>Ментальная модель:</strong> разрешение всегда идёт <em>вверх</em>, никогда вбок или вниз. Соседний компонент не может увидеть сервис, который вы предоставили в другом компоненте — предоставьте его выше (в корне или общем родителе), чтобы поделиться им.</p></div>
+    </section>
+
+    <!-- ============================= providedIn OPTIONS ============================= -->
+    <section data-searchable>
+      <h2 id="providedin-options">Опции providedIn</h2>
+      <p>Поле <code>providedIn</code> декоратора <code>@Injectable</code> объявляет, <em>где</em> регистрируется сервис, и
+        делает его <strong>поддающимся tree-shaking</strong>: если сервис никто не инжектит, сборщик может полностью его удалить.</p>
+
+      <div class="card">
+        <p class="definition"><strong>'root'</strong> — регистрирует в корневом инжекторе: единственный синглтон на всё приложение, доступный везде, и поддающийся tree-shaking. Выбор по умолчанию для подавляющего большинства сервисов.</p>
+        <p class="definition"><strong>'platform'</strong> — регистрирует в платформенном инжекторе: один экземпляр, общий для <em>нескольких Angular-приложений</em>, загруженных на одной странице. Редко; используется в микрофронтендах, разделяющих состояние.</p>
+        <p class="definition"><strong>'any'</strong> — создаёт <em>отдельный экземпляр для каждого инжектора, который его запрашивает</em> — на практике по одному на каждый лениво загружаемый модуль плюс один в корне. Используйте, когда каждой ленивой фиче нужна своя изолированная копия.</p>
+        <p class="definition"><strong>MyModule</strong> — регистрирует в инжекторе конкретного модуля: сервис существует только там, где этот модуль импортирован. Включается в бандл и удаляется вместе с модулем.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// App-wide singleton (default, recommended)
+@Injectable({ providedIn: 'root' })
+export class PortfolioService {}
+
+// Shared across multiple Angular apps on the same page
+@Injectable({ providedIn: 'platform' })
+export class SharedSessionService {}
+
+// One instance per lazy-loaded module (isolated state)
+@Injectable({ providedIn: 'any' })
+export class FeatureStateService {}
+
+// Only available where TradingModule is imported
+@Injectable({ providedIn: TradingModule })
+export class TradingConfigService {}</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Значение</th><th>Экземпляры</th><th>Tree-shaking</th><th>Типичное применение</th></tr></thead>
+          <tbody>
+            <tr><td><code>'root'</code></td><td>Один на приложение</td><td>✅</td><td>Почти всё</td></tr>
+            <tr><td><code>'platform'</code></td><td>Один на страницу</td><td>✅</td><td>Микрофронтенды</td></tr>
+            <tr><td><code>'any'</code></td><td>Один на (ленивый) инжектор</td><td>✅</td><td>Изолированное ленивое состояние</td></tr>
+            <tr><td><code>MyModule</code></td><td>Один на импорт модуля</td><td>✅</td><td>Конфигурация в области модуля</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="warn"><p><strong>Подвох с <code>'any'</code>:</strong> поскольку каждый ленивый модуль получает свой экземпляр, это <em>не</em> синглтон. Чтобы разделить единый источник истины между ленивыми фичами, нужен <code>'root'</code>.</p></div>
+    </section>
+
+    <!-- ============================= PROVIDER TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="provider-types">Типы провайдеров</h2>
+      <p>Провайдер сообщает инжектору, <em>как</em> построить значение для токена. Есть четыре рецепта,
+        плюс флаг <code>multi</code> для регистрации множества провайдеров под одним токеном.</p>
+
+      <div class="card">
+        <h4><code>useClass</code></h4>
+        <p class="definition"><strong>useClass</strong> — создаёт экземпляр заданного класса (с инжектированными в него собственными зависимостями), когда запрашивается токен. Позволяет подменять одну реализацию другой за одним и тем же токеном.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Provide a mock feed in tests, a real feed in prod — same token
+providers: [
+  { provide: PriceFeedService, useClass: MockPriceFeedService },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useValue</code></h4>
+        <p class="definition"><strong>useValue</strong> — поставляет точное, уже сконструированное значение как есть (без создания экземпляра). Идеально для объектов конфигурации, констант и примитивов.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface TradingConfig { maxOrderQty: number; baseCurrency: string; }
+
+providers: [
+  { provide: TRADING_CONFIG, useValue: { maxOrderQty: 1_000_000, baseCurrency: 'USD' } as TradingConfig },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useFactory</code></h4>
+        <p class="definition"><strong>useFactory</strong> — вызывает фабричную функцию для вычисления значения. Функция может принимать собственные зависимости, объявленные по порядку в массиве <code>deps</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Build a service that depends on runtime config + another service
+export function orderValidatorFactory(config: TradingConfig, prices: PriceService): OrderValidator {
+  return new OrderValidator(config.maxOrderQty, prices);
+}
+
+providers: [
+  {
+    provide: OrderValidator,
+    useFactory: orderValidatorFactory,
+    deps: [TRADING_CONFIG, PriceService],   // injected in this order
+  },
+];</code></pre></div>
+        <div class="tip"><p>Современная альтернатива: внутри фабрики можно вызывать <code>inject()</code> напрямую вместо перечисления <code>deps</code>, потому что фабрики выполняются в контексте инъекции.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useExisting</code></h4>
+        <p class="definition"><strong>useExisting</strong> — делает один токен псевдонимом другого: запрос нового токена возвращает <em>тот же экземпляр</em>, уже зарегистрированный для целевого токена. Новый объект не создаётся.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Expose the same PriceService under a narrower read-only interface
+providers: [
+  PriceService,
+  { provide: ReadonlyQuoteSource, useExisting: PriceService },
+];
+// inject(ReadonlyQuoteSource) === inject(PriceService) → same object</code></pre></div>
+        <div class="warn"><p><strong>useExisting против useClass:</strong> <code>useClass</code> создаёт совершенно новый экземпляр; <code>useExisting</code> переиспользует существующий. Ошибочное создание псевдонима через <code>useClass</code> даст вам два отдельных объекта.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>multi: true</code></h4>
+        <p class="definition"><strong>multi: true</strong> — позволяет нескольким провайдерам регистрироваться под одним токеном; инъекция токена возвращает <em>массив</em> всех привнесённых значений. Основа HTTP-интерцепторов, валидаторов и инициализаторов.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// Each provider adds one interceptor; inject(HTTP_INTERCEPTORS) → all of them
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  { provide: HTTP_INTERCEPTORS, useClass: RetryInterceptor, multi: true },
+  { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true },
+];</code></pre></div>
+        <div class="danger"><p><strong>Подводный камень:</strong> смешивание <code>multi: true</code> и не-multi провайдеров для одного токена приводит к ошибке. Токен либо всегда multi, либо никогда не multi.</p></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Провайдер</th><th>Производит</th><th>Новый экземпляр?</th><th>Лучше всего для</th></tr></thead>
+          <tbody>
+            <tr><td><code>useClass</code></td><td>Экземпляр класса</td><td>✅</td><td>Заменяемые реализации</td></tr>
+            <tr><td><code>useValue</code></td><td>Литеральное значение</td><td>❌ (используется как есть)</td><td>Конфигурация, константы</td></tr>
+            <tr><td><code>useFactory</code></td><td>То, что вернёт фабрика</td><td>Зависит</td><td>Зависимости, вычисляемые в рантайме</td></tr>
+            <tr><td><code>useExisting</code></td><td>Псевдоним другого токена</td><td>❌ (общий)</td><td>Сужение интерфейсов</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================= InjectionToken ============================= -->
+    <section data-searchable>
+      <h2 id="injection-token">InjectionToken</h2>
+      <p class="definition"><strong>InjectionToken</strong> — типизированный уникальный токен, используемый для инъекции <em>не-классовых</em> зависимостей (объектов конфигурации, строк, функций, примитивов). Поскольку каждый токен — это отдельный объект, он избегает коллизий ключей, свойственных обычным строковым токенам, и несёт generic-тип для типобезопасной инъекции.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// 1. Declare a typed token
+export const API_URL = new InjectionToken&lt;string&gt;('API_URL');
+
+// 2. Register a value for it
+providers: [
+  { provide: API_URL, useValue: 'https://api.trading.com' },
+];
+
+// 3a. Inject it the modern way (field initializer)
+@Injectable({ providedIn: 'root' })
+export class OrderApi {
+  private readonly apiUrl = inject(API_URL);   // typed as string
+}
+
+// 3b. Inject it the classic way (constructor + @Inject)
+@Injectable({ providedIn: 'root' })
+export class OrderApiClassic {
+  constructor(@Inject(API_URL) private apiUrl: string) {}
+}</code></pre>
+      </div>
+
+      <h3 id="token-factory-default">Токен с фабричным значением по умолчанию</h3>
+      <p>Токен <code>InjectionToken</code> может нести собственное tree-shakeable значение по умолчанию через <code>providedIn</code> + <code>factory</code>,
+        поэтому вам не нужно регистрировать его явно, если только вы не хотите его переопределить.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">export interface FeatureFlags {
+  darkMode: boolean;
+  betaFeatures: boolean;
+}
+
+export const FEATURE_FLAGS = new InjectionToken&lt;FeatureFlags&gt;('FeatureFlags', {
+  providedIn: 'root',
+  factory: () =&gt; ({ darkMode: false, betaFeatures: false }),
+});
+
+// Works with no explicit provider — the factory supplies the default
+@Injectable({ providedIn: 'root' })
+export class ThemeService {
+  private readonly flags = inject(FEATURE_FLAGS); // typed FeatureFlags
+}</code></pre>
+      </div>
+
+      <div class="danger">
+        <p><strong>Почему не строковые токены?</strong> Обычные строки глобальны и нетипизированы, поэтому две библиотеки, которые обе
+          используют <code>'config'</code> в качестве токена, будут молча конфликтовать — побеждает тот, кто зарегистрировался последним. Токен
+          <code>InjectionToken</code> — это уникальная ссылка на объект, с которой невозможно столкнуться, и она несёт свой тип.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">// ❌ Fragile — collides with any other 'config' string token, no type safety
+providers: [{ provide: 'config', useValue: { /* ... */ } }];
+
+// ✅ Unique object + generic type, collision-proof
+export const CONFIG = new InjectionToken&lt;TradingConfig&gt;('CONFIG');</code></pre></div>
+      </div>
+    </section>
+
+    <!-- ============================= DI DECORATORS ============================= -->
+    <section data-searchable>
+      <h2 id="di-decorators">Декораторы DI (@Self, @SkipSelf, @Optional, @Host)</h2>
+      <p>Эти декораторы-модификаторы (и их эквиваленты в виде опций <code>inject()</code>) меняют, <em>насколько далеко</em> и
+        <em>где</em> Angular ищет при разрешении зависимости.</p>
+
+      <div class="card">
+        <h4><code>@Self()</code></h4>
+        <p class="definition"><strong>@Self()</strong> — ограничивает разрешение только <em>текущим</em> инжектором. Если там нет провайдера, Angular выбрасывает ошибку вместо подъёма вверх.</p>
+        <p><strong>Когда использовать:</strong> вам нужен локально предоставленный экземпляр и вы хотите жёсткий сбой, если он отсутствует.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({
+  selector: 'app-order-row',
+  standalone: true,
+  providers: [OrderDraftService],            // must be provided HERE
+})
+export class OrderRowComponent {
+  // constructor form
+  constructor(@Self() private draft: OrderDraftService) {}
+  // inject() form
+  // private readonly draft = inject(OrderDraftService, { self: true });
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@SkipSelf()</code></h4>
+        <p class="definition"><strong>@SkipSelf()</strong> — пропускает текущий инжектор и начинает разрешение с <em>родительского</em>. Полезно, чтобы добраться до экземпляра родителя, даже когда тот же токен предоставлен локально.</p>
+        <p><strong>Когда использовать:</strong> иерархические сервисы, где потомок должен обращаться к копии родителя (например, вложенные группы форм, древовидные структуры).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Component({ selector: 'app-positions-node', standalone: true })
+export class PositionsNodeComponent {
+  // Reach the PARENT node's aggregator, not this node's own
+  constructor(@SkipSelf() @Optional() private parent: PositionAggregator | null) {}
+  // inject() form
+  // private readonly parent = inject(PositionAggregator, { skipSelf: true, optional: true });
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@Optional()</code></h4>
+        <p class="definition"><strong>@Optional()</strong> — возвращает <code>null</code> вместо ошибки, когда провайдер не найден нигде выше по дереву.</p>
+        <p><strong>Когда использовать:</strong> необязательные коллабораторы, переключатели фич или токены, которые могут законно отсутствовать.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class TradingService {
+  // No AnalyticsService registered? logger stays null, no crash.
+  constructor(@Optional() private analytics: AnalyticsService | null) {}
+
+  placeOrder(order: Order): void {
+    this.analytics?.track('order_placed', order.id);
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@Host()</code></h4>
+        <p class="definition"><strong>@Host()</strong> — останавливает подъём вверх на инжекторе <em>хост-компонента</em>: он смотрит в текущем и хостовом инжекторах элемента, но не выше. В основном для директив, которым нужна зависимость, предоставленная их хост-компонентом.</p>
+        <p><strong>Когда использовать:</strong> директива, которая должна привязаться к локально предоставленному сервису своего хост-компонента (например, контрол, привязанный к своей хост-форме).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Directive({ selector: '[appQtyControl]', standalone: true })
+export class QtyControlDirective {
+  // Find the validator on the host component, not somewhere up the app tree
+  constructor(@Host() private validator: OrderValidator) {}
+  // inject() form
+  // private readonly validator = inject(OrderValidator, { host: true });
+}</code></pre></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Декоратор</th><th>Область поиска</th><th>Не найдено →</th></tr></thead>
+          <tbody>
+            <tr><td><code>@Self()</code></td><td>Только текущий инжектор</td><td>Выбрасывает ошибку</td></tr>
+            <tr><td><code>@SkipSelf()</code></td><td>Родитель и выше</td><td>Выбрасывает ошибку</td></tr>
+            <tr><td><code>@Optional()</code></td><td>Обычный подъём вверх</td><td>Возвращает <code>null</code></td></tr>
+            <tr><td><code>@Host()</code></td><td>До хост-элемента</td><td>Выбрасывает ошибку</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p>Они комбинируются: <code>@SkipSelf() @Optional()</code> означает «начни с родителя и дай мне <code>null</code>, если ни у кого выше этого нет». Эквиваленты для <code>inject()</code> — это опции <code>{ skipSelf: true, optional: true }</code>.</p></div>
+    </section>
+
+    <!-- ============================= inject() vs constructor ============================= -->
+    <section data-searchable>
+      <h2 id="inject-vs-constructor">Функция inject() против инъекции через конструктор</h2>
+      <p class="definition"><strong>inject()</strong> — функция (Angular 14+), которая извлекает зависимость из текущего инжектора. Применима в конструкторах, инициализаторах полей и фабричных функциях, и особенно чиста для standalone-компонентов, функциональных guard'ов/интерцепторов и вспомогательных функций композиции.</p>
+      <p class="definition"><strong>Инъекция через конструктор</strong> — классический подход: зависимости объявляются как параметры конструктора. Работает везде и обязательна, когда инжектируемая зависимость должна быть доступна конструктору подкласса через <code>super(...)</code>.</p>
+      <p class="definition"><strong>Контекст инъекции</strong> — ограниченное окно, в котором <code>inject()</code> разрешено выполняться: во время конструирования (тело конструктора или инициализаторы полей), внутри фабрик провайдеров или явно через <code>runInInjectionContext()</code>. Вызов <code>inject()</code> вне его выбрасывает <code>NG0203</code>.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// Modern: inject() in field initializers — no constructor boilerplate
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  private readonly http = inject(HttpClient);
+  private readonly prices = inject(PriceService);
+  private readonly apiUrl = inject(API_URL);
+
+  submit(order: Order) {
+    return this.http.post&lt;Order&gt;(`${this.apiUrl}/orders`, order);
+  }
+}
+
+// Classic: constructor injection — required when subclasses call super()
+@Injectable()
+export class BaseFeedService {
+  constructor(protected http: HttpClient) {}
+}
+@Injectable({ providedIn: 'root' })
+export class QuoteFeedService extends BaseFeedService {
+  constructor(http: HttpClient) { super(http); }   // must forward via super
+}</code></pre>
+      </div>
+
+      <h3 id="injection-context">Соблюдение контекста инъекции</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">// ✅ inject() also powers functional guards / interceptors (Angular 15+)
+export const authGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);          // injection context here
+  return auth.isLoggedIn();
+};
+
+// ❌ Outside an injection context → NG0203
+function buildHelper() {
+  const prices = inject(PriceService);       // throws if called lazily later
+}
+
+// ✅ Wrap deferred work in runInInjectionContext
+@Injectable({ providedIn: 'root' })
+export class LazyLoader {
+  private readonly injector = inject(EnvironmentInjector);
+  loadLater() {
+    runInInjectionContext(this.injector, () =&gt; {
+      const prices = inject(PriceService);   // now valid
+    });
+  }
+}</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аспект</th><th><code>inject()</code></th><th>Конструктор</th></tr></thead>
+          <tbody>
+            <tr><td>С версии</td><td>Angular 14+</td><td>Всегда</td></tr>
+            <tr><td>Инициализаторы полей</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Функциональные guard'ы/интерцепторы</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Наследование через <code>super()</code></td><td>❌ (используйте конструктор)</td><td>✅</td></tr>
+            <tr><td>Нужен контекст инъекции</td><td>✅ (обязательно)</td><td>Неявно</td></tr>
+            <tr><td>Модификаторы</td><td>Объект опций <code>{ optional, self, skipSelf, host }</code></td><td>Декораторы <code>@Optional()</code> …</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="success"><p><strong>Рекомендация:</strong> предпочитайте <code>inject()</code> для нового standalone-кода — он лаконичнее, работает в функциональных API и оставляет конструкторы пустыми. Сохраняйте инъекцию через конструктор там, где вы расширяете базовый класс и должны передавать зависимости через <code>super()</code>.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Вопросы на собеседовании</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Как Angular разрешает зависимость и что происходит, если провайдер не существует?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Angular начинает с инжектора запрашивающего класса и поднимается <em>вверх</em> по дереву инжекторов — элемент/компонент → модуль → корень → платформа — возвращая первый подходящий провайдер, который находит, и кэшируя экземпляр на этом инжекторе. Если он достигает вершины без совпадения, выбрасывается <code>NullInjectorError: No provider for X</code>. Используйте <code>@Optional()</code> (или <code>inject(X, { optional: true })</code>), чтобы получить <code>null</code> вместо ошибки.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. В чём разница между <code>providedIn: 'root'</code> и <code>providedIn: 'any'</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>'root'</code> создаёт единственный синглтон на всё приложение в корневом инжекторе — все разделяют один экземпляр. <code>'any'</code> создаёт <em>отдельный</em> экземпляр для каждого инжектора, который его запрашивает, что на практике означает один экземпляр на каждый лениво загружаемый модуль (плюс один в корне). Оба поддаются tree-shaking. Используйте <code>'root'</code> для общего состояния; используйте <code>'any'</code>, когда каждой ленивой фиче нужна изолированная копия.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Когда вы бы прибегли к <code>useFactory</code> вместо <code>useClass</code> или <code>useValue</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Когда значение должно быть <em>вычислено в рантайме</em> и может зависеть от других инжектируемых сущностей или конфигурации. <code>useValue</code> нужно значение, которое у вас уже есть; <code>useClass</code> просто создаёт экземпляр класса. <code>useFactory</code> выполняет функцию — перечисляя её зависимости в <code>deps</code> (или вызывая <code>inject()</code> внутри) — так что вы можете ветвиться по конфигурации, объединять сервисы или строить объект условно. Пример: выбор реального или мокового источника цен на основе флага окружения.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Зачем использовать <code>InjectionToken</code> вместо строкового токена?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Строковые токены глобальны и нетипизированы: две библиотеки, обе использующие <code>'config'</code>, столкнутся, и последняя регистрация молча победит. <code>InjectionToken</code> — это уникальная ссылка на объект (защищённая от коллизий) и несёт generic-тип, поэтому <code>inject(API_URL)</code> типизирован как <code>string</code>, а не <code>any</code>. Токены также могут поставлять tree-shakeable значение по умолчанию через <code>{ providedIn: 'root', factory }</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Что такое «контекст инъекции» и когда <code>inject()</code> завершается с ошибкой?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Контекст инъекции — это окно, в котором Angular может разрешать зависимости: во время конструирования класса (тело конструктора и инициализаторы полей), внутри фабричных функций провайдеров и внутри функциональных guard'ов/интерцепторов. Вызов <code>inject()</code> вне его — например, в колбэке setTimeout, обработчике событий или лениво вызываемой обычной функции — выбрасывает <code>NG0203</code>. Чтобы выполнить <code>inject()</code> позже, захватите <code>EnvironmentInjector</code> и оберните работу в <code>runInInjectionContext()</code>.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какое значение <code>providedIn</code> даёт отдельный экземпляр на каждый лениво загружаемый модуль?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'root'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'platform'</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">'any'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'module'</button>
+        <div class="quiz-explain">'any' создаёт один экземпляр на каждый запрашивающий инжектор — фактически один на каждый ленивый модуль (плюс корень). 'root' — это единственный синглтон на всё приложение; 'platform' разделяется между приложениями на странице; 'module' не является допустимым значением.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Какой тип провайдера делает токен псевдонимом <strong>существующего</strong> экземпляра, не создавая нового?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useClass</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useValue</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useFactory</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">useExisting</button>
+        <div class="quiz-explain">useExisting делает один токен псевдонимом другого, возвращая тот же экземпляр. useClass создал бы отдельный объект, нарушив гарантию «того же экземпляра».</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Что делает <code>@SkipSelf()</code> во время разрешения?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Ищет только в текущем инжекторе</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Пропускает текущий инжектор и начинает с родительского</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Возвращает null вместо выбрасывания ошибки</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Останавливает поиск на хост-компоненте</button>
+        <div class="quiz-explain">@SkipSelf() пропускает локальный инжектор и разрешает зависимость начиная с родительского и выше. @Self() ищет только локально; @Optional() возвращает null; @Host() останавливается на хост-элементе.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Где можно безопасно вызывать <code>inject()</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Внутри любого колбэка setTimeout</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">В обработчике DOM-событий</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">В инициализаторе поля, конструкторе или фабрике провайдера</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Где угодно в приложении</button>
+        <div class="quiz-explain">inject() требует контекста инъекции: конструктор/инициализаторы полей, фабрики провайдеров, функциональные guard'ы/интерцепторы или код, обёрнутый в runInInjectionContext(). Вызов из отложенного колбэка выбрасывает NG0203.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="signals.html" class="btn-nav">← Signals</a>
+      <a href="forms.html" class="btn-nav">Формы →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

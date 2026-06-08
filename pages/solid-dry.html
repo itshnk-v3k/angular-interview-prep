@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOLID, DRY, KISS, YAGNI — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>SOLID и DRY</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>SOLID, DRY, KISS, YAGNI</h1>
+      <p class="page-desc">Принципы проектирования, которые на собеседованиях уровня senior ожидают увидеть в применении —
+        а не в виде заученного пересказа. Каждый из них ниже сочетает чёткое определение с проблемой, которую он решает,
+        и ❌/✅ кодом на Angular в контексте FinTech-трейдинга
+        (<code>Order</code>, <code>Quote</code>, <code>Instrument</code>, <code>Position</code>).</p>
+      <button class="btn-done" data-page="solid-dry" onclick="markDone('solid-dry')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= OVERVIEW ============================= -->
+    <section data-searchable>
+      <h2 id="overview">Обзор</h2>
+      <p><strong>SOLID</strong> — это пять принципов объектно-ориентированного проектирования, сформулированных Робертом Мартином.
+        Поверх них три прагматичные эвристики — <strong>DRY</strong>, <strong>KISS</strong> и <strong>YAGNI</strong> —
+        удерживают код в лаконичной форме. <strong>WET</strong> — это антипаттерн, с которым борется DRY.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Аббревиатура</th><th>Расшифровка</th><th>Суть в одной строке</th></tr></thead>
+          <tbody>
+            <tr><td><strong>S</strong></td><td>Single Responsibility (Единственная ответственность)</td><td>Одна причина для изменения на единицу.</td></tr>
+            <tr><td><strong>O</strong></td><td>Open/Closed (Открытость/закрытость)</td><td>Расширяй, не изменяя.</td></tr>
+            <tr><td><strong>L</strong></td><td>Liskov Substitution (Подстановка Лисков)</td><td>Подтипы должны соблюдать контракт базового типа.</td></tr>
+            <tr><td><strong>I</strong></td><td>Interface Segregation (Разделение интерфейсов)</td><td>Много маленьких интерфейсов &gt; один большой.</td></tr>
+            <tr><td><strong>D</strong></td><td>Dependency Inversion (Инверсия зависимостей)</td><td>Завись от абстракций, а не от конкретики.</td></tr>
+            <tr><td><strong>DRY</strong></td><td>Don't Repeat Yourself (Не повторяйся)</td><td>Один источник истины для каждой части знания.</td></tr>
+            <tr><td><strong>KISS</strong></td><td>Keep It Simple, Stupid (Будь проще)</td><td>Выбирай очевидное решение.</td></tr>
+            <tr><td><strong>YAGNI</strong></td><td>You Aren't Gonna Need It (Тебе это не понадобится)</td><td>Строй только то, что нужно сейчас.</td></tr>
+            <tr><td><strong>WET</strong></td><td>Write Everything Twice (Пиши всё дважды)</td><td>Антипаттерн: дублирование копипастой.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Как подать на собеседовании:</strong> назови принцип, объясни, что он означает, назови проблему, которую он решает,
+        а затем покажи рефакторинг. Интервьюеры ценят применённое суждение выше дословного пересказа из учебника.</p></div>
+    </section>
+
+    <!-- ============================= S — SRP ============================= -->
+    <section data-searchable>
+      <h2 id="srp">S — Single Responsibility Principle (Принцип единственной ответственности)</h2>
+      <div class="card">
+        <p class="definition"><strong>Single Responsibility Principle (SRP)</strong> — у класса, компонента или модуля должна быть <em>одна причина для изменения</em>, то есть одна ответственность, принадлежащая одному актору.</p>
+        <p><strong>Что это значит:</strong> разделяй <em>получение данных</em>, <em>отображение/форматирование</em> и <em>представление/состояние</em>, чтобы изменение в одной области не перетекало в другие.</p>
+        <p><strong>Какую проблему решает:</strong> «компоненты-боги», смешивающие HTTP, форматирование и логику шаблона, становятся нетестируемыми, хрупкими и непригодными для переиспользования. SRP делает каждую единицу маленькой, сфокусированной и независимо тестируемой.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — компонент, делающий HTTP + форматирование + состояние в одном месте:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">@Component({
+  selector: 'app-positions',
+  template: `&lt;div *ngFor="let p of rows"&gt;{{ p.label }}&lt;/div&gt;`,
+})
+export class PositionsComponent implements OnInit {
+  rows: { label: string }[] = [];
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    // Responsibility 1: HTTP transport
+    this.http.get&lt;Position[]&gt;('/api/positions').subscribe((positions) =&gt; {
+      // Responsibility 2: formatting/currency logic
+      this.rows = positions.map((p) =&gt; ({
+        label: `${p.symbol}: ${(p.qty * p.price).toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        })}`,
+      }));
+      // Responsibility 3: view state — all tangled together
+    });
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — разбито на сервис (транспорт), пайп (форматирование) и тонкий компонент (представление):</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// 1. Service owns transport only
+@Injectable({ providedIn: 'root' })
+export class PositionService {
+  private http = inject(HttpClient);
+  getPositions(): Observable&lt;Position[]&gt; {
+    return this.http.get&lt;Position[]&gt;('/api/positions');
+  }
+}
+
+// 2. Pipe owns formatting only
+@Pipe({ name: 'notional', standalone: true })
+export class NotionalPipe implements PipeTransform {
+  transform(p: Position): string {
+    return (p.qty * p.price).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    });
+  }
+}
+
+// 3. Component owns view/state only
+@Component({
+  selector: 'app-positions',
+  standalone: true,
+  imports: [NgFor, AsyncPipe, NotionalPipe],
+  template: `
+    &lt;div *ngFor="let p of positions$ | async"&gt;
+      {{ p.symbol }}: {{ p | notional }}
+    &lt;/div&gt;`,
+})
+export class PositionsComponent {
+  private service = inject(PositionService);
+  positions$ = this.service.getPositions();
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> форматирование валют/номинала регулируется и меняется по причинам, не связанным с тем, как
+          получаются позиции. Наличие <code>NotionalPipe</code> означает, что смена локали или правила округления затрагивает один файл, а не каждый компонент.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= O — OCP ============================= -->
+    <section data-searchable>
+      <h2 id="ocp">O — Open/Closed Principle (Принцип открытости/закрытости)</h2>
+      <div class="card">
+        <p class="definition"><strong>Open/Closed Principle (OCP)</strong> — программные сущности должны быть <em>открыты для расширения, но закрыты для изменения</em>.</p>
+        <p><strong>Что это значит:</strong> новое поведение нужно добавлять, дописывая новый код (новый класс/стратегию), а не редактируя существующий, уже протестированный код.</p>
+        <p><strong>Какую проблему решает:</strong> разрастающийся <code>switch</code> по полю типа заставляет заново открывать и перетестировать одну и ту же функцию при каждом появлении нового варианта — магнит для регрессий. Полиморфизм локализует каждый вариант.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — <code>switch</code> по типу инструмента, который приходится редактировать ради каждого нового типа:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">type InstrumentKind = 'stock' | 'bond' | 'option';
+
+@Injectable({ providedIn: 'root' })
+export class FeeCalculator {
+  calculate(instrument: Instrument, notional: number): number {
+    switch (instrument.kind) {
+      case 'stock':
+        return notional * 0.001;
+      case 'bond':
+        return notional * 0.0005;
+      case 'option':
+        return notional * 0.002 + 0.65;
+      // Adding 'future' means editing &amp; re-testing THIS method again.
+      default:
+        throw new Error('Unknown instrument');
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — интерфейс-стратегия; новые инструменты добавляют новый класс, существующий код не правится:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">export interface FeeStrategy {
+  calculate(notional: number): number;
+}
+
+export class StockFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.001; }
+}
+export class BondFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.0005; }
+}
+export class OptionFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.002 + 0.65; }
+}
+
+// New 'future' fee? Add a class — this registry/consumer is untouched.
+@Injectable({ providedIn: 'root' })
+export class FeeCalculator {
+  private readonly strategies: Record&lt;string, FeeStrategy&gt; = {
+    stock: new StockFee(),
+    bond: new BondFee(),
+    option: new OptionFee(),
+  };
+  calculate(instrument: Instrument, notional: number): number {
+    return this.strategies[instrument.kind].calculate(notional);
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> биржи и классы активов добавляются постоянно. Подход «стратегия/реестр» означает, что подключение
+          нового продукта — это аддитивное изменение, рассматриваемое изолированно, что критично, когда логика комиссий проходит аудит.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= L — LSP ============================= -->
+    <section data-searchable>
+      <h2 id="lsp">L — Liskov Substitution Principle (Принцип подстановки Лисков)</h2>
+      <div class="card">
+        <p class="definition"><strong>Liskov Substitution Principle (LSP)</strong> — объекты подтипа должны быть взаимозаменяемы с объектами их базового типа без нарушения корректности программы.</p>
+        <p><strong>Что это значит:</strong> подкласс должен соблюдать контракт базового класса — те же сигнатуры методов, без усиления предусловий, без ослабления постусловий, без неожиданных исключений.</p>
+        <p><strong>Какую проблему решает:</strong> подкласс, который бросает исключение или ничего не делает там, где база обещала поведение, превращает полиморфизм в мину — вызывающий код, написанный под базовый тип, падает на подтипе.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — подкласс, нарушающий контракт базы, бросая исключение вместо выполнения:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">abstract class TradeExecutor {
+  // Contract: returns a confirmed Order for the given quote.
+  abstract execute(quote: Quote, qty: number): Order;
+}
+
+class MarketExecutor extends TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.ask, status: 'filled' };
+  }
+}
+
+class ReadOnlyExecutor extends TradeExecutor {
+  // Violates LSP: callers expect an Order, this blows up instead.
+  execute(_quote: Quote, _qty: number): Order {
+    throw new Error('Read-only feed cannot execute trades');
+  }
+}
+
+// Any code written against TradeExecutor now randomly crashes.
+function place(exec: TradeExecutor, q: Quote): Order {
+  return exec.execute(q, 100); // 💥 with ReadOnlyExecutor
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — моделируем возможность явно, чтобы контракт исполнения удовлетворяли только настоящие исполнители:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// Separate the capabilities — don't force a non-executor to pretend.
+interface QuoteReader {
+  read(symbol: string): Quote;
+}
+interface TradeExecutor {
+  execute(quote: Quote, qty: number): Order; // every implementer truly executes
+}
+
+class MarketExecutor implements TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.ask, status: 'filled' };
+  }
+}
+
+class LimitExecutor implements TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    // Honors the contract: always returns a valid Order (here, working/pending).
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.bid, status: 'pending' };
+  }
+}
+
+// A read-only feed implements QuoteReader, never TradeExecutor — no false promise.
+class MarketDataFeed implements QuoteReader {
+  read(symbol: string): Quote {
+    return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() };
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Характерный запах нарушения LSP:</strong> подкласс переопределяет метод, чтобы <code>throw</code>, вернуть <code>null</code> или проверять
+          <code>instanceof</code> на стороне вызова. Если вызывающим нужно знать конкретный тип, взаимозаменяемость уже нарушена.</p></div>
+        <div class="tip"><p><strong>Контекст FinTech:</strong> маршрутизатор ордеров обращается с каждым исполнителем единообразно. Если один «исполнитель» молча отклоняет заявки, ты получаешь
+          потерянные ордера в продакшене — нарушения LSP здесь это реальный финансовый риск, а не академическая абстракция.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= I — ISP ============================= -->
+    <section data-searchable>
+      <h2 id="isp">I — Interface Segregation Principle (Принцип разделения интерфейсов)</h2>
+      <div class="card">
+        <p class="definition"><strong>Interface Segregation Principle (ISP)</strong> — ни один клиент не должен быть вынужден зависеть от методов, которые он не использует; предпочитай много маленьких, ролевых интерфейсов одному толстому интерфейсу.</p>
+        <p><strong>Что это значит:</strong> разбей раздутый <code>IService</code> на сфокусированные контракты, чтобы реализации и потребители зависели только от той части, которая им действительно нужна.</p>
+        <p><strong>Какую проблему решает:</strong> толстый интерфейс заставляет каждую реализацию заглушать методы, которые она не поддерживает (часто бросая исключение — что также нарушает LSP), и связывает потребителей с возможностями, которые они никогда не вызывают.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — один гигантский <code>ITradingService</code>, который должна полностью реализовать каждая реализация:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">interface ITradingService {
+  getQuote(symbol: string): Quote;
+  placeOrder(order: Order): Order;
+  cancelOrder(id: string): void;
+  streamPositions(): Observable&lt;Position[]&gt;;
+  exportRegulatoryReport(): Blob;   // only the back-office cares
+  reconcileLedger(): void;          // only settlement cares
+}
+
+// A read-only price widget must implement ALL of these, throwing for most.
+class PriceWidgetService implements ITradingService {
+  getQuote(symbol: string): Quote { /* ... */ return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+  placeOrder(): Order { throw new Error('not supported'); }
+  cancelOrder(): void { throw new Error('not supported'); }
+  streamPositions(): Observable&lt;Position[]&gt; { throw new Error('not supported'); }
+  exportRegulatoryReport(): Blob { throw new Error('not supported'); }
+  reconcileLedger(): void { throw new Error('not supported'); }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — сфокусированные интерфейсы; каждый клиент зависит только от того, что использует:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">interface QuoteProvider {
+  getQuote(symbol: string): Quote;
+}
+interface OrderManager {
+  placeOrder(order: Order): Order;
+  cancelOrder(id: string): void;
+}
+interface PositionStream {
+  streamPositions(): Observable&lt;Position[]&gt;;
+}
+interface BackOfficeReports {
+  exportRegulatoryReport(): Blob;
+  reconcileLedger(): void;
+}
+
+// The widget implements ONLY what it needs — nothing to stub.
+class PriceWidgetService implements QuoteProvider {
+  getQuote(symbol: string): Quote {
+    return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() };
+  }
+}
+
+// A full trading desk service composes the contracts it actually provides.
+class DeskService implements QuoteProvider, OrderManager, PositionStream {
+  getQuote(symbol: string): Quote { /* ... */ return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+  placeOrder(order: Order): Order { return { ...order, status: 'filled' }; }
+  cancelOrder(_id: string): void { /* ... */ }
+  streamPositions(): Observable&lt;Position[]&gt; { return of([]); }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> регуляторная отчётность и сверка реестра принадлежат совсем другим командам, чем
+          живой ценовой виджет. Разделённые интерфейсы позволяют каждому модулю компилироваться, разворачиваться и проходить аудит, не таща за собой остальные.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= D — DIP ============================= -->
+    <section data-searchable>
+      <h2 id="dip">D — Dependency Inversion Principle (Принцип инверсии зависимостей)</h2>
+      <div class="card">
+        <p class="definition"><strong>Dependency Inversion Principle (DIP)</strong> — модули высокого уровня не должны зависеть от модулей низкого уровня; оба должны зависеть от абстракций. Абстракции не должны зависеть от деталей.</p>
+        <p><strong>Что это значит:</strong> компонент должен зависеть от <em>интерфейса/токена</em>, а конкретную реализацию поставляет DI Angular — а не создаётся вручную.</p>
+        <p><strong>Какую проблему решает:</strong> компонент, который через <code>new</code> создаёт конкретный сервис, намертво приварен к нему — нельзя подменить реализацию (REST vs WebSocket vs mock), а юнит-тесты не могут внедрить фейк.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — компонент, создающий конкретный сервис через <code>new</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">@Component({ selector: 'app-ticker', template: `{{ quote?.bid }}` })
+export class TickerComponent implements OnInit {
+  quote?: Quote;
+  // Hard-wired to one concrete implementation — untestable, unswappable.
+  private feed = new RestQuoteService();
+
+  ngOnInit(): void {
+    this.quote = this.feed.getQuote('EURUSD');
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — зависим от абстракции, предоставленной через <code>InjectionToken</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">export interface QuoteFeed {
+  getQuote(symbol: string): Quote;
+}
+export const QUOTE_FEED = new InjectionToken&lt;QuoteFeed&gt;('QUOTE_FEED');
+
+// Two interchangeable implementations behind the same abstraction.
+@Injectable()
+export class RestQuoteService implements QuoteFeed {
+  getQuote(symbol: string): Quote { return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+}
+@Injectable()
+export class WsQuoteService implements QuoteFeed {
+  getQuote(symbol: string): Quote { return { symbol, bid: 1.071, ask: 1.0712, ts: Date.now() }; }
+}
+
+// Wire it at the application/route level:
+// providers: [{ provide: QUOTE_FEED, useClass: WsQuoteService }]
+
+@Component({ selector: 'app-ticker', standalone: true, template: `{{ quote?.bid }}` })
+export class TickerComponent implements OnInit {
+  quote?: Quote;
+  // Depends on the abstraction; DI supplies the concrete impl (or a mock in tests).
+  private feed = inject(QUOTE_FEED);
+
+  ngOnInit(): void {
+    this.quote = this.feed.getQuote('EURUSD');
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> dev/staging могут использовать опрашивающий REST-фид, тогда как продакшен — низколатентный WebSocket-фид,
+          а тесты используют детерминированный mock. С DIP это подмена провайдера в одну строку — компонент при этом не меняется.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= DRY ============================= -->
+    <section data-searchable>
+      <h2 id="dry">DRY — Don't Repeat Yourself (Не повторяйся)</h2>
+      <div class="card">
+        <p class="definition"><strong>Don't Repeat Yourself (DRY)</strong> — каждая часть знания должна иметь единое, однозначное, авторитетное представление в системе.</p>
+        <p><strong>Что это значит:</strong> дублированная логика (валидация, форматирование, магический порог) должна жить ровно в одном месте — общей утилите, пайпе или сервисе.</p>
+        <p><strong>Какую проблему решает:</strong> скопированная логика расходится. Исправь правило округления в трёх компонентах — и пропустишь четвёртый, отгрузив несогласованные, а в трейдинге — некорректные числа.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — одни и те же валидация и форматирование пипсов дублируются по компонентам:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// order-entry.component.ts
+isValid(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= 1_000_000 &amp;&amp; order.price &gt; 0;
+}
+format(price: number): string { return price.toFixed(5); }
+
+// modify-order.component.ts  — copy-pasted, will drift
+isValid(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= 1_000_000 &amp;&amp; order.price &gt; 0;
+}
+format(price: number): string { return price.toFixed(5); } // someone changes 5→4 here only</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — одна утилита-валидатор и один общий пайп, переиспользуемые везде:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// order-rules.ts — single source of truth
+export const MAX_QTY = 1_000_000;
+export function isValidOrder(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= MAX_QTY &amp;&amp; order.price &gt; 0;
+}
+
+// pip.pipe.ts — formatting in one place
+@Pipe({ name: 'pip', standalone: true })
+export class PipPipe implements PipeTransform {
+  transform(price: number, digits = 5): string { return price.toFixed(digits); }
+}
+
+// Both components now reuse the same logic:
+//   if (isValidOrder(order)) { ... }
+//   {{ quote.bid | pip }}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> точность цены и лимиты количества критичны для комплаенса. Единый <code>order-rules.ts</code>
+          означает, что аудитор просматривает один файл, а изменение лимита не может молча пропустить какой-то экран.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= KISS ============================= -->
+    <section data-searchable>
+      <h2 id="kiss">KISS — Keep It Simple, Stupid (Будь проще)</h2>
+      <div class="card">
+        <p class="definition"><strong>Keep It Simple, Stupid (KISS)</strong> — выбирай простейшее работающее решение; избегай ненужной изощрённости.</p>
+        <p><strong>Что это значит:</strong> читаемый, очевидный код лучше плотного однострочника, на расшифровку которого уходит пять минут. Оптимизируй под следующего сопровождающего.</p>
+        <p><strong>Какую проблему решает:</strong> изощрённый код прячет баги и замедляет ревью. Простота снижает когнитивную нагрузку и площадь поверхности для ошибок — особенно ценно в логике, двигающей деньги.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — чересчур умный однострочник, который никто не может безопасно изменить:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// "Total exposure" — what does this even do?
+const exposure = positions.reduce((a, p) =&gt; a + (p.side === 'BUY' ? 1 : -1) * p.qty * p.price, 0)
+  * (positions.some((p) =&gt; p.symbol.includes('USD')) ? 1 : fxRate);</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — разбито на именованные, очевидные шаги:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">function signedNotional(p: Position): number {
+  const direction = p.side === 'BUY' ? 1 : -1;
+  return direction * p.qty * p.price;
+}
+
+function totalExposure(positions: Position[], fxRate: number): number {
+  const gross = positions.reduce((sum, p) =&gt; sum + signedNotional(p), 0);
+  const isUsdBook = positions.some((p) =&gt; p.symbol.includes('USD'));
+  return isUsdBook ? gross : gross * fxRate;
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Баланс:</strong> KISS — это не «упрости до тупизны». Хорошо названная цепочка <code>map</code>/<code>filter</code> может быть проще, чем
+          императивный цикл. Цель — <em>наименее удивляющий</em> код, а не наименьшее число символов.</p></div>
+        <div class="tip"><p><strong>Контекст FinTech:</strong> расчёты экспозиции и P&amp;L читают риск-менеджмент и комплаенс, а не только инженеры.
+          Именованный, пошаговый код можно проверять не-авторам — в этом и смысл.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= YAGNI ============================= -->
+    <section data-searchable>
+      <h2 id="yagni">YAGNI — You Aren't Gonna Need It (Тебе это не понадобится)</h2>
+      <div class="card">
+        <p class="definition"><strong>You Aren't Gonna Need It (YAGNI)</strong> — не создавай функциональность, пока она реально не потребовалась.</p>
+        <p><strong>Что это значит:</strong> сопротивляйся спекулятивной обобщённости — настраиваемым движкам, системам плагинов и слоям абстракции, добавленным «на всякий случай» под будущее требование.</p>
+        <p><strong>Какую проблему решает:</strong> спекулятивный код — это неиспользуемая сложность, которую всё равно приходится читать, тестировать и сопровождать. Большинство предсказанных требований так и не появляются или появляются в форме, которую ты не предвидел.</p>
+
+        <div class="danger">
+          <p><strong>❌ Плохо</strong> — спекулятивный, чрезмерно обобщённый конфигурируемый движок ради одного текущего сценария:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// We only ever place market orders today, but "what if"...
+interface OrderPipelineStep&lt;T&gt; { run(ctx: T): T; }
+
+class ConfigurableOrderEngine&lt;T extends Order&gt; {
+  private steps: OrderPipelineStep&lt;T&gt;[] = [];
+  registerStep(step: OrderPipelineStep&lt;T&gt;): this { this.steps.push(step); return this; }
+  // generic plugin pipeline, dynamic dispatch, options object...
+  execute(order: T, options?: Record&lt;string, unknown&gt;): T {
+    return this.steps.reduce((o, s) =&gt; s.run(o), order);
+  }
+}
+// 80 lines of framework — to send one kind of order.</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Хорошо</strong> — строй ровно то, что нужно сейчас; обобщай, когда реально появится второй случай:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class OrderService {
+  private http = inject(HttpClient);
+
+  placeMarketOrder(order: Order): Observable&lt;Order&gt; {
+    return this.http.post&lt;Order&gt;('/api/orders', order);
+  }
+}
+// When limit/stop orders are real requirements, refactor THEN — with real constraints.</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>Контекст FinTech:</strong> требования меняются с регуляцией и запусками продуктов. Построить путь рыночного ордера сейчас и
+          расширить его, когда лимитные ордера реально будут проработаны, лучше, чем спекулятивный движок, который угадывает неверно.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= WET ============================= -->
+    <section data-searchable>
+      <h2 id="wet">WET — Write Everything Twice (Пиши всё дважды, антипаттерн)</h2>
+      <div class="card">
+        <p class="definition"><strong>Write Everything Twice (WET)</strong> — ироничная противоположность DRY: одно и то же знание копипастится и сопровождается в нескольких местах. (Также расшифровывают как «We Enjoy Typing» / «Waste Everyone's Time».)</p>
+        <p><strong>Что это значит:</strong> WET-код дублирует логику так, что одно концептуальное изменение требует правок в нескольких местах — и одно из них неизбежно пропускают.</p>
+        <p><strong>Нюанс — когда немного дублирования допустимо:</strong> преждевременная абстракция может быть хуже дублирования, потому что неправильная абстракция связывает несвязанный код. Прагматичный ориентир — <strong>Правило трёх</strong>:</p>
+
+        <div class="danger">
+          <p><strong>❌ WET</strong> — один и тот же расчёт спреда, набранный в трёх компонентах, гарантированно разойдётся:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// ticker.component.ts
+const spread = quote.ask - quote.bid;
+// order-book.component.ts
+const spread = quote.ask - quote.bid; // duplicated
+// risk-panel.component.ts
+const spread = quote.ask - quote.bid; // duplicated again — now extract it</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ DRY</strong> — как только это появляется в третий раз, выноси единый источник истины:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">// quote-utils.ts
+export function spread(quote: Quote): number {
+  return quote.ask - quote.bid;
+}
+// All three components now call spread(quote).</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Правило трёх:</strong> в первый раз, когда пишешь что-то, — просто напиши. Во второй раз, увидев дублирование, поморщись, но
+          стерпи. На <em>третий</em> раз — рефактори. Два вхождения могут быть совпадением; три сигнализируют о реальном общем понятии, достойном имени.</p></div>
+        <div class="tip"><p><strong>Контекст FinTech:</strong> «похожее на вид» дублирование между, скажем, валидацией <code>Order</code> и
+          валидацией <code>Position</code> может быть совпадением — насильственное сведение их в одну абстракцию может переплести два контракта, которые должны развиваться раздельно.
+          Дождись третьего, настоящего повтора.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы — Вопросы с собеседования</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Что на практике означает принцип единственной ответственности для Angular-компонента?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>У компонента должна быть одна причина для изменения — обычно это отображение состояния. HTTP/транспорт принадлежит инъектируемому
+          сервису, форматирование — пайпу, а бизнес-правила — чистым функциям или доменным сервисам. Так что компонент, который получает
+          позиции по HTTP <em>и</em> форматирует валюту <em>и</em> управляет состоянием представления, имеет три причины для изменения; ты разбиваешь его на
+          <code>PositionService</code>, <code>NotionalPipe</code> и тонкий компонент. Выгода — независимая тестируемость и переиспользование.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Как применить Open/Closed, когда <code>switch</code> по типу инструмента продолжает расти?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Замени условный оператор полиморфизмом. Определи интерфейс <code>FeeStrategy</code> и по одной реализации на
+          тип инструмента, затем находи стратегию в реестре/мапе (или через Angular DI с мульти-провайдером). Добавление нового инструмента означает
+          добавление класса и регистрации — существующий, протестированный <code>FeeCalculator</code> никогда не открывается заново. Это и есть «закрыт для изменения,
+          открыт для расширения».</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Приведи конкретное нарушение подстановки Лисков и способ его исправить.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>База <code>TradeExecutor</code> обещает, что <code>execute()</code> возвращает подтверждённый <code>Order</code>, но подкласс
+          <code>ReadOnlyExecutor</code> вместо этого бросает исключение. Любой код, написанный под базовый тип, падает на этом подтипе — взаимозаменяемость
+          нарушена. Исправление — честно моделировать возможности: read-only-фид реализует интерфейс <code>QuoteReader</code> и просто никогда не
+          реализует <code>TradeExecutor</code>, так что его нельзя передать туда, где требуется исполнение. Характерный запах — подкласс, который бросает исключение,
+          возвращает <code>null</code> или вынуждает вызывающих проверять <code>instanceof</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Как связаны разделение интерфейсов и инверсия зависимостей и чем помогает Angular DI?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>ISP держит интерфейсы маленькими и ролевыми, чтобы клиенты зависели только от того, что используют; DIP говорит зависеть от этих
+          абстракций, а не от конкретных классов. Вместе: определи узкие интерфейсы (например, <code>QuoteProvider</code>), ссылайся на них через
+          <code>InjectionToken</code> и дай Angular DI поставить конкретную реализацию. Компонент инъектирует <code>QUOTE_FEED</code> и никогда не
+          знает, REST это, WebSocket или тестовый mock — именно это делает его подменяемым и юнит-тестируемым.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. DRY vs WET — когда немного дублирования на самом деле правильный выбор?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>DRY говорит, что каждая часть знания живёт в одном месте; WET — антипаттерн его копипасты. Но
+          преждевременная или неправильная абстракция часто хуже дублирования, потому что связывает код, который должен развиваться независимо. Прагматичное
+          правило — <strong>Правило трёх</strong>: стерпи первое дублирование, поморщись на втором и вынеси на третьем — к этому моменту
+          повторение доказанно является реальным общим понятием, а не совпадением (например, две валидации, которые лишь <em>выглядят</em> похоже, но должны меняться
+          по разным причинам).</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Компонент получает ордера по HTTP, форматирует валюту и управляет состоянием представления. Какой принцип он нарушает наиболее явно?</div>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Single Responsibility (SRP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Liskov Substitution (LSP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Open/Closed (OCP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">YAGNI</button>
+        <div class="quiz-explain">Три ответственности (транспорт, форматирование, представление) означают три причины для изменения — хрестоматийное нарушение SRP. Разбей на сервис, пайп и тонкий компонент.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Ты постоянно правишь растущий <code>switch (instrument.kind)</code>, чтобы добавить логику комиссий. Какой рефактор лучше всего удовлетворяет Open/Closed?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Добавить ветку <code>default</code>, которая бросает исключение</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Интерфейс <code>FeeStrategy</code> с одним классом на инструмент</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Привести <code>instrument</code> к <code>any</code> и ветвиться</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Вписать всю математику прямо в компонент</button>
+        <div class="quiz-explain">Полиморфные стратегии позволяют добавить новый инструмент, добавив класс — существующий калькулятор закрыт для изменения, но открыт для расширения.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Подкласс переопределяет <code>execute()</code>, чтобы делать <code>throw new Error('not supported')</code>. Это классический признак нарушения…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">DRY</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">KISS</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Liskov Substitution (LSP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Dependency Inversion (DIP)</button>
+        <div class="quiz-explain">Подтипы должны соблюдать контракт базы. Подкласс, который бросает исключение там, где база обещала результат, не взаимозаменяем — это нарушение LSP (и часто указывает на отсутствующее разделение интерфейсов / ISP).</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Ты написал один и тот же расчёт спреда <code>quote.ask - quote.bid</code> в трёх компонентах. Правило трёх говорит…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Оставить как есть — дублирование всегда нормально</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Стоило абстрагировать это ещё при первом написании</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Сейчас самое время вынести общую утилиту <code>spread()</code></button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Построить конфигурируемый обобщённый движок ценообразования</button>
+        <div class="quiz-explain">Стерпи первые два вхождения (они могут быть совпадением); на третьем общее понятие доказано — выноси его. Прыжок к обобщённому движку нарушил бы YAGNI/KISS.</div>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="architecture.html" class="btn-nav">← Архитектура</a>
+      <a href="live-coding.html" class="btn-nav">Live Coding →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

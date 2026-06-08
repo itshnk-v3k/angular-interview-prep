@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Coding — задачи и решения — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 18
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Live Coding</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Live Coding — задачи и решения</h1>
+      <p class="page-desc">Четырнадцать задач для тестовых заданий и собеседований у доски, которые реально
+        используются на собеседованиях для senior-разработчиков: утилиты с нуля (debounce, throttle, глубокое
+        клонирование), строительные блоки Angular (пайпы, валидаторы, виртуальный скролл, интерцепторы) и
+        классические алгоритмические разминки — каждая с подсказками, решением с комментариями, оценкой сложности
+        и уточняющими вопросами, которые интервьюер задаёт следом.</p>
+      <button class="btn-done" data-page="live-coding" onclick="markDone('live-coding')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ============================= 1. DEBOUNCE ============================= -->
+    <section data-searchable>
+      <h2 id="debounce">1. Реализуйте <code>debounce</code></h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Реализуйте функцию <code>debounce</code> с нуля — без
+          lodash. Она принимает функцию и время ожидания и возвращает новую функцию, которая откладывает вызов
+          оригинала до тех пор, пока с момента <em>последнего</em> вызова не пройдёт <code>wait</code> мс. Мы
+          используем её, чтобы ограничить частоту запросов из поля поиска тикеров, которое бьёт по нашему API
+          котировок на каждое нажатие клавиши».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Вам нужно сохранять ссылку на таймер <em>между</em> вызовами — а это значит
+            замыкание над переменной <code>timer</code>. Каждый вызов сбрасывает предыдущий таймер и планирует новый.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Сохраняйте <code>this</code> и аргументы. Используйте обычную (не стрелочную)
+            возвращаемую функцию, чтобы она наследовала <code>this</code> вызывающего кода, и захватывайте
+            <code>...args</code> для отложенного вызова.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">// Generic, fully typed. T is the wrapped function's signature.
+function debounce&lt;T extends (...args: never[]) =&gt; void&gt;(
+  fn: T,
+  wait: number,
+): (...args: Parameters&lt;T&gt;) =&gt; void {
+  // `timer` is captured by the closure and survives between calls.
+  let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;
+
+  // Regular function so `this` is whatever the caller binds it to.
+  return function (this: unknown, ...args: Parameters&lt;T&gt;): void {
+    // Cancel any pending invocation — only the LAST call wins.
+    clearTimeout(timer);
+    timer = setTimeout(() =&gt; {
+      // Re-apply the original `this` and arguments.
+      fn.apply(this, args);
+    }, wait);
+  };
+}
+
+// Usage: search the quotes API at most once per 300ms of quiet typing.
+const search = debounce((term: string) =&gt; loadQuotes(term), 300);
+input.addEventListener('input', e =&gt; search((e.target as HTMLInputElement).value));</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(1) на вызов — один <code>clearTimeout</code>/<code>setTimeout</code>.
+          Память O(1) (одна ссылка на таймер).</p>
+
+        <div class="tip"><p><strong>Уточнение — leading edge, cancel и flush.</strong> Интервьюеры почти всегда
+          просят расширить реализацию. Вот версия production-уровня.</p></div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">interface DebounceOptions { leading?: boolean; trailing?: boolean; }
+interface Debounced&lt;T extends (...a: never[]) =&gt; void&gt; {
+  (...args: Parameters&lt;T&gt;): void;
+  cancel(): void;   // drop the pending call
+  flush(): void;    // run the pending call right now
+}
+
+function debounce&lt;T extends (...a: never[]) =&gt; void&gt;(
+  fn: T,
+  wait: number,
+  { leading = false, trailing = true }: DebounceOptions = {},
+): Debounced&lt;T&gt; {
+  let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;
+  let lastArgs: Parameters&lt;T&gt; | undefined;
+  let lastThis: unknown;
+
+  const invoke = () =&gt; {
+    if (lastArgs) fn.apply(lastThis, lastArgs);
+    lastArgs = undefined;
+  };
+
+  const debounced = function (this: unknown, ...args: Parameters&lt;T&gt;) {
+    lastArgs = args;
+    lastThis = this;
+    const callNow = leading &amp;&amp; timer === undefined; // first edge of a burst
+    clearTimeout(timer);
+    timer = setTimeout(() =&gt; {
+      timer = undefined;
+      if (trailing &amp;&amp; !callNow) invoke(); // avoid double-firing leading+trailing
+    }, wait);
+    if (callNow) invoke();
+  } as Debounced&lt;T&gt;;
+
+  debounced.cancel = () =&gt; { clearTimeout(timer); timer = undefined; lastArgs = undefined; };
+  debounced.flush  = () =&gt; { if (timer) { clearTimeout(timer); timer = undefined; invoke(); } };
+  return debounced;
+}</code></pre>
+        </div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Как поддержать <strong>leading edge</strong> (сработать сразу, а затем игнорировать всплеск вызовов)?</li>
+          <li>Добавьте <code>cancel()</code> и <code>flush()</code> — когда нужен каждый из них? (смена маршрута → cancel.)</li>
+          <li>Чем это отличается от <strong>throttle</strong>?</li>
+          <li>В Angular — когда вы бы использовали RxJS <code>debounceTime()</code> вместо этого?</li>
+          <li>Почему обычная функция, а не стрелочная для возвращаемой обёртки?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 2. THROTTLE ============================= -->
+    <section data-searchable>
+      <h2 id="throttle">2. Реализуйте <code>throttle</code></h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Теперь реализуйте <code>throttle</code>. В отличие от
+          debounce, он гарантирует, что функция выполняется <em>не чаще одного раза в</em> <code>wait</code> мс при
+          непрерывном потоке вызовов — мы используем его для перерисовки живого стакана заявок при потоке тиков из
+          WebSocket. Поддержите leading и trailing edge».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Отслеживайте временную метку последнего вызова. На каждом вызове вычисляйте
+            <em>оставшееся</em> время: если оно ≤ 0, срабатывайте сразу; иначе планируйте trailing-вызов на остаток.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Храните последние аргументы в переменной замыкания, чтобы trailing-вызов
+            использовал <em>самые свежие</em> данные, а не аргументы момента установки таймера.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">interface ThrottleOptions { leading?: boolean; trailing?: boolean; }
+
+function throttle&lt;T extends (...a: never[]) =&gt; void&gt;(
+  fn: T,
+  wait: number,
+  { leading = true, trailing = true }: ThrottleOptions = {},
+): (...args: Parameters&lt;T&gt;) =&gt; void {
+  let last = 0;                                  // timestamp of last run
+  let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;
+  let lastArgs: Parameters&lt;T&gt; | undefined;
+  let lastThis: unknown;
+
+  const run = (now: number) =&gt; {
+    last = now;
+    fn.apply(lastThis, lastArgs as Parameters&lt;T&gt;);
+    lastArgs = undefined;
+  };
+
+  return function (this: unknown, ...args: Parameters&lt;T&gt;): void {
+    const now = Date.now();
+    // If leading is off, treat the very first call as if it just ran.
+    if (last === 0 &amp;&amp; !leading) last = now;
+    const remaining = wait - (now - last);
+    lastArgs = args;
+    lastThis = this;
+
+    if (remaining &lt;= 0) {
+      // Enough time has passed — fire on the leading edge.
+      clearTimeout(timer);
+      timer = undefined;
+      run(now);
+    } else if (trailing &amp;&amp; timer === undefined) {
+      // Schedule a single trailing call for the end of the window.
+      timer = setTimeout(() =&gt; {
+        timer = undefined;
+        run(leading ? Date.now() : 0);
+      }, remaining);
+    }
+  };
+}
+
+// Repaint the book at most 10x/sec no matter how fast ticks arrive.
+const repaint = throttle((q: Quote) =&gt; renderBook(q), 100);
+socket.onQuote = repaint;</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(1) на вызов. Память O(1).</p>
+
+        <div class="warn"><p><strong>Debounce vs throttle в одну строку:</strong> debounce ждёт <em>тишины</em>,
+          затем срабатывает один раз; throttle срабатывает с <em>фиксированной частотой</em> во время активности.
+          Поле поиска → debounce; обработчик scroll/resize/тиков → throttle.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Чем отличается паттерн срабатывания у режима только-leading и только-trailing?</li>
+          <li>Зачем хранить <code>lastArgs</code> — какой баг возникает, если этого не делать?</li>
+          <li>Можно ли реализовать throttle <em>через</em> requestAnimationFrame? Когда это лучше?</li>
+          <li>Эквивалент в RxJS — <code>throttleTime</code> vs <code>auditTime</code> vs <code>sampleTime</code>?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 3. FIX MEMORY LEAK ============================= -->
+    <section data-searchable>
+      <h2 id="memory-leak">3. Исправьте утечку памяти</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Этот компонент подписывается на живой поток цен. Он течёт —
+          после нескольких переходов туда и обратно приложение тормозит, а в интерфейсе мелькают устаревшие цены.
+          Найдите баг и исправьте его. Покажите минимум два корректных способа исправления».</p>
+
+        <div class="danger">
+          <p><strong>Сломанный код:</strong></p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">@Component({
+  selector: 'app-ticker',
+  template: `&lt;span&gt;{{ price }}&lt;/span&gt;`,
+})
+export class TickerComponent implements OnInit {
+  price = 0;
+
+  constructor(private quotes: QuotesService) {}
+
+  ngOnInit(): void {
+    // 🐛 LEAK: this subscription is never unsubscribed.
+    // Each time the component is created a new subscription is opened;
+    // the old ones keep running forever, holding `this` alive (the whole
+    // component, its DOM and closures can never be garbage-collected).
+    this.quotes.price$.subscribe(p =&gt; {
+      this.price = p;
+    });
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Подписка переживает компонент, потому что при уничтожении ничто её не закрывает.
+            Либо завершайте её при destroy, либо доверьте управление ею фреймворку.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Самое чистое современное решение вообще убирает ручную подписку — пайп
+            <code>async</code> в шаблоне подписывается и отписывается за вас.</p></div>
+        </div>
+
+        <p class="definition"><strong>Решение 1 — <code>takeUntilDestroyed()</code> (Angular 16+, современная идиома):</strong></p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ selector: 'app-ticker', template: `&lt;span&gt;{{ price }}&lt;/span&gt;` })
+export class TickerComponent {
+  price = 0;
+  private quotes = inject(QuotesService);
+
+  constructor() {
+    // Must run in an injection context (constructor / field initializer).
+    // The stream is auto-completed when the component is destroyed.
+    this.quotes.price$
+      .pipe(takeUntilDestroyed())
+      .subscribe(p =&gt; (this.price = p));
+  }
+}</code></pre>
+        </div>
+
+        <p class="definition"><strong>Решение 2 — пайп <code>async</code> (совсем без ручной подписки — предпочтительно):</strong></p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">@Component({
+  selector: 'app-ticker',
+  // async pipe subscribes on init and unsubscribes on destroy automatically.
+  template: `&lt;span&gt;{{ price$ | async }}&lt;/span&gt;`,
+})
+export class TickerComponent {
+  // Just expose the observable — the template does the rest.
+  readonly price$ = inject(QuotesService).price$;
+}</code></pre>
+        </div>
+
+        <div class="success"><p><strong>Решение 3 — классический <code>takeUntil(destroy$)</code></strong> (до 16-й
+          версии, всё ещё часто встречается в легаси-коде):</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+            <pre><code class="language-typescript">private destroy$ = new Subject&lt;void&gt;();
+
+ngOnInit(): void {
+  this.quotes.price$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(p =&gt; (this.price = p));
+}
+ngOnDestroy(): void {
+  this.destroy$.next();      // emit → all takeUntil-ed streams complete
+  this.destroy$.complete();  // release the Subject itself
+}</code></pre>
+          </div>
+        </div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему именно открытая подписка мешает сборке мусора?</li>
+          <li>Каким подпискам <em>не нужна</em> очистка? (вызовам <code>HttpClient</code> и всему, что
+            завершается само, например одиночному <code>first()</code>.)</li>
+          <li>Где обязательно вызывать <code>takeUntilDestroyed()</code> и почему?</li>
+          <li>Как бы вы обнаружили эту утечку — снимок кучи в DevTools, detached-узлы?</li>
+          <li>Запускает ли пайп <code>async</code> обнаружение изменений? Как он ведёт себя с OnPush?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 4. VIRTUAL SCROLL ============================= -->
+    <section data-searchable>
+      <h2 id="virtual-scroll">4. Виртуальный скролл для таблицы на 10 тыс. строк</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Мы рендерим таблицу из 10 000+ инструментов, и при скролле
+          она сильно лагает. Сделайте её плавной. Объясните, почему ваш подход работает».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Вам не нужны 10 000 DOM-узлов — пользователь видит лишь ~20 за раз. Рендерьте
+            только видимое окно и переиспользуйте узлы по мере прокрутки. В Angular CDK это уже встроено.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Используйте <code>&lt;cdk-virtual-scroll-viewport&gt;</code> с фиксированным
+            <code>itemSize</code> и <code>*cdkVirtualFor</code> вместо <code>*ngFor</code>. Не забудьте
+            <code>trackBy</code>.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { AsyncPipe } from '@angular/common';
+
+@Component({
+  selector: 'app-instrument-table',
+  standalone: true,
+  imports: [ScrollingModule, AsyncPipe],
+  // itemSize = fixed row height in px. The viewport uses it to compute
+  // how many rows fit and what padding to add for the scrollbar.
+  template: `
+    &lt;cdk-virtual-scroll-viewport itemSize="40" class="grid"&gt;
+      &lt;div
+        *cdkVirtualFor="let inst of instruments$ | async; trackBy: trackById"
+        class="row"&gt;
+        {{ inst.symbol }} — {{ inst.name }}
+      &lt;/div&gt;
+    &lt;/cdk-virtual-scroll-viewport&gt;
+  `,
+  styles: [`.grid { height: 480px; } .row { height: 40px; }`],
+})
+export class InstrumentTableComponent {
+  // 10,000+ rows, but only ~12 ever exist in the DOM at once.
+  readonly instruments$ = inject(InstrumentService).all$;
+
+  // trackBy stops Angular re-creating recycled rows on every scroll frame.
+  trackById = (_: number, inst: Instrument) =&gt; inst.id;
+}</code></pre>
+        </div>
+
+        <div class="tip"><p><strong>Почему это работает.</strong> Без виртуализации браузер строит, размещает и
+          отрисовывает 10 000 DOM-узлов, а Angular прогоняет обнаружение изменений по всем им — O(n) на каждом
+          цикле. Viewport из CDK рендерит только строки в видимом окне (плюс небольшой буфер) и сдвигает
+          spacer-элемент, чтобы скроллбар оставался корректным, поэтому размер DOM и стоимость CD остаются
+          <strong>O(видимых) ≈ константа</strong> независимо от размера набора данных.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Что если строки имеют <strong>переменную высоту</strong>? (стратегия <code>autosize</code> из
+            <code>@angular/cdk-experimental</code> или своя <code>VirtualScrollStrategy</code>.)</li>
+          <li>Почему <code>trackBy</code> здесь критически важен?</li>
+          <li>Как бы вы совместили это с бесконечным скроллом / ленивой подгрузкой из API?</li>
+          <li>В чём разница между виртуальным скроллом и пагинацией — когда выбирать каждый?</li>
+          <li>Как сюда вписываются горизонтальный виртуальный скролл и закреплённые заголовки?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 5. WEBSOCKET SERVICE ============================= -->
+    <section data-searchable>
+      <h2 id="websocket-service">5. Сервис WebSocket с переподключением</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Напишите типобезопасный Angular-сервис, оборачивающий
+          WebSocket, который доставляет живые котировки. Он должен автоматически переподключаться с экспоненциальной
+          задержкой при разрыве соединения, предоставлять типизированный поток котировок и корректно
+          освобождать ресурсы».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>RxJS даёт почти всё это из коробки: <code>webSocket()</code> из
+            <code>rxjs/webSocket</code> для типизированного subject и <code>retry({ delay })</code> для
+            переподключения. Вычисляйте задержку как <code>base * 2^attempt</code> с ограничением сверху.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Добавьте джиттер к задержке, чтобы множество клиентов не переподключались
+            синхронно после сбоя, и сбрасывайте счётчик попыток, как только успешно приходит сообщение.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Injectable, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
+import { Observable, timer } from 'rxjs';
+import { retry, tap } from 'rxjs/operators';
+
+interface QuoteMessage {
+  symbol: string;
+  bid: number;
+  ask: number;
+  ts: number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class QuoteSocketService {
+  private readonly url = 'wss://feed.example.com/quotes';
+  private readonly maxDelay = 30_000; // cap backoff at 30s
+  private socket?: WebSocketSubject&lt;QuoteMessage&gt;;
+  private attempt = 0;
+  private destroyRef = inject(DestroyRef);
+
+  /** Type-safe, hot, auto-reconnecting stream of quotes. */
+  connect(): Observable&lt;QuoteMessage&gt; {
+    // webSocket() lazily opens the connection on first subscribe and
+    // reopens it on re-subscribe (which retry() triggers).
+    this.socket = webSocket&lt;QuoteMessage&gt;({
+      url: this.url,
+      openObserver: { next: () =&gt; (this.attempt = 0) }, // reset backoff on connect
+    });
+
+    return this.socket.pipe(
+      // A successful message means the connection is healthy → reset attempts.
+      tap(() =&gt; (this.attempt = 0)),
+      // On error (drop/close), wait with exponential backoff + jitter, then retry.
+      retry({
+        delay: (err: unknown) =&gt; {
+          const exp = Math.min(this.maxDelay, 1000 * 2 ** this.attempt++);
+          const jitter = Math.random() * 300; // de-sync reconnect storms
+          console.warn(`WS dropped, retrying in ${exp + jitter}ms`, err);
+          return timer(exp + jitter);
+        },
+      }),
+      // Tear the socket down when the injecting context is destroyed.
+      takeUntilDestroyed(this.destroyRef),
+    );
+  }
+
+  /** Send a subscribe frame for a given symbol. */
+  subscribeSymbol(symbol: string): void {
+    this.socket?.next({ symbol, bid: 0, ask: 0, ts: Date.now() });
+  }
+
+  /** Explicit, graceful shutdown. */
+  disconnect(): void {
+    this.socket?.complete();
+  }
+}</code></pre>
+        </div>
+
+        <div class="warn"><p><strong>Частый баг:</strong> переподписка внутри <code>retry</code> без сброса счётчика
+          попыток при успешном открытии — тогда задержка растёт бесконечно даже на здоровом соединении.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему экспоненциальная задержка <em>и</em> джиттер, а не фиксированная задержка?</li>
+          <li>Как заново отправить подписки на символы после переподключения?</li>
+          <li>Как бы вы вывели <em>статус</em> соединения (connecting / open / closed) в UI?</li>
+          <li>Heartbeat / ping-pong для обнаружения полуоткрытого соединения?</li>
+          <li>Как раздать один сокет многим компонентам без его переоткрытия?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 6. CUSTOM PIPE ============================= -->
+    <section data-searchable>
+      <h2 id="format-price-pipe">6. Кастомный пайп <code>formatPrice</code></h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Напишите standalone-пайп <code>formatPrice</code>, чистый,
+          который форматирует число как валютную строку с настраиваемым кодом валюты и числом знаков после
+          запятой — например, <code>1234.5 | formatPrice:'USD':2</code> → <code>$1,234.50</code>».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Не пишите разделители разрядов вручную — используйте <code>Intl.NumberFormat</code>
+            со <code>style: 'currency'</code>. Он сам обрабатывает локаль, группировку и символ валюты.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Оставьте его <code>pure: true</code> (по умолчанию), чтобы он пересчитывался
+            только при изменении входных данных. Защититесь от <code>null</code>/<code>NaN</code>, чтобы в шаблоне
+            никогда не появлялось «NaN».</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'formatPrice',
+  standalone: true,
+  pure: true, // recompute only when value/currency/decimals change
+})
+export class FormatPricePipe implements PipeTransform {
+  transform(
+    value: number | null | undefined,
+    currency = 'USD',
+    decimals = 2,
+    locale = 'en-US',
+  ): string {
+    // Defensive guard — never render "NaN"/"$NaN" to users.
+    if (value == null || Number.isNaN(value)) return '—';
+
+    // Intl handles grouping, symbol placement and locale rules natively.
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(value);
+  }
+}
+
+// Template:
+// {{ order.price | formatPrice:'EUR':4 }}  →  "€1,234.5000"</code></pre>
+        </div>
+
+        <div class="tip"><p><strong>Замечание о производительности:</strong> создание <code>Intl.NumberFormat</code>
+          относительно дорого. В горячей таблице можно мемоизировать форматтеры в <code>Map</code> по ключу
+          <code>`${locale}|${currency}|${decimals}`</code> и переиспользовать их между вызовами.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Чистый vs нечистый пайп — в чём разница для обнаружения изменений и какова цена по производительности?</li>
+          <li>Почему чистый пайп лучше вызова метода в шаблоне?</li>
+          <li>Как поддержать отрицательные значения, отображаемые красным / в скобках?</li>
+          <li>Как обработать крипто-пары, которым нужно 8 знаков после запятой?</li>
+          <li>Можно ли кэшировать экземпляры <code>Intl.NumberFormat</code>? Покажите как.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 7. ASYNC VALIDATOR ============================= -->
+    <section data-searchable>
+      <h2 id="async-validator">7. Асинхронный валидатор уникальности email</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Напишите асинхронный валидатор для реактивных форм, который
+          проверяет, что email ещё не зарегистрирован, обращаясь к нашему API. Он должен делать debounce, чтобы мы
+          не били по серверу на каждое нажатие клавиши, и работать в режиме fail open (не блокировать форму), если
+          API отдаёт ошибку».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p><code>AsyncValidatorFn</code> возвращает <code>Observable</code>, который
+            эмитит один раз и завершается. Используйте <code>timer(debounce)</code> + <code>switchMap</code>, чтобы
+            каждое нажатие отменяло предыдущий незавершённый запрос.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Сопоставьте результат «занято» с объектом ошибки валидации
+            <code>{ emailTaken: true }</code>, а <code>null</code> — с валидным значением. Используйте
+            <code>catchError</code>, чтобы вернуть <code>null</code> (валидно), и сбой API никогда не запирал пользователя.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
+import { Observable, of, timer } from 'rxjs';
+import { switchMap, map, catchError, first } from 'rxjs/operators';
+
+interface UserApi {
+  isEmailTaken(email: string): Observable&lt;boolean&gt;;
+}
+
+/** Factory so the validator can be configured with a service + debounce. */
+export function uniqueEmailValidator(
+  api: UserApi,
+  debounceMs = 400,
+): AsyncValidatorFn {
+  return (control: AbstractControl): Observable&lt;ValidationErrors | null&gt; =&gt; {
+    const email = (control.value ?? '').trim();
+    if (!email) return of(null); // empty → let required handle it
+
+    // timer() debounces; switchMap cancels the previous request on new input.
+    return timer(debounceMs).pipe(
+      switchMap(() =&gt; api.isEmailTaken(email)),
+      map(taken =&gt; (taken ? { emailTaken: true } : null)),
+      // Fail open: a network/API error must NOT block form submission.
+      catchError(() =&gt; of(null)),
+      first(), // emit once &amp; complete — required for async validators
+    );
+  };
+}
+
+// Wiring in a component:
+// email: new FormControl('', {
+//   validators: [Validators.required, Validators.email],
+//   asyncValidators: [uniqueEmailValidator(this.userApi)],
+//   updateOn: 'blur', // optional: validate on blur instead of every keystroke
+// });</code></pre>
+        </div>
+
+        <div class="warn"><p><strong>Подвох:</strong> асинхронные валидаторы обязаны <em>завершаться</em>. Если ваш
+          источник — долгоживущий поток, завершите его через <code>first()</code>/<code>take(1)</code>, иначе
+          контрол навсегда застрянет в статусе <code>PENDING</code>.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему <code>switchMap</code>, а не <code>mergeMap</code>/<code>concatMap</code> здесь?</li>
+          <li>Откуда берётся статус <code>PENDING</code> у контрола и когда он снимается?</li>
+          <li>Как показать спиннер «проверяем…», пока он в состоянии pending?</li>
+          <li>Почему fail open при ошибках API — в чём UX-компромисс?</li>
+          <li><code>updateOn: 'blur'</code> vs <code>'change'</code> — что выбрать для асинхронного валидатора и почему?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 8. SIMPLE STORE ============================= -->
+    <section data-searchable>
+      <h2 id="simple-store">8. Стор на BehaviorSubject</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Без NgRx постройте минимальный реактивный сервис состояния
+          для списка заказов: приватное хранилище состояния, публичный observable <code>state$</code> только для
+          чтения, <code>select()</code> для срезов и <code>update()</code>, который иммутабельно патчит
+          состояние».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p><code>private BehaviorSubject</code> хранит текущее состояние и реплеит его
+            новым подписчикам. Открывайте наружу только <code>.asObservable()</code>, чтобы вызывающий код не мог
+            пушить в него напрямую.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p><code>select()</code> = <code>state$.pipe(map(selector), distinctUntilChanged())</code>,
+            чтобы подписчиков уведомляли только когда их срез действительно меняется.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map, distinctUntilChanged } from 'rxjs/operators';
+
+interface OrdersState {
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+}
+
+const initialState: OrdersState = { orders: [], loading: false, error: null };
+
+@Injectable({ providedIn: 'root' })
+export class OrdersStore {
+  // Private — the ONLY thing allowed to call .next().
+  private readonly subject = new BehaviorSubject&lt;OrdersState&gt;(initialState);
+
+  // Public, read-only stream. Replays current state to late subscribers.
+  readonly state$: Observable&lt;OrdersState&gt; = this.subject.asObservable();
+
+  /** Synchronous snapshot for imperative reads. */
+  private get state(): OrdersState {
+    return this.subject.value;
+  }
+
+  /** Subscribe to a derived slice; emits only when that slice changes. */
+  select&lt;T&gt;(selector: (s: OrdersState) =&gt; T): Observable&lt;T&gt; {
+    return this.state$.pipe(map(selector), distinctUntilChanged());
+  }
+
+  /** Immutably patch state (accepts a partial or an updater function). */
+  update(patch: Partial&lt;OrdersState&gt; | ((s: OrdersState) =&gt; Partial&lt;OrdersState&gt;)): void {
+    const delta = typeof patch === 'function' ? patch(this.state) : patch;
+    this.subject.next({ ...this.state, ...delta }); // new object → new reference
+  }
+
+  // --- Example domain actions built on update() ---
+  addOrder(order: Order): void {
+    this.update(s =&gt; ({ orders: [...s.orders, order] })); // never mutate the array
+  }
+  setLoading(loading: boolean): void {
+    this.update({ loading });
+  }
+}
+
+// Usage in a component:
+// orders$ = this.store.select(s =&gt; s.orders);
+// buys$   = this.store.select(s =&gt; s.orders.filter(o =&gt; o.side === 'BUY'));</code></pre>
+        </div>
+
+        <div class="tip"><p><strong>Современная альтернатива:</strong> та же форма на сигналах — <code>signal&lt;OrdersState&gt;()</code>
+          для состояния и <code>computed()</code> для селекторов — даёт синхронное чтение и тонкую реактивность без
+          подписок. Та же архитектура, меньше шаблонного кода.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему открывать наружу <code>asObservable()</code>, а не сам subject?</li>
+          <li>Что даёт <code>distinctUntilChanged</code> и каково его сравнение по умолчанию?</li>
+          <li>Чем это отличается от NgRx — когда NgRx действительно оправдан?</li>
+          <li>Как бы вы переписали это на сигналах / <code>@ngrx/signals</code>?</li>
+          <li>Как обрабатывать асинхронные эффекты (загрузку заказов из API) в этом паттерне?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 9. FLATTEN ARRAY ============================= -->
+    <section data-searchable>
+      <h2 id="flatten">9. Выпрямите вложенный массив</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Выпрямите массив произвольной вложенности в один плоский
+          массив. Покажите рекурсивное решение, итеративное и однострочное на встроенном методе».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Для каждого элемента: если это массив — рекурсивно разворачиваем его; иначе
+            добавляем значение. Рекурсивная версия самая естественная; итеративная меняет стек вызовов на явный
+            стек, чтобы избежать переполнения при глубокой рекурсии.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">type Nested&lt;T&gt; = (T | Nested&lt;T&gt;)[];
+
+// 1) Recursive — clean, but can overflow the stack on very deep input.
+function flattenRecursive&lt;T&gt;(arr: Nested&lt;T&gt;): T[] {
+  return arr.reduce&lt;T[]&gt;((acc, item) =&gt; {
+    return Array.isArray(item)
+      ? acc.concat(flattenRecursive(item)) // dive into nested array
+      : (acc.push(item), acc);             // leaf value
+  }, []);
+}
+
+// 2) Iterative with an explicit stack — no recursion-depth limit.
+function flattenIterative&lt;T&gt;(arr: Nested&lt;T&gt;): T[] {
+  const stack: (T | Nested&lt;T&gt;)[] = [...arr];
+  const result: T[] = [];
+  while (stack.length) {
+    const next = stack.pop()!;            // take from the end (O(1))
+    if (Array.isArray(next)) {
+      stack.push(...next);                // push children back on
+    } else {
+      result.push(next);
+    }
+  }
+  return result.reverse();                // we popped from the end → restore order
+}
+
+// 3) Built-in — flat(Infinity) flattens to any depth.
+const flat = ([1, [2, [3, [4]]]] as Nested&lt;number&gt;).flat(Infinity); // [1,2,3,4]</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(n), где n — общее число элементов на всех уровнях. Рекурсивная
+          версия использует O(d) памяти стека вызовов (d = глубина вложенности); итеративная использует явный стек
+          на O(n), но не переполняет стек вызовов.</p>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Что ломает рекурсивную версию на патологически глубоком входе и как итеративная это решает?</li>
+          <li>Выпрямить до <em>конкретной</em> глубины, а не полностью — как?</li>
+          <li>Почему <code>stack.pop()</code> с последующим <code>reverse()</code>, а не <code>shift()</code>?</li>
+          <li>Как выпрямить массив, сохраняя путь до каждого листа?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 10. DEEP CLONE ============================= -->
+    <section data-searchable>
+      <h2 id="deep-clone">10. Глубокое клонирование (без <code>structuredClone</code>)</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Реализуйте глубокое клонирование без <code>structuredClone</code>
+          и без <code>JSON.parse(JSON.stringify())</code>. Обработайте вложенные объекты, массивы, <code>Date</code> и
+          <code>null</code>».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Рекурсия. Обработайте особые случаи первыми — <code>null</code>, примитивы,
+            затем <code>Date</code> и массивы — прежде чем переходить к общему случаю объекта. <code>typeof</code>
+            отличает примитивы от объектов.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Дополнительная надёжность: отслеживайте посещённые объекты в <code>WeakMap</code>,
+            чтобы циклические ссылки не приводили к бесконечной рекурсии.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">function deepClone&lt;T&gt;(value: T, seen = new WeakMap&lt;object, unknown&gt;()): T {
+  // 1) Primitives and null/undefined are copied by value — return as-is.
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  // 2) Date — recreate from its timestamp.
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as unknown as T;
+  }
+
+  // 3) Circular reference guard — return the already-cloned copy.
+  if (seen.has(value as object)) {
+    return seen.get(value as object) as T;
+  }
+
+  // 4) Array — clone each element recursively.
+  if (Array.isArray(value)) {
+    const arr: unknown[] = [];
+    seen.set(value as object, arr);
+    for (const item of value) arr.push(deepClone(item, seen));
+    return arr as unknown as T;
+  }
+
+  // 5) Plain object — clone each own enumerable property recursively.
+  const out: Record&lt;string, unknown&gt; = {};
+  seen.set(value as object, out);
+  for (const key of Object.keys(value as object)) {
+    out[key] = deepClone((value as Record&lt;string, unknown&gt;)[key], seen);
+  }
+  return out as T;
+}
+
+// Example:
+const original = { id: 1, when: new Date(), tags: ['a', ['b']], meta: { ok: true } };
+const copy = deepClone(original);
+copy.meta.ok = false;          // original.meta.ok stays true ✅</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(n) по общему числу узлов (ключи + элементы массивов). Память O(n)
+          на клон плюс O(глубины) на рекурсию.</p>
+
+        <div class="warn"><p><strong>Почему не <code>JSON.parse(JSON.stringify(x))</code>?</strong> Он молча теряет
+          <code>undefined</code>, функции и <code>Symbol</code>, превращает <code>Date</code> в строку, калечит
+          <code>NaN</code>/<code>Infinity</code> в <code>null</code> и падает на циклических ссылках.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Как обрабатывать циклические ссылки? (<code>WeakMap</code> выше.)</li>
+          <li>Расширьте его на <code>Map</code>, <code>Set</code> и типизированные массивы.</li>
+          <li>Должен ли клон сохранять прототип? Как бы вы это сделали?</li>
+          <li>Функции нельзя клонировать — что с ними должно происходить?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 11. FIND DUPLICATES ============================= -->
+    <section data-searchable>
+      <h2 id="find-duplicates">11. Найдите дубликаты по ключу</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Дан массив заказов; найдите те, у кого <code>symbol</code>
+          встречается более одного раза. Сделайте это за один проход».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Подсчитайте вхождения каждого ключа в <code>Map</code> за один проход, затем
+            соберите элементы, у которых счётчик ключа &gt; 1. <code>Set</code> «увиденных» ключей тоже подойдёт,
+            если нужны только ключи.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">// Return the items that share a duplicated key value.
+function findDuplicatesBy&lt;T, K&gt;(items: T[], keyFn: (item: T) =&gt; K): T[] {
+  const counts = new Map&lt;K, number&gt;();
+  // Pass 1: tally how many times each key appears — O(n).
+  for (const item of items) {
+    const k = keyFn(item);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  // Pass 2: keep items whose key occurred more than once — O(n).
+  return items.filter(item =&gt; (counts.get(keyFn(item)) ?? 0) &gt; 1);
+}
+
+// Just the duplicated KEY values, using a Set:
+function duplicateKeys&lt;T, K&gt;(items: T[], keyFn: (item: T) =&gt; K): K[] {
+  const seen = new Set&lt;K&gt;();
+  const dupes = new Set&lt;K&gt;();
+  for (const item of items) {
+    const k = keyFn(item);
+    if (seen.has(k)) dupes.add(k); // second+ time we've seen it
+    else seen.add(k);
+  }
+  return [...dupes];
+}
+
+// Usage:
+const dups = findDuplicatesBy(orders, o =&gt; o.symbol);
+const dupSymbols = duplicateKeys(orders, o =&gt; o.symbol); // ['EURUSD', ...]</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(n) с O(k) дополнительной памяти (k = число различных ключей).
+          Поиск в Map/Set в среднем O(1) — намного лучше наивного O(n²) с вложенным циклом.</p>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему подход с Map — O(n), а наивный двойной цикл — O(n²)?</li>
+          <li>Вернуть каждую группу дубликатов вместо плоского списка — как?</li>
+          <li>Что если ключ — объект, почему <code>Set</code> не дедуплицирует его по значению?</li>
+          <li>Как найти только <em>первый</em> дубликат и остановиться раньше?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 12. GROUP BY ============================= -->
+    <section data-searchable>
+      <h2 id="group-by">12. Сгруппируйте массив по ключу</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Сгруппируйте <code>Order[]</code> по <code>symbol</code> в
+          <code>Record&lt;string, Order[]&gt;</code> с помощью <code>reduce</code>».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Сворачивайте в объект-аккумулятор. Для каждого элемента лениво создавайте массив-
+            корзину, если её ещё нет (<code>acc[key] ??= []</code>), затем добавляйте в неё.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">// Generic group-by → Record&lt;key, items[]&gt;
+function groupBy&lt;T, K extends PropertyKey&gt;(
+  items: T[],
+  keyFn: (item: T) =&gt; K,
+): Record&lt;K, T[]&gt; {
+  return items.reduce((acc, item) =&gt; {
+    const key = keyFn(item);
+    // Create the bucket on first sight, then append.
+    (acc[key] ??= []).push(item);
+    return acc;
+  }, {} as Record&lt;K, T[]&gt;);
+}
+
+// Orders grouped by symbol:
+const orders: Order[] = [
+  { id: 1, symbol: 'EURUSD', side: 'BUY',  quantity: 100, price: 1.07, status: 'FILLED' },
+  { id: 2, symbol: 'BTCUSD', side: 'SELL', quantity: 0.5, price: 64000, status: 'NEW' },
+  { id: 3, symbol: 'EURUSD', side: 'SELL', quantity: 200, price: 1.08, status: 'NEW' },
+];
+
+const bySymbol = groupBy(orders, o =&gt; o.symbol);
+// {
+//   EURUSD: [ {id:1,...}, {id:3,...} ],
+//   BTCUSD: [ {id:2,...} ],
+// }
+
+// Modern built-in (ES2024 / TS 5.4+): Object.groupBy(orders, o =&gt; o.symbol)</code></pre>
+        </div>
+
+        <p><strong>Сложность по времени.</strong> O(n) — один проход, в среднем O(1) на добавление элемента. Память
+          O(n) на корзины.</p>
+
+        <div class="tip"><p><strong>Нативный вариант:</strong> <code>Object.groupBy()</code> и
+          <code>Map.groupBy()</code> теперь стандартны (ES2024). Используйте их, когда целевой рантайм их
+          поддерживает; версия на <code>reduce</code> — переносимый и безопасный для собеседования ответ.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему <code>??=</code>, а не проверка <code>if (!acc[key])</code>?</li>
+          <li>Сгруппировать в <code>Map</code>, а не в объект — когда это лучше?</li>
+          <li>Сгруппировать по <em>составному</em> ключу (например, symbol + side)?</li>
+          <li>Получить количество элементов на группу вместо массивов — что меняется?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 13. OBSERVABLE FROM SCRATCH ============================= -->
+    <section data-searchable>
+      <h2 id="observable-from-scratch">13. Реализуйте Observable с нуля</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Постройте минимальный класс <code>Observable</code> с методом
+          <code>subscribe</code> и наблюдателем из <code>next</code>/<code>error</code>/<code>complete</code>,
+          чтобы показать, что вы понимаете механизм, на котором построен RxJS».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Observable — это просто функция («продюсер»), которая принимает наблюдателя и
+            пушит в него значения. <code>subscribe</code> вызывает эту функцию и возвращает teardown, чтобы
+            потребитель мог перестать получать значения.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Соблюдайте контракт: как только сработал <code>error</code> или
+            <code>complete</code>, ни один <code>next</code> больше не должен доставляться. Оберните наблюдателя,
+            чтобы это гарантировать, и вызовите teardown.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">interface Observer&lt;T&gt; {
+  next: (value: T) =&gt; void;
+  error?: (err: unknown) =&gt; void;
+  complete?: () =&gt; void;
+}
+type Teardown = () =&gt; void;
+// The producer receives an observer and returns optional cleanup.
+type SubscribeFn&lt;T&gt; = (observer: Observer&lt;T&gt;) =&gt; Teardown | void;
+
+class Observable&lt;T&gt; {
+  constructor(private readonly producer: SubscribeFn&lt;T&gt;) {}
+
+  subscribe(observer: Observer&lt;T&gt;): { unsubscribe: Teardown } {
+    let closed = false;
+    let teardown: Teardown | void;
+
+    // Guard the observer so the contract (no next after stop) holds.
+    const safe: Observer&lt;T&gt; = {
+      next: (v) =&gt; { if (!closed) observer.next(v); },
+      error: (e) =&gt; {
+        if (closed) return;
+        closed = true;
+        observer.error?.(e);
+        if (teardown) teardown();      // auto-cleanup on error
+      },
+      complete: () =&gt; {
+        if (closed) return;
+        closed = true;
+        observer.complete?.();
+        if (teardown) teardown();      // auto-cleanup on complete
+      },
+    };
+
+    // Run the producer — this is where values start flowing.
+    teardown = this.producer(safe);
+
+    return {
+      unsubscribe: () =&gt; {
+        if (closed) return;
+        closed = true;
+        if (teardown) teardown();      // stop the producer
+      },
+    };
+  }
+}
+
+// Demo: an interval that emits 0,1,2... and cleans up its timer on unsubscribe.
+const ticks$ = new Observable&lt;number&gt;((obs) =&gt; {
+  let n = 0;
+  const id = setInterval(() =&gt; obs.next(n++), 1000);
+  return () =&gt; clearInterval(id);      // teardown
+});
+
+const sub = ticks$.subscribe({ next: (v) =&gt; console.log(v) });
+// later: sub.unsubscribe(); // timer cleared, no leak</code></pre>
+        </div>
+
+        <div class="tip"><p><strong>Ключевая идея:</strong> это <em>ленивый</em> и <em>unicast</em> — ничего не
+          выполняется до <code>subscribe</code>, и каждый подписчик получает собственный запуск продюсера. Именно
+          так работают холодные observable в RxJS; multicast им придаёт Subject.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Почему Observable «ленивый» — что это значит для побочных эффектов?</li>
+          <li>Cold vs hot / unicast vs multicast — как бы вы добавили <code>Subject</code>?</li>
+          <li>Как реализовать оператор <code>map</code> поверх этого?</li>
+          <li>Почему <code>complete</code>/<code>error</code> должны останавливать дальнейшие эмиссии?</li>
+          <li>Как это связано с teardown и предотвращением утечек памяти?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================= 14. AUTH INTERCEPTOR ============================= -->
+    <section data-searchable>
+      <h2 id="auth-interceptor">14. Auth-интерцептор с обновлением по 401</h2>
+      <div class="card">
+        <p class="definition"><strong>Задача.</strong> «Напишите функциональный HTTP-интерцептор, который добавляет
+          access-токен к запросам. На <code>401</code> он должен вызвать endpoint обновления, а затем повторить
+          исходный запрос с новым токеном. Если несколько запросов получают 401 одновременно, обновлять токен
+          нужно <em>только один раз</em>, а остальные ставить в очередь за ним».</p>
+
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Клонируйте запрос, чтобы добавить заголовок <code>Authorization</code> (запросы
+            иммутабельны). Используйте <code>catchError</code> для обнаружения 401, затем <code>switchMap</code> в
+            вызов обновления и повторите клонированный запрос со свежим токеном.</p></div>
+        </div>
+        <div class="hint">
+          <button class="hint-toggle" data-label="Подсказка" onclick="toggleHint(this)">▶ Подсказка</button>
+          <div class="hint-body"><p>Для одновременных 401 разделяйте одно обновление в полёте через
+            <code>BehaviorSubject&lt;string | null&gt;</code>. Пока идёт обновление, остальные запросы
+            <code>filter</code>-уют до появления ненулевого токена, затем <code>take(1)</code> и продолжают — так
+            обновление срабатывает один раз.</p></div>
+        </div>
+
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+          <pre><code class="language-typescript">import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { BehaviorSubject, throwError, Observable } from 'rxjs';
+import { catchError, switchMap, filter, take, finalize } from 'rxjs/operators';
+
+// Module-level state shared across all requests = single refresh in flight.
+let isRefreshing = false;
+// null while a refresh is in progress; emits the new token when ready.
+const refreshedToken$ = new BehaviorSubject&lt;string | null&gt;(null);
+
+export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const auth = inject(AuthService);
+
+  // Attach the current access token (clone — requests are immutable).
+  const withAuth = addToken(req, auth.accessToken);
+
+  return next(withAuth).pipe(
+    catchError((err: unknown) =&gt; {
+      // Only handle 401s; let everything else bubble up.
+      if (err instanceof HttpErrorResponse &amp;&amp; err.status === 401) {
+        return handle401(req, next, auth);
+      }
+      return throwError(() =&gt; err);
+    }),
+  );
+};
+
+function addToken(req: HttpRequest&lt;unknown&gt;, token: string | null): HttpRequest&lt;unknown&gt; {
+  return token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+}
+
+function handle401(
+  req: HttpRequest&lt;unknown&gt;,
+  next: HttpHandlerFn,
+  auth: AuthService,
+): Observable&lt;unknown&gt; {
+  if (!isRefreshing) {
+    // First 401 in the burst kicks off THE refresh.
+    isRefreshing = true;
+    refreshedToken$.next(null); // signal "refresh in progress"
+
+    return auth.refreshToken().pipe(
+      switchMap((newToken: string) =&gt; {
+        refreshedToken$.next(newToken);          // release the queue
+        return next(addToken(req, newToken));    // retry THIS request
+      }),
+      catchError((refreshErr) =&gt; {
+        auth.logout();                           // refresh failed → sign out
+        return throwError(() =&gt; refreshErr);
+      }),
+      finalize(() =&gt; (isRefreshing = false)),    // reset the gate
+    );
+  }
+
+  // Concurrent 401s: wait for the single refresh to publish a token, then retry.
+  return refreshedToken$.pipe(
+    filter((token): token is string =&gt; token !== null), // until refresh done
+    take(1),                                             // one token, then proceed
+    switchMap((token) =&gt; next(addToken(req, token))),    // retry queued request
+  );
+}</code></pre>
+        </div>
+
+        <div class="warn"><p><strong>Граничные случаи, которые стоит упомянуть:</strong> не добавляйте токен к
+          самому вызову обновления (чтобы избежать бесконечного цикла 401); пропускайте авторизацию для
+          публичных/логин-эндпоинтов; и предусмотрите жёсткий лимит, чтобы постоянно падающее обновление не
+          повторялось вечно.</p></div>
+
+        <p><strong>Уточняющие вопросы от интервьюера:</strong></p>
+        <ul>
+          <li>Как именно вы не даёте N параллельным 401 запустить N обновлений?</li>
+          <li>Почему <code>filter(token !== null)</code> + <code>take(1)</code> для запросов в очереди?</li>
+          <li>Что останавливает бесконечный цикл обновления, если сам endpoint обновления отдаёт 401?</li>
+          <li>Функциональный интерцептор vs классовый <code>HttpInterceptor</code> — плюсы/минусы?</li>
+          <li>Где вы храните токены и каковы компромиссы по XSS/CSRF?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- =================== PAGE NAV =================== -->
+    <div class="page-nav">
+      <a href="solid-dry.html" class="btn-nav">← SOLID и DRY</a>
+      <a href="communication.html" class="btn-nav">Общение с клиентом →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>
