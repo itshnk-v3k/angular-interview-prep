@@ -57,15 +57,18 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>SW + WebWorker</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">SW + WebWorker</span><span data-lang="ru">SW + WebWorker</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>ServiceWorker и WebWorker</h1>
-      <p class="page-desc">Два совершенно разных фоновых скрипта с похожим названием:
+      <h1><span data-lang="en">ServiceWorker &amp; WebWorker</span><span data-lang="ru">ServiceWorker и WebWorker</span></h1>
+      <p class="page-desc"><span data-lang="en">Two completely different background scripts with similar names:
+        <strong>ServiceWorker</strong> proxies the network for caching and offline support, while
+        <strong>WebWorker</strong> moves CPU-heavy computations (RSI, MACD) off the UI thread. Neither
+        one has access to the DOM.</span><span data-lang="ru">Два совершенно разных фоновых скрипта с похожим названием:
         <strong>ServiceWorker</strong> проксирует сеть для кэширования и работы офлайн, а
         <strong>WebWorker</strong> выносит ресурсоёмкие вычисления (RSI, MACD) из потока UI. Ни тот, ни
-        другой не имеют доступа к DOM.</p>
+        другой не имеют доступа к DOM.</span></p>
       <button class="btn-done" data-page="workers" onclick="markDone('workers')">✓ Отметить как пройдено</button>
     </div>
 
@@ -73,6 +76,439 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ===================== COMPARISON TABLE ===================== -->
+    <section data-searchable>
+      <h2 id="comparison-en">ServiceWorker vs WebWorker — comparison</h2>
+      <p>Both run on a thread separate from the main UI, and both are written in TypeScript, but they solve
+        opposite problems. Understanding which one to choose is a common signal of senior-level expertise.</p>
+
+      <p class="definition"><strong>ServiceWorker</strong> — a background script that sits between
+        the application and the network, intercepting <code>fetch</code> requests in order to serve cached
+        responses, provide offline mode and deliver push notifications.</p>
+      <p class="definition"><strong>WebWorker</strong> — a background script that runs JavaScript on its own
+        thread purely for computation and communicates with the page via message passing. It has no
+        network-proxy role.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>ServiceWorker</th><th>WebWorker</th></tr></thead>
+          <tbody>
+            <tr><td>Purpose</td><td>Network proxy / caching</td><td>CPU-heavy computation</td></tr>
+            <tr><td>DOM access</td><td>❌</td><td>❌</td></tr>
+            <tr><td>Lifecycle</td><td>Independent of the page</td><td>Tied to the page</td></tr>
+            <tr><td>Trading use case</td><td>Cache instrument data, offline</td><td>Compute RSI/MACD</td></tr>
+            <tr><td>Angular integration</td><td><code>@angular/service-worker</code></td><td><code>new Worker()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Mnemonic:</strong> <em>Service</em>Worker <em>serves</em> the network;
+        <em>Web</em>Worker <em>works</em> the CPU. One survives a page reload to provide
+        offline mode; the other dies together with its tab.</p></div>
+    </section>
+
+    <!-- ===================== SERVICEWORKER IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="service-worker-en">ServiceWorker in Angular</h2>
+      <p class="definition"><strong>Angular ServiceWorker (<code>ngsw</code>)</strong> — Angular's ready-made
+        service worker (<code>ngsw-worker.js</code>) that turns the app into an installable PWA. It is
+        controlled declaratively through the <code>ngsw-config.json</code> file rather than hand-written
+        <code>fetch</code> handlers, caching assets and API data and taking over the management of version
+        updates.</p>
+
+      <h3 id="sw-setup-en">Setup overview</h3>
+      <p>Add the PWA package via the CLI, which generates <code>ngsw-config.json</code>, a manifest and the
+        registration call. In a standalone app, registration is done through
+        <code>provideServiceWorker</code>; in an NgModule app you use
+        <code>ServiceWorkerModule.register('ngsw-worker.js')</code>. Registration is disabled in development
+        mode and enabled in production builds.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// Scaffold everything (adds @angular/service-worker + ngsw-config.json)
+//   ng add @angular/pwa
+
+// --- Standalone bootstrap: main.ts ---
+import { bootstrapApplication } from '@angular/platform-browser';
+import { provideServiceWorker } from '@angular/service-worker';
+import { isDevMode } from '@angular/core';
+import { AppComponent } from './app/app.component';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),            // only in production builds
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
+  ],
+});</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// --- Legacy NgModule equivalent: app.module.ts ---
+import { ServiceWorkerModule } from '@angular/service-worker';
+import { isDevMode, NgModule } from '@angular/core';
+
+@NgModule({
+  imports: [
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: !isDevMode(),
+    }),
+  ],
+})
+export class AppModule {}</code></pre>
+      </div>
+
+      <h3 id="ngsw-config-en">Caching strategies in <code>ngsw-config.json</code></h3>
+      <p class="definition"><strong>performance (cache-first)</strong> — serve from cache and skip the network
+        as long as a fresh copy exists in the cache. Fast and convenient for offline; ideal for instrument
+        metadata that changes rarely.</p>
+      <p class="definition"><strong>freshness (network-first)</strong> — try the network first and fall back to
+        the cache only on failure or timeout. The best choice for data that must be up to date,
+        such as live quotes, while still degrading gracefully when offline.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-json">{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app-shell",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/*.css", "/*.js"]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "instruments-api",
+      "urls": ["/api/instruments/**"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 200,
+        "maxAge": "7d",
+        "timeout": "2s"
+      }
+    },
+    {
+      "name": "quotes-api",
+      "urls": ["/api/quotes/**"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "10s",
+        "timeout": "1s"
+      }
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <div class="tip"><p><strong>Trading takeaway:</strong> cache the slowly changing
+        <code>/api/instruments</code> catalog with the <code>performance</code> strategy so the symbol
+        list works offline, but keep <code>/api/quotes</code> on <code>freshness</code> so traders never
+        see a stale price while the network is available.</p></div>
+
+      <h3 id="sw-update-en">Update flow with <code>SwUpdate</code></h3>
+      <p class="definition"><strong>SwUpdate</strong> — an Angular service for managing the service worker
+        lifecycle. It exposes <code>versionUpdates</code> (an Observable of version events),
+        <code>checkForUpdate()</code> for on-demand checks, and <code>activateUpdate()</code> for switching
+        to a freshly downloaded version.</p>
+      <p class="definition"><strong>VersionReady event</strong> — a <code>versionUpdates</code> event whose
+        <code>type</code> equals <code>'VERSION_READY'</code>, signalling that a new build has fully
+        downloaded and is ready to activate. This is the moment you prompt the user to reload.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Injectable, inject } from '@angular/core';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class AppUpdateService {
+  private readonly swUpdate = inject(SwUpdate);
+
+  init(): void {
+    if (!this.swUpdate.isEnabled) {
+      return;                              // no SW in dev or unsupported browser
+    }
+
+    // 1. React when a new version has finished downloading.
+    this.swUpdate.versionUpdates
+      .pipe(filter((e): e is VersionReadyEvent =&gt; e.type === 'VERSION_READY'))
+      .subscribe((event: VersionReadyEvent) =&gt; {
+        console.log('Update ready', event.latestVersion.hash);
+        const reload = confirm('A new version is available. Reload now?');
+        if (reload) {
+          this.swUpdate.activateUpdate().then(() =&gt; document.location.reload());
+        }
+      });
+  }
+
+  // 2. Manually poll for updates (e.g. every few minutes).
+  async checkForUpdate(): Promise&lt;boolean&gt; {
+    return this.swUpdate.checkForUpdate();
+  }
+}</code></pre>
+      </div>
+
+      <div class="warn"><p><strong>Pitfall:</strong> never reload the page
+        automatically in the middle of trading. In a FinTech app an unexpected reload can interrupt the
+        submission of a pending <code>Order</code> — always ask and let the trader choose
+        when to activate the new version.</p></div>
+    </section>
+
+    <!-- ===================== WEBWORKER IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="web-worker-en">WebWorker in Angular</h2>
+      <p class="definition"><strong>WebWorker</strong> — a separate JavaScript context on its own
+        OS thread with no access to the DOM, <code>window</code> or the Angular injector. It communicates with
+        the page only by passing serializable messages via <code>postMessage</code> and
+        <code>onmessage</code>, which makes it ideal for keeping CPU-heavy indicator calculations off the
+        rendering thread.</p>
+
+      <p class="definition"><strong>postMessage(data)</strong> — sends a structured-cloneable message to
+        the other side of the channel (worker → page or page → worker).</p>
+      <p class="definition"><strong>onmessage / the <code>message</code> event</strong> — fires on the
+        receiving side, with the data available in <code>event.data</code>.</p>
+
+      <h3 id="ww-generate-en">Generating the worker</h3>
+      <p>The CLI sets up the TypeScript configuration and creates a sample worker file for you:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// ng generate web-worker rsi
+// → creates src/app/rsi.worker.ts and updates tsconfig.worker.json</code></pre>
+      </div>
+
+      <h3 id="ww-types-en">Shared trading types</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// models/trading.ts — shared by component and worker
+export interface Instrument {
+  readonly symbol: string;
+  readonly exchange: string;
+  readonly tickSize: number;
+}
+
+export interface Quote {
+  readonly symbol: string;
+  readonly bid: number;
+  readonly ask: number;
+  readonly timestamp: number;
+}
+
+// Messages exchanged with the worker (must be structured-cloneable)
+export interface RsiRequest {
+  readonly symbol: string;
+  readonly prices: readonly number[];
+  readonly period: number;
+}
+
+export interface RsiResponse {
+  readonly symbol: string;
+  readonly rsi: number;
+}</code></pre>
+      </div>
+
+      <h3 id="ww-file-en">Worker file — RSI calculation</h3>
+      <p>The worker waits for a message, runs the heavy loop and sends the result back. The
+        <code>/// &lt;reference&gt;</code> directive pulls in the correct types of the
+        <code>WebWorker</code> library.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">/// &lt;reference lib="webworker" /&gt;
+import { RsiRequest, RsiResponse } from './models/trading';
+
+function calculateRsi(prices: readonly number[], period: number): number {
+  if (prices.length &lt;= period) {
+    return 0;
+  }
+  let gains = 0;
+  let losses = 0;
+  for (let i = 1; i &lt;= period; i++) {
+    const delta = prices[i] - prices[i - 1];
+    if (delta &gt;= 0) {
+      gains += delta;
+    } else {
+      losses -= delta;
+    }
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+
+  for (let i = period + 1; i &lt; prices.length; i++) {
+    const delta = prices[i] - prices[i - 1];
+    const gain = delta &gt; 0 ? delta : 0;
+    const loss = delta &lt; 0 ? -delta : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+  }
+
+  if (avgLoss === 0) {
+    return 100;
+  }
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+addEventListener('message', ({ data }: MessageEvent&lt;RsiRequest&gt;) =&gt; {
+  const rsi = calculateRsi(data.prices, data.period);
+  const response: RsiResponse = { symbol: data.symbol, rsi };
+  postMessage(response);
+});</code></pre>
+      </div>
+
+      <h3 id="ww-component-en">The component side</h3>
+      <p>Create the worker using <code>import.meta.url</code> (the only form the Angular CLI bundles
+        correctly), send the request, handle the typed result, catch errors via
+        <code>onerror</code> and always call <code>terminate()</code> on destroy to free the
+        thread.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Component, OnDestroy, signal } from '@angular/core';
+import { RsiRequest, RsiResponse } from './models/trading';
+
+@Component({
+  selector: 'app-rsi-panel',
+  standalone: true,
+  template: `&lt;p&gt;RSI: {{ rsi() ?? '—' }}&lt;/p&gt;`,
+})
+export class RsiPanelComponent implements OnDestroy {
+  readonly rsi = signal&lt;number | null&gt;(null);
+  private worker?: Worker;
+
+  compute(symbol: string, prices: readonly number[]): void {
+    if (typeof Worker === 'undefined') {
+      return;                              // SSR / unsupported environment
+    }
+
+    // import.meta.url lets the CLI resolve & bundle the worker.
+    this.worker = new Worker(new URL('./rsi.worker', import.meta.url));
+
+    this.worker.onmessage = ({ data }: MessageEvent&lt;RsiResponse&gt;) =&gt; {
+      this.rsi.set(data.rsi);
+    };
+
+    this.worker.onerror = (err: ErrorEvent) =&gt; {
+      console.error('RSI worker failed:', err.message);
+      this.rsi.set(null);
+    };
+
+    const request: RsiRequest = { symbol, prices, period: 14 };
+    this.worker.postMessage(request);
+  }
+
+  ngOnDestroy(): void {
+    this.worker?.terminate();              // kill the thread, avoid leaks
+  }
+}</code></pre>
+      </div>
+
+      <div class="card">
+        <div class="success"><p><strong>Right:</strong> the heavy RSI/MACD loops run in the worker,
+          so the fast stream of <code>Quote</code> updates never blocks scrolling or chart
+          rendering on the UI thread.</p></div>
+        <div class="danger"><p><strong>Wrong:</strong> running the same loop directly in a component method
+          freezes change detection — a backtest over 50k bars will block the tab until it finishes.</p></div>
+      </div>
+
+      <div class="warn"><p><strong>Pitfall:</strong> messages are <em>copied by structured clone</em>,
+        not shared. You cannot pass a class instance with methods, a DOM node or a function — only plain
+        data. For huge <code>Float64Array</code> price buffers, transfer the
+        <code>ArrayBuffer</code> itself to avoid copying.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Interview Questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the key difference between ServiceWorker and WebWorker?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>They use the same threading model but solve different problems.
+          <strong>ServiceWorker</strong> is a network proxy: it intercepts <code>fetch</code> requests to
+          cache responses, provide offline mode and handle push — it lives independently of any
+          page and survives reloads. <strong>WebWorker</strong> is a pure-computation thread: you
+          send it data, it does CPU-heavy work (e.g. RSI/MACD over price history) and
+          sends the result back, and it is tied to the page that created it. Neither has
+          DOM access. In Angular the former uses <code>@angular/service-worker</code>, while the
+          latter uses <code>new Worker()</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. When should you choose <code>performance</code> versus <code>freshness</code> in <code>ngsw-config.json</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>performance</code> is cache-first: serve from cache and skip the network
+          while the copy is fresh — ideal for rarely changing data such as the <code>Instrument</code> catalog,
+          giving instant loads and offline support. <code>freshness</code> is network-first: try the network
+          (within a timeout) and fall back to the cache only on failure — the right choice for live
+          <code>Quote</code> data, where showing a stale price is unacceptable, while still degrading gracefully
+          offline.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. How do you safely notify users of a new app version?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Inject <code>SwUpdate</code> and subscribe to
+          <code>versionUpdates</code>, filtering for the <code>VERSION_READY</code> event, which fires
+          as soon as a new build has fully downloaded. Then prompt the user to update; on
+          confirmation call <code>activateUpdate()</code> and reload the page. Never
+          reload automatically — in a trading app a forced reload can interrupt a
+          pending <code>Order</code>, so the trader should choose the moment. Always check
+          <code>swUpdate.isEnabled</code>, since the SW is disabled in dev and unsupported browsers.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Why must you call <code>terminate()</code> on a WebWorker, and what data can you pass to it?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A WebWorker is a real OS thread that keeps running until you
+          call <code>terminate()</code> (or it finishes on its own). Forgetting to do this in
+          <code>ngOnDestroy</code> will leak threads on every component re-creation. Messages
+          are <strong>copied by structured clone</strong>, so you can only pass serializable
+          data — plain objects, arrays, typed arrays, <code>Map</code>, <code>Set</code>,
+          <code>Date</code> — but not class instances with methods, DOM nodes or functions. For large price
+          buffers you can transfer an <code>ArrayBuffer</code> to move ownership and avoid copying.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which task belongs to a <strong>WebWorker</strong>, not a ServiceWorker?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Caching the instrument catalog for offline use</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Computing RSI/MACD over thousands of price bars</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Intercepting fetch requests to serve cached quotes</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Delivering push notifications</button>
+        <div class="quiz-explain">A WebWorker performs CPU-heavy computation off the UI thread. Caching, intercepting fetch and push are all ServiceWorker responsibilities.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Which caching strategy is best for live <code>Quote</code> data?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">performance (cache-first)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">freshness (network-first)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">prefetch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">lazy</button>
+        <div class="quiz-explain">Live quotes must be up to date, so freshness tries the network first and falls back to the cache only on failure. performance (cache-first) would risk serving a stale price.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Which <code>SwUpdate.versionUpdates</code> event signals that the downloaded build is ready to activate?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NO_NEW_VERSION_DETECTED</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">VERSION_DETECTED</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">VERSION_READY</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">VERSION_INSTALLATION_FAILED</button>
+        <div class="quiz-explain">VERSION_READY means a new build has fully downloaded and can be activated — the moment to prompt the user to reload. VERSION_DETECTED only means a new build has been detected.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ===================== COMPARISON TABLE ===================== -->
     <section data-searchable>
       <h2 id="comparison">ServiceWorker против WebWorker — сравнение</h2>
@@ -502,11 +938,12 @@ export class RsiPanelComponent implements OnDestroy {
         <div class="quiz-explain">VERSION_READY означает, что новая сборка полностью скачана и может быть активирована — момент, чтобы предложить пользователю перезагрузиться. VERSION_DETECTED означает лишь то, что новая сборка обнаружена.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
       <a href="canvas.html" class="btn-nav">← Canvas</a>
-      <a href="http.html" class="btn-nav">HTTP и интерцепторы →</a>
+      <a href="http.html" class="btn-nav"><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span> →</a>
     </div>
   </main>
 

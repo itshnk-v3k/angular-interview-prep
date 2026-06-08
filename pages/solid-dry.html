@@ -57,15 +57,18 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>SOLID и DRY</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">SOLID &amp; DRY</span><span data-lang="ru">SOLID и DRY</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>SOLID, DRY, KISS, YAGNI</h1>
-      <p class="page-desc">Принципы проектирования, которые на собеседованиях уровня senior ожидают увидеть в применении —
+      <h1><span data-lang="en">SOLID, DRY, KISS, YAGNI</span><span data-lang="ru">SOLID, DRY, KISS, YAGNI</span></h1>
+      <p class="page-desc"><span data-lang="en">Design principles that senior-level interviews expect to see applied —
+        not recited from memory. Each one below pairs a crisp definition with the problem it solves,
+        and ❌/✅ Angular code in a FinTech trading context
+        (<code>Order</code>, <code>Quote</code>, <code>Instrument</code>, <code>Position</code>).</span><span data-lang="ru">Принципы проектирования, которые на собеседованиях уровня senior ожидают увидеть в применении —
         а не в виде заученного пересказа. Каждый из них ниже сочетает чёткое определение с проблемой, которую он решает,
         и ❌/✅ кодом на Angular в контексте FinTech-трейдинга
-        (<code>Order</code>, <code>Quote</code>, <code>Instrument</code>, <code>Position</code>).</p>
+        (<code>Order</code>, <code>Quote</code>, <code>Instrument</code>, <code>Position</code>).</span></p>
       <button class="btn-done" data-page="solid-dry" onclick="markDone('solid-dry')">✓ Отметить как пройдено</button>
     </div>
 
@@ -73,6 +76,685 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= OVERVIEW ============================= -->
+    <section data-searchable>
+      <h2 id="overview-en">Overview</h2>
+      <p><strong>SOLID</strong> is five object-oriented design principles formulated by Robert Martin.
+        On top of them, three pragmatic heuristics — <strong>DRY</strong>, <strong>KISS</strong> and <strong>YAGNI</strong> —
+        keep the code lean. <strong>WET</strong> is the anti-pattern that DRY fights.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Acronym</th><th>Expansion</th><th>One-line essence</th></tr></thead>
+          <tbody>
+            <tr><td><strong>S</strong></td><td>Single Responsibility</td><td>One reason to change per unit.</td></tr>
+            <tr><td><strong>O</strong></td><td>Open/Closed</td><td>Extend without modifying.</td></tr>
+            <tr><td><strong>L</strong></td><td>Liskov Substitution</td><td>Subtypes must honor the base type's contract.</td></tr>
+            <tr><td><strong>I</strong></td><td>Interface Segregation</td><td>Many small interfaces &gt; one big one.</td></tr>
+            <tr><td><strong>D</strong></td><td>Dependency Inversion</td><td>Depend on abstractions, not concretions.</td></tr>
+            <tr><td><strong>DRY</strong></td><td>Don't Repeat Yourself</td><td>One source of truth for each piece of knowledge.</td></tr>
+            <tr><td><strong>KISS</strong></td><td>Keep It Simple, Stupid</td><td>Choose the obvious solution.</td></tr>
+            <tr><td><strong>YAGNI</strong></td><td>You Aren't Gonna Need It</td><td>Build only what you need now.</td></tr>
+            <tr><td><strong>WET</strong></td><td>Write Everything Twice</td><td>Anti-pattern: copy-paste duplication.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>How to present it in an interview:</strong> name the principle, explain what it means, name the problem it solves,
+        and then show the refactor. Interviewers value applied judgement over a verbatim textbook recital.</p></div>
+    </section>
+
+    <!-- ============================= S — SRP ============================= -->
+    <section data-searchable>
+      <h2 id="srp-en">S — Single Responsibility Principle</h2>
+      <div class="card">
+        <p class="definition"><strong>Single Responsibility Principle (SRP)</strong> — a class, component or module should have <em>one reason to change</em>, i.e. one responsibility owned by one actor.</p>
+        <p><strong>What it means:</strong> separate <em>data fetching</em>, <em>display/formatting</em> and <em>presentation/state</em>, so a change in one area doesn't spill into the others.</p>
+        <p><strong>What problem it solves:</strong> "god components" mixing HTTP, formatting and template logic become untestable, fragile and non-reusable. SRP keeps each unit small, focused and independently testable.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — a component doing HTTP + formatting + state in one place:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">@Component({
+  selector: 'app-positions',
+  template: `&lt;div *ngFor="let p of rows"&gt;{{ p.label }}&lt;/div&gt;`,
+})
+export class PositionsComponent implements OnInit {
+  rows: { label: string }[] = [];
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    // Responsibility 1: HTTP transport
+    this.http.get&lt;Position[]&gt;('/api/positions').subscribe((positions) =&gt; {
+      // Responsibility 2: formatting/currency logic
+      this.rows = positions.map((p) =&gt; ({
+        label: `${p.symbol}: ${(p.qty * p.price).toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        })}`,
+      }));
+      // Responsibility 3: view state — all tangled together
+    });
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — split into a service (transport), a pipe (formatting) and a thin component (presentation):</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// 1. Service owns transport only
+@Injectable({ providedIn: 'root' })
+export class PositionService {
+  private http = inject(HttpClient);
+  getPositions(): Observable&lt;Position[]&gt; {
+    return this.http.get&lt;Position[]&gt;('/api/positions');
+  }
+}
+
+// 2. Pipe owns formatting only
+@Pipe({ name: 'notional', standalone: true })
+export class NotionalPipe implements PipeTransform {
+  transform(p: Position): string {
+    return (p.qty * p.price).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    });
+  }
+}
+
+// 3. Component owns view/state only
+@Component({
+  selector: 'app-positions',
+  standalone: true,
+  imports: [NgFor, AsyncPipe, NotionalPipe],
+  template: `
+    &lt;div *ngFor="let p of positions$ | async"&gt;
+      {{ p.symbol }}: {{ p | notional }}
+    &lt;/div&gt;`,
+})
+export class PositionsComponent {
+  private service = inject(PositionService);
+  positions$ = this.service.getPositions();
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> currency/notional formatting is regulated and changes for reasons unrelated to how
+          positions are fetched. Having a <code>NotionalPipe</code> means a locale switch or rounding-rule change touches one file, not every component.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= O — OCP ============================= -->
+    <section data-searchable>
+      <h2 id="ocp-en">O — Open/Closed Principle</h2>
+      <div class="card">
+        <p class="definition"><strong>Open/Closed Principle (OCP)</strong> — software entities should be <em>open for extension but closed for modification</em>.</p>
+        <p><strong>What it means:</strong> new behavior should be added by writing new code (a new class/strategy), not by editing existing, already-tested code.</p>
+        <p><strong>What problem it solves:</strong> a sprawling <code>switch</code> over a type field forces you to reopen and re-test the same function every time a new variant appears — a regression magnet. Polymorphism localizes each variant.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — a <code>switch</code> on instrument type that you have to edit for every new type:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">type InstrumentKind = 'stock' | 'bond' | 'option';
+
+@Injectable({ providedIn: 'root' })
+export class FeeCalculator {
+  calculate(instrument: Instrument, notional: number): number {
+    switch (instrument.kind) {
+      case 'stock':
+        return notional * 0.001;
+      case 'bond':
+        return notional * 0.0005;
+      case 'option':
+        return notional * 0.002 + 0.65;
+      // Adding 'future' means editing &amp; re-testing THIS method again.
+      default:
+        throw new Error('Unknown instrument');
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — a strategy interface; new instruments add a new class, existing code is left untouched:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">export interface FeeStrategy {
+  calculate(notional: number): number;
+}
+
+export class StockFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.001; }
+}
+export class BondFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.0005; }
+}
+export class OptionFee implements FeeStrategy {
+  calculate(notional: number): number { return notional * 0.002 + 0.65; }
+}
+
+// New 'future' fee? Add a class — this registry/consumer is untouched.
+@Injectable({ providedIn: 'root' })
+export class FeeCalculator {
+  private readonly strategies: Record&lt;string, FeeStrategy&gt; = {
+    stock: new StockFee(),
+    bond: new BondFee(),
+    option: new OptionFee(),
+  };
+  calculate(instrument: Instrument, notional: number): number {
+    return this.strategies[instrument.kind].calculate(notional);
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> exchanges and asset classes are added constantly. The "strategy/registry" approach means onboarding
+          a new product is an additive change reviewed in isolation — critical when fee logic is audited.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= L — LSP ============================= -->
+    <section data-searchable>
+      <h2 id="lsp-en">L — Liskov Substitution Principle</h2>
+      <div class="card">
+        <p class="definition"><strong>Liskov Substitution Principle (LSP)</strong> — objects of a subtype must be substitutable for objects of their base type without breaking program correctness.</p>
+        <p><strong>What it means:</strong> a subclass must honor the base class's contract — same method signatures, no strengthening of preconditions, no weakening of postconditions, no unexpected exceptions.</p>
+        <p><strong>What problem it solves:</strong> a subclass that throws or does nothing where the base promised behavior turns polymorphism into a landmine — caller code written against the base type blows up on the subtype.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — a subclass that breaks the base contract by throwing instead of executing:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">abstract class TradeExecutor {
+  // Contract: returns a confirmed Order for the given quote.
+  abstract execute(quote: Quote, qty: number): Order;
+}
+
+class MarketExecutor extends TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.ask, status: 'filled' };
+  }
+}
+
+class ReadOnlyExecutor extends TradeExecutor {
+  // Violates LSP: callers expect an Order, this blows up instead.
+  execute(_quote: Quote, _qty: number): Order {
+    throw new Error('Read-only feed cannot execute trades');
+  }
+}
+
+// Any code written against TradeExecutor now randomly crashes.
+function place(exec: TradeExecutor, q: Quote): Order {
+  return exec.execute(q, 100); // 💥 with ReadOnlyExecutor
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — model the capability explicitly so only real executors satisfy the execution contract:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// Separate the capabilities — don't force a non-executor to pretend.
+interface QuoteReader {
+  read(symbol: string): Quote;
+}
+interface TradeExecutor {
+  execute(quote: Quote, qty: number): Order; // every implementer truly executes
+}
+
+class MarketExecutor implements TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.ask, status: 'filled' };
+  }
+}
+
+class LimitExecutor implements TradeExecutor {
+  execute(quote: Quote, qty: number): Order {
+    // Honors the contract: always returns a valid Order (here, working/pending).
+    return { id: crypto.randomUUID(), symbol: quote.symbol, qty, price: quote.bid, status: 'pending' };
+  }
+}
+
+// A read-only feed implements QuoteReader, never TradeExecutor — no false promise.
+class MarketDataFeed implements QuoteReader {
+  read(symbol: string): Quote {
+    return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() };
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Telltale LSP-violation smell:</strong> a subclass overrides a method to <code>throw</code>, return <code>null</code> or check
+          <code>instanceof</code> at the call site. If callers need to know the concrete type, substitutability is already broken.</p></div>
+        <div class="tip"><p><strong>FinTech context:</strong> an order router treats every executor uniformly. If one "executor" silently rejects orders, you get
+          lost orders in production — LSP violations here are a real financial risk, not an academic abstraction.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= I — ISP ============================= -->
+    <section data-searchable>
+      <h2 id="isp-en">I — Interface Segregation Principle</h2>
+      <div class="card">
+        <p class="definition"><strong>Interface Segregation Principle (ISP)</strong> — no client should be forced to depend on methods it does not use; prefer many small, role-based interfaces over one fat interface.</p>
+        <p><strong>What it means:</strong> split a bloated <code>IService</code> into focused contracts, so implementations and consumers depend only on the part they actually need.</p>
+        <p><strong>What problem it solves:</strong> a fat interface forces every implementation to stub methods it doesn't support (often by throwing — which also violates LSP), and couples consumers to capabilities they never call.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — one giant <code>ITradingService</code> that every implementation must fully implement:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">interface ITradingService {
+  getQuote(symbol: string): Quote;
+  placeOrder(order: Order): Order;
+  cancelOrder(id: string): void;
+  streamPositions(): Observable&lt;Position[]&gt;;
+  exportRegulatoryReport(): Blob;   // only the back-office cares
+  reconcileLedger(): void;          // only settlement cares
+}
+
+// A read-only price widget must implement ALL of these, throwing for most.
+class PriceWidgetService implements ITradingService {
+  getQuote(symbol: string): Quote { /* ... */ return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+  placeOrder(): Order { throw new Error('not supported'); }
+  cancelOrder(): void { throw new Error('not supported'); }
+  streamPositions(): Observable&lt;Position[]&gt; { throw new Error('not supported'); }
+  exportRegulatoryReport(): Blob { throw new Error('not supported'); }
+  reconcileLedger(): void { throw new Error('not supported'); }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — focused interfaces; each client depends only on what it uses:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">interface QuoteProvider {
+  getQuote(symbol: string): Quote;
+}
+interface OrderManager {
+  placeOrder(order: Order): Order;
+  cancelOrder(id: string): void;
+}
+interface PositionStream {
+  streamPositions(): Observable&lt;Position[]&gt;;
+}
+interface BackOfficeReports {
+  exportRegulatoryReport(): Blob;
+  reconcileLedger(): void;
+}
+
+// The widget implements ONLY what it needs — nothing to stub.
+class PriceWidgetService implements QuoteProvider {
+  getQuote(symbol: string): Quote {
+    return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() };
+  }
+}
+
+// A full trading desk service composes the contracts it actually provides.
+class DeskService implements QuoteProvider, OrderManager, PositionStream {
+  getQuote(symbol: string): Quote { /* ... */ return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+  placeOrder(order: Order): Order { return { ...order, status: 'filled' }; }
+  cancelOrder(_id: string): void { /* ... */ }
+  streamPositions(): Observable&lt;Position[]&gt; { return of([]); }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> regulatory reporting and ledger reconciliation belong to entirely different teams than
+          the live price widget. Segregated interfaces let each module compile, deploy and pass audit without dragging the rest along.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= D — DIP ============================= -->
+    <section data-searchable>
+      <h2 id="dip-en">D — Dependency Inversion Principle</h2>
+      <div class="card">
+        <p class="definition"><strong>Dependency Inversion Principle (DIP)</strong> — high-level modules should not depend on low-level modules; both should depend on abstractions. Abstractions should not depend on details.</p>
+        <p><strong>What it means:</strong> a component should depend on an <em>interface/token</em>, and Angular's DI supplies the concrete implementation — rather than constructing it by hand.</p>
+        <p><strong>What problem it solves:</strong> a component that uses <code>new</code> to create a concrete service is permanently welded to it — you can't swap the implementation (REST vs WebSocket vs mock), and unit tests can't inject a fake.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — a component creating a concrete service via <code>new</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">@Component({ selector: 'app-ticker', template: `{{ quote?.bid }}` })
+export class TickerComponent implements OnInit {
+  quote?: Quote;
+  // Hard-wired to one concrete implementation — untestable, unswappable.
+  private feed = new RestQuoteService();
+
+  ngOnInit(): void {
+    this.quote = this.feed.getQuote('EURUSD');
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — depend on an abstraction provided via an <code>InjectionToken</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">export interface QuoteFeed {
+  getQuote(symbol: string): Quote;
+}
+export const QUOTE_FEED = new InjectionToken&lt;QuoteFeed&gt;('QUOTE_FEED');
+
+// Two interchangeable implementations behind the same abstraction.
+@Injectable()
+export class RestQuoteService implements QuoteFeed {
+  getQuote(symbol: string): Quote { return { symbol, bid: 1.07, ask: 1.0702, ts: Date.now() }; }
+}
+@Injectable()
+export class WsQuoteService implements QuoteFeed {
+  getQuote(symbol: string): Quote { return { symbol, bid: 1.071, ask: 1.0712, ts: Date.now() }; }
+}
+
+// Wire it at the application/route level:
+// providers: [{ provide: QUOTE_FEED, useClass: WsQuoteService }]
+
+@Component({ selector: 'app-ticker', standalone: true, template: `{{ quote?.bid }}` })
+export class TickerComponent implements OnInit {
+  quote?: Quote;
+  // Depends on the abstraction; DI supplies the concrete impl (or a mock in tests).
+  private feed = inject(QUOTE_FEED);
+
+  ngOnInit(): void {
+    this.quote = this.feed.getQuote('EURUSD');
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> dev/staging may use a polling REST feed, while production uses a low-latency WebSocket feed,
+          and tests use a deterministic mock. With DIP this is a one-line provider swap — the component itself never changes.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= DRY ============================= -->
+    <section data-searchable>
+      <h2 id="dry-en">DRY — Don't Repeat Yourself</h2>
+      <div class="card">
+        <p class="definition"><strong>Don't Repeat Yourself (DRY)</strong> — every piece of knowledge should have a single, unambiguous, authoritative representation in the system.</p>
+        <p><strong>What it means:</strong> duplicated logic (validation, formatting, a magic threshold) should live in exactly one place — a shared utility, pipe or service.</p>
+        <p><strong>What problem it solves:</strong> copied logic diverges. Fix a rounding rule in three components and you'll miss the fourth, shipping inconsistent — and in trading, incorrect — numbers.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — the same validation and pip formatting duplicated across components:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// order-entry.component.ts
+isValid(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= 1_000_000 &amp;&amp; order.price &gt; 0;
+}
+format(price: number): string { return price.toFixed(5); }
+
+// modify-order.component.ts  — copy-pasted, will drift
+isValid(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= 1_000_000 &amp;&amp; order.price &gt; 0;
+}
+format(price: number): string { return price.toFixed(5); } // someone changes 5→4 here only</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — one validator utility and one shared pipe, reused everywhere:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// order-rules.ts — single source of truth
+export const MAX_QTY = 1_000_000;
+export function isValidOrder(order: Order): boolean {
+  return order.qty &gt; 0 &amp;&amp; order.qty &lt;= MAX_QTY &amp;&amp; order.price &gt; 0;
+}
+
+// pip.pipe.ts — formatting in one place
+@Pipe({ name: 'pip', standalone: true })
+export class PipPipe implements PipeTransform {
+  transform(price: number, digits = 5): string { return price.toFixed(digits); }
+}
+
+// Both components now reuse the same logic:
+//   if (isValidOrder(order)) { ... }
+//   {{ quote.bid | pip }}</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> price precision and quantity limits are compliance-critical. A single <code>order-rules.ts</code>
+          means an auditor reviews one file, and changing a limit can't silently skip some screen.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= KISS ============================= -->
+    <section data-searchable>
+      <h2 id="kiss-en">KISS — Keep It Simple, Stupid</h2>
+      <div class="card">
+        <p class="definition"><strong>Keep It Simple, Stupid (KISS)</strong> — choose the simplest solution that works; avoid unnecessary cleverness.</p>
+        <p><strong>What it means:</strong> readable, obvious code beats a dense one-liner that takes five minutes to decode. Optimize for the next maintainer.</p>
+        <p><strong>What problem it solves:</strong> clever code hides bugs and slows reviews. Simplicity reduces cognitive load and the surface area for mistakes — especially valuable in logic that moves money.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — an over-clever one-liner that no one can safely change:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// "Total exposure" — what does this even do?
+const exposure = positions.reduce((a, p) =&gt; a + (p.side === 'BUY' ? 1 : -1) * p.qty * p.price, 0)
+  * (positions.some((p) =&gt; p.symbol.includes('USD')) ? 1 : fxRate);</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — broken into named, obvious steps:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">function signedNotional(p: Position): number {
+  const direction = p.side === 'BUY' ? 1 : -1;
+  return direction * p.qty * p.price;
+}
+
+function totalExposure(positions: Position[], fxRate: number): number {
+  const gross = positions.reduce((sum, p) =&gt; sum + signedNotional(p), 0);
+  const isUsdBook = positions.some((p) =&gt; p.symbol.includes('USD'));
+  return isUsdBook ? gross : gross * fxRate;
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Balance:</strong> KISS is not "dumb it down". A well-named <code>map</code>/<code>filter</code> chain can be simpler than
+          an imperative loop. The goal is the <em>least surprising</em> code, not the fewest characters.</p></div>
+        <div class="tip"><p><strong>FinTech context:</strong> exposure and P&amp;L calculations are read by risk management and compliance, not just engineers.
+          Named, step-by-step code can be reviewed by non-authors — that's the whole point.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= YAGNI ============================= -->
+    <section data-searchable>
+      <h2 id="yagni-en">YAGNI — You Aren't Gonna Need It</h2>
+      <div class="card">
+        <p class="definition"><strong>You Aren't Gonna Need It (YAGNI)</strong> — don't build functionality until it's actually required.</p>
+        <p><strong>What it means:</strong> resist speculative generality — configurable engines, plugin systems and abstraction layers added "just in case" for a future requirement.</p>
+        <p><strong>What problem it solves:</strong> speculative code is unused complexity you still have to read, test and maintain. Most predicted requirements never arrive, or arrive in a form you didn't anticipate.</p>
+
+        <div class="danger">
+          <p><strong>❌ Bad</strong> — a speculative, over-generalized configurable engine for a single current scenario:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// We only ever place market orders today, but "what if"...
+interface OrderPipelineStep&lt;T&gt; { run(ctx: T): T; }
+
+class ConfigurableOrderEngine&lt;T extends Order&gt; {
+  private steps: OrderPipelineStep&lt;T&gt;[] = [];
+  registerStep(step: OrderPipelineStep&lt;T&gt;): this { this.steps.push(step); return this; }
+  // generic plugin pipeline, dynamic dispatch, options object...
+  execute(order: T, options?: Record&lt;string, unknown&gt;): T {
+    return this.steps.reduce((o, s) =&gt; s.run(o), order);
+  }
+}
+// 80 lines of framework — to send one kind of order.</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ Good</strong> — build exactly what you need now; generalize when a second case actually appears:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class OrderService {
+  private http = inject(HttpClient);
+
+  placeMarketOrder(order: Order): Observable&lt;Order&gt; {
+    return this.http.post&lt;Order&gt;('/api/orders', order);
+  }
+}
+// When limit/stop orders are real requirements, refactor THEN — with real constraints.</code></pre>
+          </div>
+        </div>
+
+        <div class="tip"><p><strong>FinTech context:</strong> requirements shift with regulation and product launches. Building the market-order path now and
+          extending it when limit orders are genuinely scoped beats a speculative engine that guesses wrong.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================= WET ============================= -->
+    <section data-searchable>
+      <h2 id="wet-en">WET — Write Everything Twice (anti-pattern)</h2>
+      <div class="card">
+        <p class="definition"><strong>Write Everything Twice (WET)</strong> — the ironic opposite of DRY: the same knowledge is copy-pasted and maintained in several places. (Also expanded as "We Enjoy Typing" / "Waste Everyone's Time".)</p>
+        <p><strong>What it means:</strong> WET code duplicates logic so that one conceptual change requires edits in multiple places — and one of them inevitably gets missed.</p>
+        <p><strong>Nuance — when a little duplication is acceptable:</strong> premature abstraction can be worse than duplication, because the wrong abstraction couples unrelated code. The pragmatic guideline is the <strong>Rule of Three</strong>:</p>
+
+        <div class="danger">
+          <p><strong>❌ WET</strong> — the same spread calculation typed out in three components, guaranteed to diverge:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// ticker.component.ts
+const spread = quote.ask - quote.bid;
+// order-book.component.ts
+const spread = quote.ask - quote.bid; // duplicated
+// risk-panel.component.ts
+const spread = quote.ask - quote.bid; // duplicated again — now extract it</code></pre>
+          </div>
+        </div>
+
+        <div class="success">
+          <p><strong>✅ DRY</strong> — once it appears a third time, extract a single source of truth:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code class="language-typescript">// quote-utils.ts
+export function spread(quote: Quote): number {
+  return quote.ask - quote.bid;
+}
+// All three components now call spread(quote).</code></pre>
+          </div>
+        </div>
+
+        <div class="warn"><p><strong>Rule of Three:</strong> the first time you write something, just write it. The second time, when you see duplication, wince but
+          tolerate it. The <em>third</em> time — refactor. Two occurrences may be coincidence; three signal a real shared concept worth a name.</p></div>
+        <div class="tip"><p><strong>FinTech context:</strong> "look-alike" duplication between, say, <code>Order</code> validation and
+          <code>Position</code> validation may be coincidental — forcibly merging them into one abstraction could entangle two contracts that should evolve separately.
+          Wait for the third, genuine repetition.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Interview Questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What does the Single Responsibility Principle mean in practice for an Angular component?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A component should have one reason to change — usually displaying state. HTTP/transport belongs to an injectable
+          service, formatting to a pipe, and business rules to pure functions or domain services. So a component that fetches
+          positions over HTTP <em>and</em> formats currency <em>and</em> manages view state has three reasons to change; you split it into
+          <code>PositionService</code>, <code>NotionalPipe</code> and a thin component. The payoff is independent testability and reuse.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. How do you apply Open/Closed when a <code>switch</code> over instrument type keeps growing?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Replace the conditional with polymorphism. Define a <code>FeeStrategy</code> interface and one implementation per
+          instrument type, then look the strategy up in a registry/map (or via Angular DI with a multi-provider). Adding a new instrument means
+          adding a class and a registration — the existing, tested <code>FeeCalculator</code> is never reopened. That's "closed for modification,
+          open for extension".</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Give a concrete Liskov Substitution violation and how to fix it.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>The base <code>TradeExecutor</code> promises that <code>execute()</code> returns a confirmed <code>Order</code>, but the subclass
+          <code>ReadOnlyExecutor</code> throws instead. Any code written against the base type crashes on this subtype — substitutability is
+          broken. The fix is to model capabilities honestly: a read-only feed implements a <code>QuoteReader</code> interface and simply never
+          implements <code>TradeExecutor</code>, so it can't be passed where execution is required. The telltale smell is a subclass that throws,
+          returns <code>null</code> or forces callers to check <code>instanceof</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How are Interface Segregation and Dependency Inversion related, and how does Angular DI help?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>ISP keeps interfaces small and role-based so clients depend only on what they use; DIP says to depend on those
+          abstractions rather than concrete classes. Together: define narrow interfaces (e.g. <code>QuoteProvider</code>), reference them via an
+          <code>InjectionToken</code>, and let Angular DI supply the concrete implementation. The component injects <code>QUOTE_FEED</code> and never
+          knows whether it's REST, WebSocket or a test mock — that's exactly what makes it swappable and unit-testable.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. DRY vs WET — when is a little duplication actually the right choice?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>DRY says each piece of knowledge lives in one place; WET is its copy-paste anti-pattern. But
+          premature or wrong abstraction is often worse than duplication, because it couples code that should evolve independently. The pragmatic
+          rule is the <strong>Rule of Three</strong>: tolerate the first duplication, wince at the second, and extract at the third — by then the
+          repetition is demonstrably a real shared concept, not a coincidence (e.g. two validations that merely <em>look</em> alike but should change
+          for different reasons).</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. A component fetches orders over HTTP, formats currency and manages view state. Which principle does it most clearly violate?</div>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Single Responsibility (SRP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Liskov Substitution (LSP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Open/Closed (OCP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">YAGNI</button>
+        <div class="quiz-explain">Three responsibilities (transport, formatting, presentation) mean three reasons to change — a textbook SRP violation. Split into a service, a pipe and a thin component.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. You keep editing a growing <code>switch (instrument.kind)</code> to add fee logic. Which refactor best satisfies Open/Closed?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Add a <code>default</code> branch that throws</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">A <code>FeeStrategy</code> interface with one class per instrument</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Cast <code>instrument</code> to <code>any</code> and branch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Inline all the math directly into the component</button>
+        <div class="quiz-explain">Polymorphic strategies let you add a new instrument by adding a class — the existing calculator is closed for modification but open for extension.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. A subclass overrides <code>execute()</code> to do <code>throw new Error('not supported')</code>. This is a classic sign of violating…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">DRY</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">KISS</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Liskov Substitution (LSP)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Dependency Inversion (DIP)</button>
+        <div class="quiz-explain">Subtypes must honor the base contract. A subclass that throws where the base promised a result is not substitutable — that's an LSP violation (and often points to a missing interface segregation / ISP).</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. You've written the same spread calculation <code>quote.ask - quote.bid</code> in three components. The Rule of Three says…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Leave it as is — duplication is always fine</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">You should have abstracted it on the first write</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Now is the right time to extract a shared <code>spread()</code> utility</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Build a configurable generic pricing engine</button>
+        <div class="quiz-explain">Tolerate the first two occurrences (they may be coincidence); on the third the shared concept is proven — extract it. Jumping to a generic engine would violate YAGNI/KISS.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= OVERVIEW ============================= -->
     <section data-searchable>
       <h2 id="overview">Обзор</h2>
@@ -748,10 +1430,11 @@ export function spread(quote: Quote): number {
         <div class="quiz-explain">Стерпи первые два вхождения (они могут быть совпадением); на третьем общее понятие доказано — выноси его. Прыжок к обобщённому движку нарушил бы YAGNI/KISS.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="architecture.html" class="btn-nav">← Архитектура</a>
+      <a href="architecture.html" class="btn-nav">← <span data-lang="en">Architecture</span><span data-lang="ru">Архитектура</span></a>
       <a href="live-coding.html" class="btn-nav">Live Coding →</a>
     </div>
   </main>

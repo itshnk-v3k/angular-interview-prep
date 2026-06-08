@@ -57,14 +57,16 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Маршрутизация</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Router</span><span data-lang="ru">Маршрутизация</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Маршрутизация (Router)</h1>
-      <p class="page-desc">Router в Angular сопоставляет URL-адреса с деревьями компонентов: конфигурация, навигация,
+      <h1><span data-lang="en">Router</span><span data-lang="ru">Маршрутизация (Router)</span></h1>
+      <p class="page-desc"><span data-lang="en">Angular's Router maps URLs to component trees: configuration, navigation,
+        route parameters, lazy loading, guards, resolvers and events — plus the CDK
+        <code>BreakpointObserver</code> for responsive layouts.</span><span data-lang="ru">Router в Angular сопоставляет URL-адреса с деревьями компонентов: конфигурация, навигация,
         параметры маршрута, ленивая загрузка, гарды, резолверы и события — плюс CDK
-        <code>BreakpointObserver</code> для адаптивных макетов.</p>
+        <code>BreakpointObserver</code> для адаптивных макетов.</span></p>
       <button class="btn-done" data-page="routing" onclick="markDone('routing')">✓ Отметить как пройдено</button>
     </div>
 
@@ -72,6 +74,590 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= CONFIGURATION ============================= -->
+    <section data-searchable>
+      <h2 id="configuration-en">Configuration</h2>
+      <p>The <code>Routes</code> array maps URL paths to components or lazily loaded chunks. You register it
+        either through the <code>NgModule</code> API (classic approach) or through the standalone <code>provideRouter</code> API (modern approach).</p>
+
+      <div class="card">
+        <p class="definition"><strong>RouterModule.forRoot(routes)</strong> — called <em>once</em> in the application's root module. It creates the singleton <code>Router</code> service, registers the top-level routes and configures global options (preloading, scroll restoration, in-memory navigation).</p>
+        <p class="definition"><strong>RouterModule.forChild(routes)</strong> — used in <em>feature</em> modules. It registers additional routes but does <em>not</em> recreate the <code>Router</code> service, avoiding duplicate provider instances.</p>
+        <p class="definition"><strong>provideRouter(routes)</strong> — the modern standalone bootstrap API (Angular 14+). It is passed to <code>bootstrapApplication</code> via <code>ApplicationConfig</code>; it replaces <code>RouterModule.forRoot</code> with composable features such as <code>withPreloading</code>, <code>withComponentInputBinding</code>, <code>withRouterConfig</code>.</p>
+      </div>
+
+      <h3>NgModule style (classic)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+const routes: Routes = [
+  { path: 'orders', component: OrderListComponent },
+  { path: 'instruments/:symbol', component: InstrumentComponent },
+  { path: '', redirectTo: 'orders', pathMatch: 'full' },
+  { path: '**', component: NotFoundComponent },
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],   // once, at the root
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+
+// Feature module
+@NgModule({
+  imports: [RouterModule.forChild(featureRoutes)], // child routes
+})
+export class OrdersRoutingModule {}</code></pre>
+      </div>
+
+      <h3>Standalone style (modern)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { bootstrapApplication } from '@angular/platform-browser';
+import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes, withPreloading(PreloadAllModules)),
+  ],
+});</code></pre>
+      </div>
+
+      <h3>Route properties</h3>
+      <p>Each <code>Route</code> object is configured through these properties:</p>
+      <div class="card">
+        <p class="definition"><strong>path</strong> — the URL segment to match (<code>'orders'</code>, <code>'instruments/:symbol'</code>, <code>''</code> empty or <code>'**'</code> wildcard). No leading slash.</p>
+        <p class="definition"><strong>component</strong> — the component rendered when the path matches.</p>
+        <p class="definition"><strong>loadChildren</strong> — a function returning a dynamic <code>import()</code> of a lazily loaded module (or an array of child routes).</p>
+        <p class="definition"><strong>loadComponent</strong> — a function returning a dynamic <code>import()</code> of a standalone component (component-level lazy loading).</p>
+        <p class="definition"><strong>children</strong> — an array of nested child routes rendered into a child <code>&lt;router-outlet&gt;</code>.</p>
+        <p class="definition"><strong>redirectTo</strong> — the path to redirect to when this route matches.</p>
+        <p class="definition"><strong>pathMatch</strong> — <code>'full'</code> (the whole URL must equal the path) or <code>'prefix'</code> (the default; the path is a prefix). Required for empty-path redirects.</p>
+        <p class="definition"><strong>data</strong> — a static, immutable object of arbitrary metadata, accessible via <code>ActivatedRoute.data</code> (e.g. <code>{ roles: ['trader'] }</code>).</p>
+        <p class="definition"><strong>resolve</strong> — a map of resolvers that preload data <em>before</em> the route is activated.</p>
+        <p class="definition"><strong>canActivate</strong> — guards deciding whether navigation <em>to</em> this route is allowed.</p>
+        <p class="definition"><strong>canActivateChild</strong> — guards applied to all child routes of this route.</p>
+        <p class="definition"><strong>canDeactivate</strong> — guards deciding whether navigation <em>away</em> from this route is allowed.</p>
+        <p class="definition"><strong>canLoad</strong> — guards deciding whether a lazy module can be loaded (deprecated; replaced by <code>canMatch</code>).</p>
+        <p class="definition"><strong>canMatch</strong> — guards deciding whether <em>the route matches at all</em>; this lets the router try alternative routes when false is returned.</p>
+        <p class="definition"><strong>outlet</strong> — the name of the named <code>&lt;router-outlet&gt;</code> to render into (for secondary/auxiliary routes).</p>
+        <p class="definition"><strong>title</strong> — a string or resolver that sets <code>document.title</code> when the route is activated.</p>
+      </div>
+    </section>
+
+    <!-- ============================= NAVIGATION ============================= -->
+    <section data-searchable>
+      <h2 id="navigation-en">Navigation</h2>
+      <p>Navigation is performed either <strong>declaratively</strong> from the template using <code>routerLink</code>, or
+        <strong>imperatively</strong> from the class using the <code>Router</code> service.</p>
+
+      <p class="definition"><strong>routerLink</strong> — a directive that binds an element to a route. It accepts a string or a "link parameters array" of path segments and parameters.</p>
+      <p class="definition"><strong>routerLinkActive</strong> — adds CSS class(es) to the element while its link's route is active. Use <code>[routerLinkActiveOptions]="{ exact: true }"</code> for an exact match.</p>
+
+      <h3>Declarative — links in the template</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-html">&lt;!-- Static path --&gt;
+&lt;a routerLink="/orders" routerLinkActive="active-class"&gt;Orders&lt;/a&gt;
+
+&lt;!-- Dynamic segment via parameters array --&gt;
+&lt;a [routerLink]="['/orders', order.id]"&gt;View order&lt;/a&gt;
+
+&lt;!-- With query params and a fragment --&gt;
+&lt;a [routerLink]="['/instruments', symbol]"
+   [queryParams]="{ tf: '1h' }"
+   fragment="depth"
+   routerLinkActive="active-class"&gt;
+  {{ symbol }}
+&lt;/a&gt;</code></pre>
+      </div>
+
+      <p class="definition"><strong>Router.navigate(commands, extras?)</strong> — navigates imperatively using a parameters array; returns a <code>Promise&lt;boolean&gt;</code>.</p>
+      <p class="definition"><strong>Router.navigateByUrl(url, extras?)</strong> — navigates imperatively using an absolute URL string (ignoring the current route).</p>
+
+      <h3>Imperative — the Router service</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+
+@Component({ /* ... */ })
+export class OrderActionsComponent {
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  openOrder(id: string): void {
+    // Absolute, parameters array
+    this.router.navigate(['/orders', id]);
+  }
+
+  goToSibling(): void {
+    // Relative navigation — resolves against the current route
+    this.router.navigate(['../sibling'], { relativeTo: this.route });
+  }
+
+  openByUrl(): void {
+    // Absolute URL string
+    this.router.navigateByUrl('/orders/123');
+  }
+}</code></pre>
+      </div>
+
+      <h3>Navigation options (<code>NavigationExtras</code>)</h3>
+      <div class="card">
+        <p class="definition"><strong>queryParams</strong> — an object of query-string parameters to append (<code>?tf=1h&amp;side=BUY</code>).</p>
+        <p class="definition"><strong>fragment</strong> — the URL hash fragment (<code>#depth</code>), often used for in-page anchors.</p>
+        <p class="definition"><strong>replaceUrl</strong> — when <code>true</code>, replaces the current history entry instead of pushing a new one (no Back-button entry).</p>
+        <p class="definition"><strong>skipLocationChange</strong> — navigates and renders the target, but does <em>not</em> change the browser URL.</p>
+        <p class="definition"><strong>queryParamsHandling</strong> — <code>'merge'</code> (merge new with current), <code>'preserve'</code> (keep current, ignore new) or <code>null</code> (replace, the default).</p>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">this.router.navigate(['/instruments', symbol], {
+  queryParams: { tf: '1h' },
+  queryParamsHandling: 'merge',
+  fragment: 'depth',
+  replaceUrl: true,
+});</code></pre>
+      </div>
+      <div class="tip"><p><strong>Relative navigation tip:</strong> always pass <code>{ relativeTo: this.route }</code> with relative commands like <code>['../sibling']</code> — without it the router resolves the path against the root and you get the wrong URL.</p></div>
+    </section>
+
+    <!-- ============================= ACTIVATEDROUTE ============================= -->
+    <section data-searchable>
+      <h2 id="activated-route-en">ActivatedRoute</h2>
+      <p class="definition"><strong>ActivatedRoute</strong> — an injectable service that exposes information about the route associated with the currently rendered component: its parameters, query parameters, static/resolved data and URL segments — mostly as <code>Observable</code>s so the component reacts to changes.</p>
+
+      <div class="card">
+        <p class="definition"><strong>params</strong> — an <code>Observable&lt;Params&gt;</code> of the route's path parameters. It re-emits when only the parameters change but the component is reused (e.g. <code>/orders/1</code> → <code>/orders/2</code>). Prefer <code>paramMap</code> for the typed map API.</p>
+        <p class="definition"><strong>queryParams</strong> — an <code>Observable&lt;Params&gt;</code> of the URL's query-string parameters.</p>
+        <p class="definition"><strong>data</strong> — an <code>Observable&lt;Data&gt;</code> combining the static <code>route.data</code> with whatever the resolvers return.</p>
+        <p class="definition"><strong>snapshot.params</strong> — a <em>synchronous</em> snapshot of the parameters at the moment of activation. Convenient, but it is <em>not</em> updated when the component is reused, so use it only when the component cannot be reused for the same route.</p>
+        <p class="definition"><strong>ActivatedRouteSnapshot</strong> — an immutable snapshot of the route state at a particular moment in time (<code>params</code>, <code>queryParams</code>, <code>data</code>, <code>url</code>) — also passed to guards and resolvers.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+interface Instrument { symbol: string; tickSize: number; }
+
+@Component({ /* ... */ })
+export class InstrumentComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(InstrumentService);
+  instrument?: Instrument;
+
+  ngOnInit(): void {
+    // Reactive — re-fetches when :symbol changes and the component is reused
+    this.route.paramMap.pipe(
+      switchMap(pm =&gt; this.api.getBySymbol(pm.get('symbol')!)),
+      takeUntilDestroyed(),
+    ).subscribe(i =&gt; this.instrument = i);
+
+    // Synchronous snapshot — fine only if this route is never reused
+    const symbol = this.route.snapshot.params['symbol'];
+
+    // Resolved data combined with static data
+    this.route.data.subscribe(d =&gt; console.log(d['quote']));
+  }
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Snapshot pitfall:</strong> navigating from <code>/instruments/EURUSD</code> to <code>/instruments/BTCUSD</code> reuses the component, so <code>snapshot.params</code> stays on the <em>first</em> value. Subscribe to <code>paramMap</code> instead.</p></div>
+    </section>
+
+    <!-- ============================= LAZY LOADING ============================= -->
+    <section data-searchable>
+      <h2 id="lazy-loading-en">Lazy loading</h2>
+      <p class="definition"><strong>Lazy loading</strong> — deferring the loading of a route's code until the user navigates to it, using a dynamic <code>import()</code>. It reduces the initial bundle and speeds up the first render.</p>
+
+      <h3>Module-based (<code>loadChildren</code>)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">const routes: Routes = [
+  {
+    path: 'orders',
+    loadChildren: () =&gt;
+      import('./feature/feature.module').then(m =&gt; m.FeatureModule),
+  },
+];</code></pre>
+      </div>
+
+      <h3>Standalone component (<code>loadComponent</code>)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">const routes: Routes = [
+  {
+    path: 'instruments/:symbol',
+    loadComponent: () =&gt;
+      import('./page.component').then(c =&gt; c.PageComponent),
+  },
+];</code></pre>
+      </div>
+
+      <h3>Preloading strategies</h3>
+      <p>Preloading downloads lazy chunks <em>in the background</em> after the initial app has loaded, making navigation feel instant without bloating the first bundle.</p>
+      <div class="card">
+        <p class="definition"><strong>NoPreloading</strong> — the default. Lazy chunks load only on navigation; nothing is preloaded.</p>
+        <p class="definition"><strong>PreloadAllModules</strong> — eagerly preloads every lazy route in the background after the app loads.</p>
+        <p class="definition"><strong>Custom strategy</strong> — implement <code>PreloadingStrategy</code> to decide per route, usually based on a flag in <code>route.data</code>.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Strategy</th><th>Preloads</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td>NoPreloading</td><td>❌ Nothing</td><td>Many rarely visited routes</td></tr>
+            <tr><td>PreloadAllModules</td><td>✅ Everything</td><td>Small/medium apps, fast networks</td></tr>
+            <tr><td>Custom</td><td>✅ Selected (by data flag)</td><td>Large apps — preload only key routes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Custom preloading strategy example</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Injectable } from '@angular/core';
+import { PreloadingStrategy, Route } from '@angular/router';
+import { Observable, of } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class CustomPreloadStrategy implements PreloadingStrategy {
+  // Preload only routes flagged with data: { preload: true }
+  preload(route: Route, load: () =&gt; Observable&lt;unknown&gt;): Observable&lt;unknown&gt; {
+    return route.data?.['preload'] ? load() : of(null);
+  }
+}
+
+// Usage with the route definition
+const routes: Routes = [
+  {
+    path: 'orders',
+    data: { preload: true },                 // this one preloads
+    loadChildren: () =&gt; import('./orders/orders.module').then(m =&gt; m.OrdersModule),
+  },
+  {
+    path: 'reports',
+    data: { preload: false },                // this one waits
+    loadChildren: () =&gt; import('./reports/reports.module').then(m =&gt; m.ReportsModule),
+  },
+];
+
+// Register it
+provideRouter(routes, withPreloading(CustomPreloadStrategy));</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================= GUARDS ============================= -->
+    <section data-searchable>
+      <h2 id="guards-en">Guards</h2>
+      <p>Guards are functions the router runs during navigation to allow, block or redirect it.
+        Each returns a <code>boolean</code>, a <code>UrlTree</code> (a redirect) or an async wrapper
+        (<code>Promise</code> / <code>Observable</code>) over them. From Angular 14+ onward, the idiomatic form is the
+        <strong>functional guard</strong> using <code>inject()</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>canActivate</strong> — decides whether navigation <em>to</em> a route is allowed. Returning <code>false</code> cancels the navigation; returning a <code>UrlTree</code> redirects.</p>
+        <p class="definition"><strong>canActivateChild</strong> — runs the same check for <em>child</em> routes before each child is activated.</p>
+        <p class="definition"><strong>canDeactivate</strong> — decides whether navigation <em>away</em> from the current route is allowed. The classic use is warning about unsaved form changes.</p>
+        <p class="definition"><strong>canLoad / canMatch</strong> — prevent a lazily loaded module from being downloaded. <code>canMatch</code> (newer) can also reject a route so the router tries the next matching route.</p>
+        <p class="definition"><strong>resolve</strong> — not a guard as such, but runs in the same pipeline to preload data <em>before</em> the component is activated, so the view renders with data ready.</p>
+      </div>
+
+      <h3>Functional guards (Angular 14+)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+
+// Minimal inline guard
+export const authGuard: CanActivateFn = () =&gt; inject(AuthService).isLoggedIn();
+
+// Guard that redirects via a UrlTree instead of just returning false
+export const tradingGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.isLoggedIn() ? true : router.createUrlTree(['/login']);
+};
+
+// Registered on a route
+const routes: Routes = [
+  { path: 'orders', component: OrderListComponent, canActivate: [authGuard] },
+];</code></pre>
+      </div>
+
+      <h3>canActivateChild</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanActivateChildFn } from '@angular/router';
+
+export const childAuthGuard: CanActivateChildFn = () =&gt; inject(AuthService).isLoggedIn();
+
+const routes: Routes = [
+  {
+    path: 'orders',
+    canActivateChild: [childAuthGuard],     // applies to every child below
+    children: [
+      { path: '', component: OrderListComponent },
+      { path: ':id', component: OrderDetailComponent },
+    ],
+  },
+];</code></pre>
+      </div>
+
+      <h3>canDeactivate — unsaved changes warning</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanDeactivateFn } from '@angular/router';
+
+// Contract the guarded component must satisfy
+export interface CanComponentDeactivate {
+  canDeactivate(): boolean;
+}
+
+// Generic functional guard
+export const unsavedChangesGuard: CanDeactivateFn&lt;CanComponentDeactivate&gt; =
+  (component) =&gt; component.canDeactivate();
+
+// Component implementing the contract
+@Component({ /* ... */ })
+export class OrderFormComponent implements CanComponentDeactivate {
+  private readonly form = inject(FormBuilder).group({ symbol: [''], qty: [0] });
+
+  canDeactivate(): boolean {
+    // Block navigation if there are unsaved edits
+    return this.form.pristine
+      ? true
+      : confirm('You have unsaved changes. Leave anyway?');
+  }
+}
+
+const routes: Routes = [
+  { path: 'orders/new', component: OrderFormComponent, canDeactivate: [unsavedChangesGuard] },
+];</code></pre>
+      </div>
+
+      <h3>canMatch — guard for lazy loading</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanMatchFn } from '@angular/router';
+
+export const adminMatchGuard: CanMatchFn = () =&gt; inject(AuthService).isAdmin();
+
+const routes: Routes = [
+  {
+    path: 'reports',
+    canMatch: [adminMatchGuard],   // chunk is not even downloaded if false
+    loadChildren: () =&gt; import('./reports/reports.module').then(m =&gt; m.ReportsModule),
+  },
+];</code></pre>
+      </div>
+
+      <h3>resolve — preloading data</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { ResolveFn } from '@angular/router';
+
+interface Order { id: string; symbol: string; qty: number; }
+
+export const orderResolver: ResolveFn&lt;Order&gt; = (route) =&gt; {
+  const api = inject(OrderService);
+  return api.getById(route.paramMap.get('id')!);
+};
+
+const routes: Routes = [
+  {
+    path: 'orders/:id',
+    component: OrderDetailComponent,
+    resolve: { order: orderResolver },   // available via route.data['order']
+  },
+];</code></pre>
+      </div>
+      <div class="success"><p><strong>Why resolvers are useful:</strong> the component is activated only after the data is ready, so you avoid the empty-state flicker and <code>undefined</code> checks in the template.</p></div>
+    </section>
+
+    <!-- ============================= ROUTER EVENTS ============================= -->
+    <section data-searchable>
+      <h2 id="router-events-en">Router events</h2>
+      <p class="definition"><strong>Router.events</strong> — an <code>Observable&lt;Event&gt;</code> that emits lifecycle events on every navigation. Subscribe to drive loading spinners, analytics or scroll behavior. Use <code>instanceof</code> (or the <code>filter</code> operator) to react to a specific event type.</p>
+
+      <div class="card">
+        <p class="definition"><strong>NavigationStart</strong> — navigation has started; the new URL is being processed.</p>
+        <p class="definition"><strong>RoutesRecognized</strong> — the URL has been parsed and matched against the route config; the target route tree is known.</p>
+        <p class="definition"><strong>RouteConfigLoadStart</strong> — a lazily loaded route's config is about to be fetched (download begins).</p>
+        <p class="definition"><strong>RouteConfigLoadEnd</strong> — a lazy route's config has finished downloading.</p>
+        <p class="definition"><strong>NavigationEnd</strong> — navigation completed successfully; the new route is active. The most used event (analytics, scroll to top).</p>
+        <p class="definition"><strong>NavigationCancel</strong> — navigation was cancelled, usually by a guard returning <code>false</code> or a redirect via <code>UrlTree</code>.</p>
+        <p class="definition"><strong>NavigationError</strong> — navigation failed due to an unexpected error (e.g. a resolver threw or a lazy chunk failed to load).</p>
+        <p class="definition"><strong>ActivationEnd</strong> — the route's guards/resolvers have run and the route is being activated (fires for each activated route, the deepest last).</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import {
+  Router, NavigationStart, NavigationEnd,
+  NavigationCancel, NavigationError, Event as RouterEvent,
+} from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ /* ... */ })
+export class ShellComponent {
+  private readonly router = inject(Router);
+  loading = false;
+
+  constructor() {
+    this.router.events
+      .pipe(takeUntilDestroyed())
+      .subscribe((e: RouterEvent) =&gt; {
+        if (e instanceof NavigationStart) this.loading = true;
+        if (e instanceof NavigationEnd) this.loading = false;
+        if (e instanceof NavigationCancel) this.loading = false;
+        if (e instanceof NavigationError) {
+          this.loading = false;
+          console.error('Navigation failed:', e.error);
+        }
+      });
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================= BREAKPOINTOBSERVER ============================= -->
+    <section data-searchable>
+      <h2 id="breakpoint-observer-en">BreakpointObserver</h2>
+      <p class="definition"><strong>BreakpointObserver</strong> — an Angular CDK service (<code>@angular/cdk/layout</code>) that reactively observes one or more CSS media-query breakpoints. <code>observe(...)</code> returns an <code>Observable&lt;BreakpointState&gt;</code> that emits whenever a tracked breakpoint starts or stops matching — ideal for switching between mobile and desktop layouts (e.g. collapsing the router's side panel on small screens).</p>
+
+      <h3>Single breakpoint → a boolean stream</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { map } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ /* ... */ })
+export class LayoutComponent {
+  private readonly bp = inject(BreakpointObserver);
+
+  readonly isMobile$ = this.bp.observe([Breakpoints.Handset]).pipe(
+    map(result =&gt; result.matches),
+    takeUntilDestroyed(),
+  );
+}</code></pre>
+      </div>
+
+      <h3>Multiple breakpoints → a named result</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">readonly layout$ = this.bp
+  .observe(['(max-width: 768px)', '(min-width: 1400px)'])
+  .pipe(
+    map(result =&gt; ({
+      isMobile: result.breakpoints['(max-width: 768px)'],
+      isWide: result.breakpoints['(min-width: 1400px)'],
+    })),
+  );</code></pre>
+      </div>
+
+      <h3>Breakpoints constants</h3>
+      <div class="card">
+        <p class="definition"><strong>Breakpoints.Handset</strong> — phone-sized devices (portrait + landscape).</p>
+        <p class="definition"><strong>Breakpoints.Tablet</strong> — tablet-sized devices.</p>
+        <p class="definition"><strong>Breakpoints.Web</strong> — desktop / large screens.</p>
+        <p class="definition"><strong>Breakpoints.HandsetPortrait</strong> — phones in portrait orientation only.</p>
+        <p class="definition"><strong>Breakpoints.XSmall</strong> — viewports narrower than 600px.</p>
+        <p class="definition"><strong>Breakpoints.Small</strong> — viewports 600px–959px wide.</p>
+        <p class="definition"><strong>Breakpoints.Medium</strong> — viewports 960px–1279px wide.</p>
+        <p class="definition"><strong>Breakpoints.Large</strong> — viewports 1280px–1919px wide.</p>
+        <p class="definition"><strong>Breakpoints.XLarge</strong> — viewports 1920px and wider.</p>
+      </div>
+      <div class="tip"><p><strong>Cleanup:</strong> pipe through <code>takeUntilDestroyed()</code> (or use the <code>async</code> pipe in the template) so the media-query listener is removed when the component is destroyed.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — interview</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between <code>RouterModule.forRoot</code> and <code>forChild</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>forRoot</code> is called exactly <strong>once</strong> in the root module. It registers the top-level routes <em>and</em> creates the singleton <code>Router</code> service together with global providers (preloading, scroll restoration). <code>forChild</code> is used in feature modules to register additional routes <em>without</em> recreating the <code>Router</code> service — calling <code>forRoot</code> twice would create duplicate router instances and break navigation. In standalone apps, <code>provideRouter(routes)</code> replaces <code>forRoot</code>, and feature routes are provided directly via <code>loadChildren</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. When should you subscribe to <code>paramMap</code> instead of reading <code>snapshot.params</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Use <code>snapshot.params</code> only when the component is destroyed and recreated on every navigation. When you navigate between two instances of the <em>same</em> route — e.g. <code>/instruments/EURUSD</code> → <code>/instruments/BTCUSD</code> — Angular reuses the component, so <code>ngOnInit</code> does not run again and the snapshot keeps the old value. Subscribing to <code>paramMap</code> (an Observable) emits the new <code>symbol</code> and lets you re-fetch the data, usually via <code>switchMap</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. What is the difference between <code>canLoad</code> and <code>canMatch</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Both can prevent a lazy chunk from being downloaded. <code>canLoad</code> (deprecated) only blocks loading — if it returns false, navigation simply fails. <code>canMatch</code> (Angular 14.1+) is more powerful: it decides whether <em>the route matches at all</em>, so when it returns false the router moves on and tries the next matching route. This enables patterns such as serving different components for the same path depending on role or feature flag. <code>canMatch</code> also works for eagerly loaded (non-lazy) routes, so it is the recommended modern replacement.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How do you redirect from a guard?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Return a <code>UrlTree</code> instead of <code>false</code>. Inject <code>Router</code> and build the tree with <code>router.createUrlTree(['/login'])</code>. Returning a <code>UrlTree</code> cancels the current navigation and starts a new one to that URL — a <code>NavigationCancel</code> event fires for the original navigation. Returning a plain <code>false</code> only blocks navigation without redirecting, which usually leaves the user on a blank or previous page.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What does a resolver do and what is its trade-off?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A resolver (<code>ResolveFn</code>) preloads data <em>before</em> the route is activated, exposing it via <code>route.data</code> so the component renders with data already present — no empty-state flicker and no <code>undefined</code> checks in the template. The trade-off is perceived latency: navigation is <em>blocked</em> until the resolver completes, so a slow API makes the whole transition slow. For non-critical data, prefer loading inside the component with a loading state; reserve resolvers for data the page truly cannot render without.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which API registers routes in a <strong>standalone</strong> bootstrap?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.forRoot(routes)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.forChild(routes)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">provideRouter(routes)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RouterModule.register(routes)</button>
+        <div class="quiz-explain">provideRouter(routes) is passed to bootstrapApplication via ApplicationConfig. forRoot/forChild are NgModule APIs; forChild is for feature modules, not bootstrap.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Which guard prevents navigating <strong>away</strong> from a route with unsaved changes?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">canActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">canDeactivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">canMatch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">resolve</button>
+        <div class="quiz-explain">canDeactivate fires when leaving a route — the classic use is confirming before discarding unsaved form edits. canActivate guards entry; canMatch guards matching/loading; resolve preloads data.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Which preloading strategy is used <strong>by default</strong>?</div>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">NoPreloading</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">PreloadAllModules</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">QuicklinkStrategy</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">PreloadOnHover</button>
+        <div class="quiz-explain">NoPreloading is the default — lazy chunks load only on navigation. PreloadAllModules eagerly preloads everything; a custom PreloadingStrategy can preload selectively based on route data.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Which event signals that navigation <strong>completed successfully</strong>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NavigationStart</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">RoutesRecognized</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">NavigationEnd</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">NavigationCancel</button>
+        <div class="quiz-explain">NavigationEnd fires when the new route is active — used for analytics and scroll to top. NavigationStart begins it, RoutesRecognized matches the URL, NavigationCancel means a guard blocked it.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= CONFIGURATION ============================= -->
     <section data-searchable>
       <h2 id="configuration">Конфигурация</h2>
@@ -652,11 +1238,12 @@ export class LayoutComponent {
         <div class="quiz-explain">NavigationEnd срабатывает, когда новый маршрут активен — используется для аналитики и прокрутки наверх. NavigationStart начинает её, RoutesRecognized сопоставляет URL, NavigationCancel означает, что гард её заблокировал.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="forms.html" class="btn-nav">← Формы</a>
-      <a href="guards.html" class="btn-nav">Гарды (Guards) →</a>
+      <a href="forms.html" class="btn-nav">← <span data-lang="en">Forms</span><span data-lang="ru">Формы</span></a>
+      <a href="guards.html" class="btn-nav"><span data-lang="en">Guards</span><span data-lang="ru">Гарды (Guards)</span> →</a>
     </div>
   </main>
 

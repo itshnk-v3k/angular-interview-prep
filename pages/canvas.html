@@ -57,15 +57,18 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Canvas и графики</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Canvas &amp; Charts</span><span data-lang="ru">Canvas и графики</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Canvas API и графики</h1>
-      <p class="page-desc">Отрисовка высокочастотных торговых графиков в браузере: Canvas 2D API,
+      <h1><span data-lang="en">Canvas API &amp; charts</span><span data-lang="ru">Canvas API и графики</span></h1>
+      <p class="page-desc"><span data-lang="en">Rendering high-frequency trading charts in the browser: the Canvas 2D API,
+        a full candlestick-and-volume renderer, plus the performance techniques (rAF, dirty
+        rendering, <code>devicePixelRatio</code>, <code>OffscreenCanvas</code>) that keep a live
+        price chart smooth at 60 fps.</span><span data-lang="ru">Отрисовка высокочастотных торговых графиков в браузере: Canvas 2D API,
         полноценный рендерер свечей и объёмов, а также приёмы производительности (rAF, частичная
         перерисовка, <code>devicePixelRatio</code>, <code>OffscreenCanvas</code>), которые держат живой
-        ценовой график плавным на 60 fps.</p>
+        ценовой график плавным на 60 fps.</span></p>
       <button class="btn-done" data-page="canvas" onclick="markDone('canvas')">✓ Отметить как пройдено</button>
     </div>
 
@@ -73,6 +76,442 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ===================== CANVAS VS SVG VS WEBGL ===================== -->
+    <section data-searchable>
+      <h2 id="canvas-svg-webgl-en">Canvas vs SVG vs WebGL</h2>
+      <p>Three ways to draw graphics on the web. Picking the right one is the first question an
+        interviewer asks about chart building: which technology and why.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Canvas</strong> — an immediate-mode raster surface. You issue drawing commands and they paint pixels onto a bitmap. There are no retained objects and no DOM nodes — once drawn, a shape is just a set of pixels. Ideal for thousands of frequently updating elements, such as price charts.</p>
+        <p class="definition"><strong>SVG</strong> — a retained-mode vector format. Every shape is a real DOM element you can style with CSS, attach events to, and inspect. It is resolution-independent, but performance drops once the document holds thousands of nodes.</p>
+        <p class="definition"><strong>WebGL</strong> — a low-level, GPU-accelerated API (built on OpenGL ES). It renders through shaders that run on the graphics card; the best choice for huge data sets, 3D, and heavy visual effects, at the cost of much greater complexity.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>Canvas</th><th>SVG</th><th>WebGL</th></tr></thead>
+          <tbody>
+            <tr><td>Type</td><td>Raster pixels</td><td>Vector</td><td>GPU-accelerated 3D</td></tr>
+            <tr><td>DOM interaction</td><td>❌ pixels</td><td>✅ elements</td><td>❌</td></tr>
+            <tr><td>Performance (many elements)</td><td>✅</td><td>❌ DOM</td><td>✅✅</td></tr>
+            <tr><td>Animation</td><td>requestAnimationFrame</td><td>CSS / SMIL</td><td>✅✅</td></tr>
+            <tr><td>Trading use</td><td>Price charts, heatmaps</td><td>Simple icons</td><td>3D visualization</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Rule of thumb:</strong> a few interactive shapes that need accessibility and CSS → SVG. A live order-book heatmap or a candlestick chart repainting on every tick → Canvas. Tens of millions of points or 3D depth surfaces → WebGL.</p></div>
+    </section>
+
+    <!-- ===================== CANVAS API BASICS ===================== -->
+    <section data-searchable>
+      <h2 id="canvas-basics-en">Canvas API basics</h2>
+
+      <h3 id="getting-context-en">Getting the context</h3>
+      <p class="definition"><strong>The rendering context</strong> — the object exposing every drawing method. You obtain the 2D context via <code>canvas.getContext('2d')</code>. It returns <code>CanvasRenderingContext2D | null</code>, so always narrow the type before using it.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">const canvas = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (!canvas) throw new Error('canvas not found');
+
+const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+if (!ctx) throw new Error('2d context unavailable');
+
+// ctx is now narrowed to CanvasRenderingContext2D
+ctx.fillStyle = '#0a0';</code></pre></div>
+
+      <h3 id="coordinate-system-en">Coordinate system</h3>
+      <p class="definition"><strong>The coordinate system</strong> — the origin <code>(0, 0)</code> sits in the top-left corner. <code>x</code> grows to the right, <code>y</code> grows <em>downward</em>. This matters for charts: higher prices are <em>smaller</em> y values, so mapping price to y must invert the axis.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// (0,0) ──────────────▶ +x
+//   │
+//   │   canvas pixels
+//   ▼
+//  +y         a higher price → a SMALLER y (closer to the top)</code></pre></div>
+
+      <h3 id="drawing-primitives-en">Drawing primitives</h3>
+      <div class="card">
+        <p class="definition"><strong>fillRect(x, y, w, h)</strong> — draws a filled rectangle with the current <code>fillStyle</code>. The workhorse for candle bodies and volume bars.</p>
+        <p class="definition"><strong>strokeRect(x, y, w, h)</strong> — draws only the rectangle's outline, using <code>strokeStyle</code> and <code>lineWidth</code>.</p>
+        <p class="definition"><strong>clearRect(x, y, w, h)</strong> — erases a rectangular region to transparency. The key method for redrawing and partial rendering.</p>
+        <p class="definition"><strong>beginPath()</strong> — starts a new path, discarding any previously recorded subpaths. Call it before each independent shape.</p>
+        <p class="definition"><strong>moveTo(x, y)</strong> — moves the "pen" to a point without drawing, starting a new subpath.</p>
+        <p class="definition"><strong>lineTo(x, y)</strong> — adds a straight segment from the current point to <code>(x, y)</code>.</p>
+        <p class="definition"><strong>arc(x, y, r, start, end, ccw?)</strong> — adds a circular arc; a full circle goes from <code>0</code> to <code>2 * Math.PI</code>. Used for markers and dots.</p>
+        <p class="definition"><strong>quadraticCurveTo(cpx, cpy, x, y)</strong> — adds a quadratic Bézier curve with a single control point.</p>
+        <p class="definition"><strong>bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)</strong> — adds a cubic Bézier curve with two control points; smoother line charts.</p>
+        <p class="definition"><strong>fill()</strong> — fills the current path with <code>fillStyle</code>.</p>
+        <p class="definition"><strong>stroke()</strong> — strokes the current path with <code>strokeStyle</code>.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Filled candle body
+ctx.fillStyle = '#16a34a';
+ctx.fillRect(40, 100, 8, 60);
+
+// A wick (high → low) as a stroked line
+ctx.strokeStyle = '#16a34a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(44, 80);
+ctx.lineTo(44, 180);
+ctx.stroke();
+
+// A smooth line-chart segment with a Bézier curve
+ctx.beginPath();
+ctx.moveTo(0, 200);
+ctx.bezierCurveTo(50, 120, 100, 260, 150, 180);
+ctx.stroke();
+
+// A circular marker
+ctx.beginPath();
+ctx.arc(150, 180, 3, 0, 2 * Math.PI);
+ctx.fill();</code></pre></div>
+
+      <h3 id="drawing-text-en">Drawing text</h3>
+      <div class="card">
+        <p class="definition"><strong>fillText(text, x, y)</strong> — draws filled text using <code>font</code>, <code>fillStyle</code>, <code>textAlign</code> and <code>textBaseline</code>. Used for axis labels and price tags.</p>
+        <p class="definition"><strong>strokeText(text, x, y)</strong> — draws only the text's outline.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">ctx.font = '12px monospace';
+ctx.fillStyle = '#475569';
+ctx.textAlign = 'right';
+ctx.textBaseline = 'middle';
+ctx.fillText('1.0850', 60, 100); // a price-axis label</code></pre></div>
+
+      <h3 id="drawing-images-en">Drawing images</h3>
+      <p class="definition"><strong>drawImage(source, dx, dy, dw?, dh?)</strong> — draws an image, video frame, or <em>another canvas</em> onto the current one, scaling if needed. This is exactly how an <code>OffscreenCanvas</code> or a cached layer is blitted onto the visible canvas.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Blit a pre-rendered grid layer onto the main canvas
+ctx.drawImage(gridLayer, 0, 0);
+
+// Draw a scaled logo watermark
+const logo = new Image();
+logo.onload = () =&gt; ctx.drawImage(logo, 10, 10, 48, 48);
+logo.src = '/assets/mark.png';</code></pre></div>
+
+      <h3 id="transformations-en">Transformations</h3>
+      <div class="card">
+        <p class="definition"><strong>translate(dx, dy)</strong> — shifts the coordinate origin. Drawing at <code>(0,0)</code> afterwards lands at <code>(dx, dy)</code>.</p>
+        <p class="definition"><strong>rotate(angle)</strong> — rotates the coordinate system by <code>angle</code> radians around the current origin. Used for rotated time-axis labels.</p>
+        <p class="definition"><strong>scale(sx, sy)</strong> — scales subsequent drawing. Passing <code>devicePixelRatio</code> on both axes yields crisp Retina output.</p>
+        <p class="definition"><strong>save()</strong> — pushes the current drawing state (transform, styles, clip) onto a stack.</p>
+        <p class="definition"><strong>restore()</strong> — pops the last saved state, undoing every transformation and style change since the matching <code>save()</code>. Always use them as a pair.</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">ctx.save();                 // remember the clean state
+ctx.translate(80, 200);     // move origin to the label anchor
+ctx.rotate(-Math.PI / 4);   // tilt 45° for a dense time axis
+ctx.fillText('09:30', 0, 0);
+ctx.restore();              // undo translate + rotate</code></pre></div>
+      <div class="warn"><p><strong>Gotcha:</strong> transformations accumulate. If you forget <code>restore()</code> after <code>translate</code>/<code>rotate</code>, the whole canvas ends up shifted on the next frame. Always wrap transformed drawing in a <code>save()</code>/<code>restore()</code> pair.</p></div>
+    </section>
+
+    <!-- ===================== CANDLESTICK CHART ===================== -->
+    <section data-searchable>
+      <h2 id="candlestick-chart-en">Candlestick chart</h2>
+      <p class="definition"><strong>A candle</strong> — a single OHLCV bar: the open, high, low, and close prices plus the traded volume over a fixed time interval. Green (bullish) when <code>close &gt;= open</code>, red (bearish) otherwise.</p>
+      <p>A full, well-commented renderer that draws candle wicks, bodies, and a volume histogram
+        from a <code>Candle[]</code> array, mapping price → y (with inversion) and index → x.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface Candle {
+  time: number;   // epoch ms at the start of the interval
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface ChartTheme {
+  bull: string;   // colour for close &gt;= open
+  bear: string;   // colour for close &lt; open
+  volume: string;
+  axis: string;
+}
+
+const DEFAULT_THEME: ChartTheme = {
+  bull: '#16a34a',
+  bear: '#dc2626',
+  volume: 'rgba(100, 116, 139, 0.4)',
+  axis: '#94a3b8',
+};
+
+class CandlestickChart {
+  private readonly ctx: CanvasRenderingContext2D;
+
+  // Layout: the price panel sits on top, the volume panel below it.
+  private readonly padding = { top: 12, right: 64, bottom: 24, left: 12 };
+  private readonly volumeRatio = 0.2; // volume panel takes 20% of the height
+
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly theme: ChartTheme = DEFAULT_THEME,
+  ) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('2d context unavailable');
+    this.ctx = ctx;
+  }
+
+  /** Draw the whole chart for the given candles. */
+  render(candles: Candle[]): void {
+    if (candles.length === 0) return;
+    const { width, height } = this.canvas;
+    const { top, right, bottom, left } = this.padding;
+
+    // ---- Panel geometry ----
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const volumeHeight = plotHeight * this.volumeRatio;
+    const priceHeight = plotHeight - volumeHeight;
+    const priceTop = top;
+    const volumeTop = top + priceHeight;
+
+    // ---- Price scale: map a price to a y pixel (inverted axis) ----
+    const highest = Math.max(...candles.map(c =&gt; c.high));
+    const lowest = Math.min(...candles.map(c =&gt; c.low));
+    const priceRange = highest - lowest || 1; // guard against flat series
+    const priceToY = (price: number): number =&gt;
+      priceTop + (highest - price) / priceRange * priceHeight;
+
+    // ---- Time axis: map a candle index to an x pixel ----
+    const slot = plotWidth / candles.length;      // px per candle
+    const bodyWidth = Math.max(1, slot * 0.6);    // leave a gap between candles
+    const indexToX = (i: number): number =&gt; left + i * slot + slot / 2;
+
+    // ---- Volume scale ----
+    const maxVolume = Math.max(...candles.map(c =&gt; c.volume)) || 1;
+
+    // Clear the frame before redrawing.
+    this.ctx.clearRect(0, 0, width, height);
+
+    // ---- Draw each candle ----
+    for (let i = 0; i &lt; candles.length; i++) {
+      const candle = candles[i];
+      const x = indexToX(i);
+      const bullish = candle.close &gt;= candle.open;
+      const colour = bullish ? this.theme.bull : this.theme.bear;
+
+      // Wick: a vertical line from high to low.
+      this.ctx.strokeStyle = colour;
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, priceToY(candle.high));
+      this.ctx.lineTo(x, priceToY(candle.low));
+      this.ctx.stroke();
+
+      // Body: a filled rectangle between open and close.
+      const yOpen = priceToY(candle.open);
+      const yClose = priceToY(candle.close);
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyHeight = Math.max(1, Math.abs(yClose - yOpen)); // min 1px (doji)
+      this.ctx.fillStyle = colour;
+      this.ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+
+      // Volume bar at the bottom panel.
+      const vH = candle.volume / maxVolume * volumeHeight;
+      this.ctx.fillStyle = this.theme.volume;
+      this.ctx.fillRect(x - bodyWidth / 2, volumeTop + volumeHeight - vH, bodyWidth, vH);
+    }
+
+    // ---- Price axis labels on the right ----
+    this.drawPriceAxis(highest, lowest, priceToY, width - right + 6);
+  }
+
+  /** Draw a handful of evenly-spaced price labels. */
+  private drawPriceAxis(
+    highest: number,
+    lowest: number,
+    priceToY: (p: number) =&gt; number,
+    labelX: number,
+  ): void {
+    const ticks = 5;
+    this.ctx.fillStyle = this.theme.axis;
+    this.ctx.font = '11px monospace';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    for (let t = 0; t &lt;= ticks; t++) {
+      const price = lowest + (highest - lowest) * (t / ticks);
+      this.ctx.fillText(price.toFixed(4), labelX, priceToY(price));
+    }
+  }
+}
+
+// Usage
+const el = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (el) {
+  const chart = new CandlestickChart(el);
+  chart.render(candles); // candles: Candle[]
+}</code></pre></div>
+      <div class="tip"><p><strong>Why <code>priceToY</code> inverts:</strong> the canvas y axis grows downward while prices grow upward. The formula <code>(highest - price) / range</code> maps the highest price to the top (small y) and the lowest to the bottom (large y).</p></div>
+      <div class="warn"><p><strong>Edge cases handled:</strong> a flat series (<code>priceRange</code> falls back to <code>1</code>), a doji where open equals close (the body is forced to <code>1px</code> to stay visible), and zero volume (<code>maxVolume</code> falls back to <code>1</code>).</p></div>
+    </section>
+
+    <!-- ===================== PERFORMANCE ===================== -->
+    <section data-searchable>
+      <h2 id="performance-en">Performance</h2>
+
+      <h3 id="raf-en">requestAnimationFrame</h3>
+      <p class="definition"><strong>requestAnimationFrame(cb)</strong> — schedules <code>cb</code> to run right before the browser's next repaint (~60 fps, in step with the display refresh rate). The callback receives a high-resolution timestamp. Prefer it over <code>setTimeout</code> for animation: it pauses in background tabs, syncs with the display, and avoids dropped or doubled frames.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">class RenderLoop {
+  private rafId = 0;
+  private running = false;
+
+  constructor(private readonly draw: (timestamp: number) =&gt; void) {}
+
+  start(): void {
+    if (this.running) return;
+    this.running = true;
+    const frame = (timestamp: number): void =&gt; {
+      if (!this.running) return;
+      this.draw(timestamp);                       // render one frame
+      this.rafId = requestAnimationFrame(frame);  // queue the next
+    };
+    this.rafId = requestAnimationFrame(frame);
+  }
+
+  stop(): void {
+    this.running = false;
+    cancelAnimationFrame(this.rafId);
+  }
+}
+
+// Drive the chart from live quotes
+const loop = new RenderLoop(() =&gt; chart.render(latestCandles));
+loop.start();
+// loop.stop(); // call on ngOnDestroy</code></pre></div>
+      <div class="warn"><p><strong>Angular note:</strong> run the loop via <code>NgZone.runOutsideAngular()</code> so each frame doesn't trigger change detection, and always call <code>cancelAnimationFrame</code> in <code>ngOnDestroy</code> to avoid leaking the loop.</p></div>
+
+      <h3 id="dirty-rendering-en">Dirty rendering</h3>
+      <p class="definition"><strong>Dirty rendering</strong> — instead of clearing and redrawing the whole canvas every frame, repaint only the region that changed (the "dirty rectangle"). On a wide chart where only the newest candle updates on each tick, this sharply cuts the per-frame work.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Only the last candle moves on each tick → repaint just its column.
+function redrawLastCandle(
+  ctx: CanvasRenderingContext2D,
+  column: { x: number; width: number; top: number; height: number },
+  drawColumn: () =&gt; void,
+): void {
+  // Clear ONLY the dirty rectangle, not the entire canvas.
+  ctx.clearRect(column.x, column.top, column.width, column.height);
+  drawColumn(); // repaint that single column
+}</code></pre></div>
+      <div class="tip"><p><strong>Layered alternative:</strong> keep static content (the grid, the axes) on a background canvas drawn once, and only the dynamic series on a transparent top canvas. The expensive layer never repaints.</p></div>
+
+      <h3 id="device-pixel-ratio-en">devicePixelRatio</h3>
+      <p class="definition"><strong>devicePixelRatio (DPR)</strong> — the ratio of the device's physical pixels to CSS pixels. On a Retina/HiDPI display it is <code>2</code> (or more). A canvas sized only in CSS renders blurry; you must set its drawing buffer to <code>cssSize × DPR</code> and scale the context so one drawing unit maps to one physical pixel.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">function setupHiDpiCanvas(
+  canvas: HTMLCanvasElement,
+  cssWidth: number,
+  cssHeight: number,
+): CanvasRenderingContext2D {
+  const dpr = window.devicePixelRatio || 1;
+
+  // Backing store in physical pixels (sharp).
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+
+  // Display size stays in CSS pixels.
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2d context unavailable');
+
+  // Scale so all drawing code can use CSS-pixel coordinates.
+  ctx.scale(dpr, dpr);
+  return ctx;
+}</code></pre></div>
+      <div class="danger"><p><strong>Gotcha:</strong> if you set <code>canvas.width</code>/<code>height</code> but forget <code>canvas.style.width</code>/<code>height</code> (or vice versa), the chart will be either blurry or stretched incorrectly. Both pairs must be set, and <code>scale(dpr, dpr)</code> applied once after sizing.</p></div>
+
+      <h3 id="offscreen-canvas-en">OffscreenCanvas</h3>
+      <p class="definition"><strong>OffscreenCanvas</strong> — a canvas detached from the DOM that can be rendered from a Web Worker. Heavy chart drawing happens off the main thread, keeping the UI responsive; the result is handed to the visible canvas via <code>transferControlToOffscreen()</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// --- main thread ---
+const canvas = document.querySelector&lt;HTMLCanvasElement&gt;('#chart');
+if (!canvas) throw new Error('canvas not found');
+
+const offscreen: OffscreenCanvas = canvas.transferControlToOffscreen();
+const worker = new Worker(new URL('./chart.worker', import.meta.url), { type: 'module' });
+
+// Transfer ownership of the offscreen canvas to the worker (zero-copy).
+worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+
+// Stream live candles to the worker for rendering.
+worker.postMessage({ type: 'candles', candles: latestCandles });
+
+// --- chart.worker.ts ---
+let ctx: OffscreenCanvasRenderingContext2D | null = null;
+
+onmessage = (e: MessageEvent): void =&gt; {
+  const data = e.data as
+    | { type: 'init'; canvas: OffscreenCanvas }
+    | { type: 'candles'; candles: Candle[] };
+
+  if (data.type === 'init') {
+    ctx = data.canvas.getContext('2d');
+  } else if (data.type === 'candles' &amp;&amp; ctx) {
+    drawCandles(ctx, data.candles); // runs entirely off the main thread
+  }
+};</code></pre></div>
+      <div class="tip"><p><strong>When it pays off:</strong> dense charts (thousands of candles) or several panels repainting on every tick. For a single lightweight chart, the worker messaging and serialization overhead can outweigh the benefit — measure first.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — interview</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. When would you choose Canvas over SVG for a chart?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>When there are many frequently updating elements — a live candlestick chart, an order-book heatmap, thousands of points. SVG creates a DOM node per shape, so a chart with thousands of elements bloats the document and reflow/repaint becomes the bottleneck. Canvas is an immediate-mode raster: it simply paints pixels, so repainting thousands of candles on every tick stays cheap. The trade-off is that Canvas has no DOM — no CSS styling, no per-shape event handlers, weaker accessibility. SVG wins for a small number of interactive, stylable, accessible shapes (icons, a single annotated line).</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Why is <code>requestAnimationFrame</code> preferred over <code>setTimeout</code> for animation?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>requestAnimationFrame</code> is synced to the display refresh rate (~60 fps) and fires right before the next repaint, so frames are never dropped or duplicated and the animation looks smooth. It pauses automatically in background or hidden tabs, saving CPU and battery. <code>setTimeout(fn, 16)</code> drifts relative to the real refresh rate, keeps firing in background tabs, and can paint partial frames. rAF also passes a high-resolution timestamp you can use to compute time deltas.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Why does a canvas look blurry on a Retina screen, and how do you fix it?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>On a HiDPI display <code>devicePixelRatio</code> is 2 or more: each CSS pixel maps to several physical pixels. If the canvas drawing buffer is sized only in CSS pixels, the browser upscales the bitmap and it looks soft. The fix: set <code>canvas.width = cssWidth * dpr</code> and <code>canvas.height = cssHeight * dpr</code> for the drawing buffer, keep <code>canvas.style.width/height</code> at the CSS size, then call <code>ctx.scale(dpr, dpr)</code> once so the drawing code can keep using CSS-pixel coordinates. Now one drawing unit equals one physical pixel and lines are crisp.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. What is <code>OffscreenCanvas</code> and what problem does it solve?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>It is a canvas detached from the DOM that can be rendered from a Web Worker. You call <code>transferControlToOffscreen()</code> on the visible canvas and <code>postMessage</code> the offscreen handle to the worker (as a transferable, so no copy). The worker then performs all the expensive drawing off the main thread, so scrolling, input, and Angular change detection stay responsive even while a dense chart repaints. It solves main-thread contention; the cost is worker setup and message serialization, so it pays off mostly for heavy or multi-panel charts — measure before adopting.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. You need a price chart repainting thousands of candles on every tick. Which technology fits best?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">SVG — one element per candle</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Canvas — an immediate-mode raster</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Plain HTML div blocks with absolute positioning</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CSS background gradients</button>
+        <div class="quiz-explain">Canvas paints pixels without creating DOM nodes, so repainting thousands of frequently updating candles stays cheap. SVG/div create a node per shape and choke on reflow.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Where is the origin <code>(0, 0)</code> in the canvas coordinate system?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Bottom-left, y grows upward</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">At the center of the canvas</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Top-left, x to the right and y downward</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Top-right, x to the left and y downward</button>
+        <div class="quiz-explain">The canvas origin is top-left; x grows to the right and y grows downward. That is why a price→y mapping must invert the axis, placing higher prices at smaller y values.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. To render a crisp canvas on a screen with <code>devicePixelRatio === 2</code>, you should:</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Set only <code>canvas.style.width/height</code></button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Size the drawing buffer × dpr and call <code>ctx.scale(dpr, dpr)</code></button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Manually halve all coordinates</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Use <code>image-rendering: pixelated</code> in CSS</button>
+        <div class="quiz-explain">Size the drawing buffer to cssSize × dpr, keep the CSS size for display, then scale the context by dpr once so the drawing code keeps using CSS-pixel coordinates. Then one unit equals one physical pixel.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ===================== CANVAS VS SVG VS WEBGL ===================== -->
     <section data-searchable>
       <h2 id="canvas-svg-webgl">Canvas против SVG против WebGL</h2>
@@ -505,6 +944,7 @@ onmessage = (e: MessageEvent): void =&gt; {
         <div class="quiz-explain">Задайте буфер отрисовки в размере cssSize × dpr, оставьте CSS-размер для отображения, затем один раз масштабируйте контекст на dpr, чтобы код рисования продолжал использовать CSS-пиксельные координаты. Тогда одна единица равна одному физическому пикселю.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">

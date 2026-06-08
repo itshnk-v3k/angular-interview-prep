@@ -57,21 +57,698 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Архитектура</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Architecture</span><span data-lang="ru">Архитектура</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Архитектура Angular приложений</h1>
-      <p class="page-desc">Как senior-инженеры структурируют крупные Angular-приложения: умные и глупые
+      <h1><span data-lang="en">Angular Architecture</span><span data-lang="ru">Архитектура Angular приложений</span></h1>
+      <p class="page-desc"><span data-lang="en">How senior engineers structure large Angular applications: smart and dumb
+        components, MVVM, a scalable folder structure, GoF design patterns as they actually appear in
+        the framework, OOP principles, plus the Facade / Repository / Barrel patterns used in
+        production FinTech codebases.</span><span data-lang="ru">Как senior-инженеры структурируют крупные Angular-приложения: умные и глупые
         компоненты, MVVM, масштабируемая структура папок, паттерны проектирования GoF в том виде, в
         котором они реально встречаются во фреймворке, принципы ООП, а также паттерны Facade /
-        Repository / Barrel, применяемые в продакшен-кодовых базах FinTech.</p>
+        Repository / Barrel, применяемые в продакшен-кодовых базах FinTech.</span></p>
       <button class="btn-done" data-page="architecture" onclick="markDone('architecture')">✓ Отметить как пройдено</button>
     </div>
 
     <div class="search-bar">
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
+
+    <div class="lang-block" data-lang="en">
+
+    <!-- ===================== SMART VS DUMB COMPONENTS ===================== -->
+    <section data-searchable>
+      <h2 id="smart-dumb-en">Smart vs Dumb Components</h2>
+      <p>The single most important split in Angular component design. It keeps state handling inside a
+        few container components and leaves the rest of the UI tree pure, reusable and trivial to test.</p>
+
+      <p class="definition"><strong>Smart (container) component</strong> — knows about the application state. It injects services, reads from the store, dispatches actions / handles events, and passes plain data <em>down</em> to child components through inputs. It owns the "what happens" logic.</p>
+      <p class="definition"><strong>Dumb (presentational) component</strong> — knows nothing about services or state. It only receives data through <code>@Input()</code>, emits user intents through <code>@Output()</code> and renders. It is pure, reusable, OnPush-friendly and easy to test in isolation.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>Smart / container</th><th>Dumb / presentational</th></tr></thead>
+          <tbody>
+            <tr><td>Injects services</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Knows about state / store</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Communicates via</td><td>Services, store, router</td><td><code>@Input()</code> / <code>@Output()</code></td></tr>
+            <tr><td>Reusable across features</td><td>❌ (tied to a feature)</td><td>✅ (easily reusable)</td></tr>
+            <tr><td>Change detection</td><td>Default or OnPush</td><td>OnPush (pure inputs)</td></tr>
+            <tr><td>Easy to unit test</td><td>Needs mocked services</td><td>✅ trivial</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Below, <code>OrdersContainerComponent</code> is a smart component: it injects the facade,
+        owns the <code>orders$</code> stream and turns child events into actions. <code>OrderRowComponent</code>
+        is dumb: pure inputs/outputs and OnPush.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// order.model.ts — shared FinTech domain types
+export type OrderSide = 'BUY' | 'SELL';
+export type OrderStatus = 'pending' | 'filled' | 'cancelled';
+
+export interface Order {
+  readonly id: string;
+  readonly symbol: string;
+  readonly side: OrderSide;
+  readonly qty: number;
+  readonly price: number;
+  readonly status: OrderStatus;
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// orders-container.component.ts — SMART
+import { Component, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { OrderFacade } from './order.facade';
+import { Order } from './order.model';
+
+@Component({
+  selector: 'app-orders-container',
+  standalone: true,
+  imports: [OrderRowComponent, AsyncPipe],
+  template: `
+    &lt;app-order-row
+      *ngFor="let order of orders$ | async; trackBy: trackById"
+      [order]="order"
+      (cancel)="onCancel($event)"&gt;
+    &lt;/app-order-row&gt;
+  `,
+})
+export class OrdersContainerComponent {
+  private readonly facade = inject(OrderFacade);
+
+  readonly orders$: Observable&lt;Order[]&gt; = this.facade.orders$;
+
+  ngOnInit(): void {
+    this.facade.loadOrders();        // dispatches, owns the state
+  }
+
+  onCancel(orderId: string): void {
+    this.facade.cancelOrder(orderId); // turns child event into an action
+  }
+
+  trackById(_: number, order: Order): string {
+    return order.id;
+  }
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// order-row.component.ts — DUMB (OnPush, pure)
+import {
+  ChangeDetectionStrategy, Component, EventEmitter, Input, Output,
+} from '@angular/core';
+import { Order } from './order.model';
+
+@Component({
+  selector: 'app-order-row',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    &lt;span&gt;{{ order.symbol }}&lt;/span&gt;
+    &lt;span&gt;{{ order.side }} {{ order.qty }} @ {{ order.price }}&lt;/span&gt;
+    &lt;span&gt;{{ order.status }}&lt;/span&gt;
+    &lt;button (click)="cancel.emit(order.id)"&gt;Cancel&lt;/button&gt;
+  `,
+})
+export class OrderRowComponent {
+  @Input({ required: true }) order!: Order;     // data in
+  @Output() cancel = new EventEmitter&lt;string&gt;(); // intent out
+  // No services, no store — pure rendering.
+}</code></pre>
+      </div>
+
+      <div class="tip"><p><strong>Rule of thumb:</strong> if a component injects a service, it is smart. Keep smart components few and thin; push everything visual into reusable, input-driven dumb components.</p></div>
+    </section>
+
+    <!-- ===================== MVVM IN ANGULAR ===================== -->
+    <section data-searchable>
+      <h2 id="mvvm-en">MVVM in Angular</h2>
+      <p class="definition"><strong>MVVM (Model-View-ViewModel)</strong> — an architectural pattern that separates the user interface from the business logic through three layers linked by data binding, so the View does not know directly where its data comes from.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Model</strong> — the data plus the business logic. In Angular these are your services, interfaces and domain types (<code>Order</code>, <code>Quote</code>, the <code>OrderService</code> that fetches them).</p>
+        <p class="definition"><strong>View</strong> — the rendered UI. In Angular this is the component's HTML template, including bindings and structural directives.</p>
+        <p class="definition"><strong>ViewModel</strong> — the connective layer that exposes the Model's data and commands to the View and reacts to user input. In Angular this is the <strong>component class</strong>: it holds reactive state and the methods the template calls.</p>
+      </div>
+
+      <p>Angular is <strong>MVVM by nature</strong>: the component class <em>is</em> the ViewModel, and
+        Angular's binding engine is the synchronization mechanism. Property/interpolation bindings push the Model's data
+        into the View; event bindings push user actions back; <code>[(ngModel)]</code> does both at once
+        (two-way binding).</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// MODEL — data + business logic
+export interface Instrument {
+  readonly symbol: string;
+  readonly tickSize: number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class InstrumentService {            // Model layer
+  getBySymbol(symbol: string): Observable&lt;Instrument&gt; { /* ... */ }
+}
+
+// VIEWMODEL — the component class binds Model to View
+@Component({
+  selector: 'app-instrument-search',
+  template: `
+    &lt;!-- VIEW: template HTML --&gt;
+    &lt;input [(ngModel)]="query" placeholder="Symbol" /&gt;   &lt;!-- two-way sync --&gt;
+    &lt;p&gt;Tick size: {{ instrument?.tickSize }}&lt;/p&gt;        &lt;!-- Model → View --&gt;
+    &lt;button (click)="search()"&gt;Load&lt;/button&gt;             &lt;!-- View → ViewModel --&gt;
+  `,
+})
+export class InstrumentSearchComponent {     // ViewModel
+  private readonly service = inject(InstrumentService);
+  query = '';                                // bound state
+  instrument: Instrument | null = null;
+
+  search(): void {                           // command exposed to the View
+    this.service.getBySymbol(this.query)
+      .subscribe(i =&gt; (this.instrument = i));
+  }
+}</code></pre>
+      </div>
+
+      <p class="definition"><strong>Two-way binding <code>[(ngModel)]</code></strong> — Angular's "banana in a box" syntax, shorthand for a <code>[ngModel]</code> property binding plus an <code>(ngModelChange)</code> event binding. It automatically keeps the View's input field and the ViewModel's field in sync — the synchronization mechanism at the very heart of MVVM.</p>
+
+      <h3 id="mvvm-vs-mvc-en">How MVVM differs from MVC</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>MVC</th><th>MVVM</th></tr></thead>
+          <tbody>
+            <tr><td>Third layer</td><td>Controller (orchestrates request → response)</td><td>ViewModel (exposes state + commands)</td></tr>
+            <tr><td>View ↔ logic link</td><td>Controller updates the View manually</td><td>Automatic two-way <strong>data binding</strong></td></tr>
+            <tr><td>View awareness</td><td>Controller knows about the View</td><td>ViewModel does <em>not</em> reference the View</td></tr>
+            <tr><td>Typical habitat</td><td>Server-side frameworks (Rails, Spring MVC)</td><td>Rich client UIs (Angular, WPF)</td></tr>
+            <tr><td>Boilerplate for UI sync</td><td>High (manual wiring)</td><td>Low (binding does it)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Key takeaway:</strong> in MVC the Controller actively reaches into the View; in MVVM the ViewModel simply exposes data and Angular's binding engine performs the sync. The ViewModel never imports or touches the DOM, which is why it tests so well.</p></div>
+    </section>
+
+    <!-- ===================== FEATURE/CORE/SHARED STRUCTURE ===================== -->
+    <section data-searchable>
+      <h2 id="folder-structure-en">Feature / Core / Shared Structure</h2>
+      <p>A widely adopted scalable structure for an enterprise standalone-API Angular application. It separates
+        <strong>singletons</strong> (Core), <strong>reusable parts</strong> (Shared) and
+        <strong>business domains</strong> (Features), so the app grows feature by feature without tangling.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-text">src/
+└── app/
+    ├── core/                      # app-wide SINGLETONS (loaded once)
+    │   ├── auth/
+    │   │   ├── auth.service.ts
+    │   │   └── auth.guard.ts
+    │   ├── interceptors/
+    │   │   ├── auth.interceptor.ts
+    │   │   └── error.interceptor.ts
+    │   └── guards/
+    │       └── role.guard.ts
+    ├── shared/                    # REUSABLE, stateless building blocks
+    │   ├── components/
+    │   │   ├── order-row/
+    │   │   └── price-badge/
+    │   ├── pipes/
+    │   │   └── currency-precision.pipe.ts
+    │   └── directives/
+    │       └── highlight-change.directive.ts
+    ├── features/                  # BUSINESS DOMAINS (lazy-loaded)
+    │   ├── orders/
+    │   │   ├── orders-container.component.ts
+    │   │   ├── order-row.component.ts
+    │   │   ├── order.facade.ts
+    │   │   ├── order.service.ts
+    │   │   └── orders.routes.ts
+    │   └── charts/
+    │       ├── base-chart.component.ts
+    │       ├── candlestick-chart.component.ts
+    │       └── line-chart.component.ts
+    ├── app.component.ts
+    ├── app.config.ts              # providers, router, interceptors
+    └── app.routes.ts              # top-level (lazy) routes</code></pre>
+      </div>
+
+      <div class="card">
+        <p class="definition"><strong>core/</strong> — app-wide singletons that must exist exactly once: authentication, route guards, HTTP interceptors, global error handling, application-level configuration. They are marked <code>providedIn: 'root'</code> and logically are never imported by features more than once.</p>
+        <p class="definition"><strong>shared/</strong> — stateless, reusable presentational building blocks with no business logic: dumb components, pipes and directives. Anything that could appear in two different features lives here. This layer must never depend on a feature.</p>
+        <p class="definition"><strong>features/</strong> — self-contained business domains (orders, charts). Each owns its smart/dumb components, services, facade and its own lazy-loaded routes. Features may depend on <code>core</code> and <code>shared</code>, but <strong>not on each other</strong>.</p>
+        <p class="definition"><strong>app.config.ts</strong> — the standalone bootstrap configuration: application providers, router setup and interceptor / HTTP-client wiring, passed to <code>bootstrapApplication</code>.</p>
+      </div>
+
+      <div class="warn"><p><strong>Dependency-direction rule:</strong> <code>features → shared → core</code>. Never let <code>shared</code> import from a feature, and never let one feature import from another — route through a shared abstraction or the store.</p></div>
+    </section>
+
+    <!-- ===================== GOF PATTERNS ===================== -->
+    <section data-searchable>
+      <h2 id="gof-patterns-en">GoF Patterns in Angular</h2>
+      <p>The "Gang of Four" design patterns in Angular are not academic — the framework is <em>built</em>
+        out of them. Recognizing them is a frequent signal in a senior interview.</p>
+
+      <div class="card">
+        <h4>Observer</h4>
+        <p class="definition"><strong>Observer</strong> — defines a one-to-many dependency so that when one object's state changes, all its dependents are automatically notified. In Angular it shows up as <strong>RxJS Observables / Subjects</strong>: subscribers react to every emitted value.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">const quote$ = new Subject&lt;Quote&gt;();           // subject = observable
+quote$.subscribe(q =&gt; console.log('A', q.bid)); // observer 1
+quote$.subscribe(q =&gt; console.log('B', q.ask)); // observer 2
+quote$.next({ symbol: 'EURUSD', bid: 1.07, ask: 1.0702 }); // notifies all</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Factory</h4>
+        <p class="definition"><strong>Factory</strong> — delegates object creation to a function instead of a constructor, so the calling code is decoupled from the concrete class. In Angular it shows up as <strong><code>useFactory</code></strong> DI providers that build a dependency from other injected values.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export const ORDER_REPO = new InjectionToken&lt;IOrderRepository&gt;('OrderRepo');
+
+providers: [
+  {
+    provide: ORDER_REPO,
+    useFactory: (http: HttpClient) =&gt; new HttpOrderRepository(http),
+    deps: [HttpClient],          // injected into the factory
+  },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Decorator</h4>
+        <p class="definition"><strong>Decorator</strong> — dynamically adds extra behavior/metadata to an object. <strong><code>@Component</code>, <code>@Injectable</code>, <code>@Pipe</code></strong> in Angular are decorators that annotate a class with metadata read by the compiler.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })   // decorator adds DI metadata
+export class OrderService {}
+
+@Pipe({ name: 'pnl' })                 // decorator adds pipe metadata
+export class PnlPipe implements PipeTransform {
+  transform(value: number): string { return value.toFixed(2); }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Strategy</h4>
+        <p class="definition"><strong>Strategy</strong> — encapsulates interchangeable algorithms behind a common interface, selected at runtime. <strong><code>ChangeDetectionStrategy</code></strong> in Angular switches the change-detection algorithm (<code>Default</code> or <code>OnPush</code>) per component.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({
+  selector: 'app-order-row',
+  changeDetection: ChangeDetectionStrategy.OnPush, // pick the strategy
+  template: `...`,
+})
+export class OrderRowComponent {}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Command</h4>
+        <p class="definition"><strong>Command</strong> — encapsulates a request as a standalone object carrying all the information needed to perform it. In Angular this is <strong>NgRx Actions</strong>: a typed object describing "what happened", dispatched to be handled later by reducers/effects.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export const cancelOrder = createAction(
+  '[Orders] Cancel Order',
+  props&lt;{ orderId: string }&gt;(),    // the command's payload
+);
+
+store.dispatch(cancelOrder({ orderId: 'ord-42' })); // request as an object</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Proxy</h4>
+        <p class="definition"><strong>Proxy</strong> — a surrogate that controls access to another object by intercepting calls. <strong><code>HttpInterceptor</code></strong> in Angular proxies every HTTP request, able to inspect, modify or short-circuit it before it reaches the server.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const cloned = req.clone({               // proxy: modify the request
+    setHeaders: { Authorization: 'Bearer token' },
+  });
+  return next(cloned);                      // forward to the real handler
+};</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Chain of Responsibility</h4>
+        <p class="definition"><strong>Chain of Responsibility</strong> — passes a request along a chain of handlers, each deciding whether to handle it and/or pass it on. The <strong>interceptor chain</strong> in Angular is exactly this: each interceptor calls <code>next()</code> to pass the request to the next handler.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Order matters: each link calls next() to pass control along the chain.
+provideHttpClient(
+  withInterceptors([
+    authInterceptor,    // 1. adds token, then next()
+    loggingInterceptor, // 2. logs, then next()
+    errorInterceptor,   // 3. catches errors, then next()
+  ]),
+);</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Singleton</h4>
+        <p class="definition"><strong>Singleton</strong> — guarantees a class has exactly one instance with a global access point. <strong><code>providedIn: 'root'</code></strong> in Angular creates one shared instance for the whole application via the root injector.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' }) // one instance, app-wide
+export class QuoteService {
+  private readonly quotes$ = new BehaviorSubject&lt;Quote[]&gt;([]);
+}
+// Every component that injects QuoteService gets the SAME instance.</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Template Method</h4>
+        <p class="definition"><strong>Template Method</strong> — defines the skeleton of an algorithm, deferring specific steps to subclasses/hooks. <strong>Lifecycle hooks</strong> in Angular (<code>ngOnInit</code>, <code>ngOnChanges</code>, <code>ngOnDestroy</code>…) are the hook points that the framework calls in a fixed order.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Angular runs a fixed sequence; you fill in the steps:
+export class ChartComponent implements OnInit, OnDestroy {
+  ngOnInit(): void { /* framework calls this step on init */ }
+  ngOnDestroy(): void { /* and this step on teardown */ }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Facade</h4>
+        <p class="definition"><strong>Facade</strong> — a simplified single interface in front of a complex subsystem. In Angular this is a service wrapping the NgRx store / multiple services, so components depend on one clean API. Covered in detail in the next section.</p>
+      </div>
+    </section>
+
+    <!-- ===================== OOP PRINCIPLES ===================== -->
+    <section data-searchable>
+      <h2 id="oop-en">OOP Principles in Angular</h2>
+      <p>The four pillars of object-oriented programming, each shown as it actually
+        appears in Angular service and component design.</p>
+
+      <div class="card">
+        <h4>Encapsulation</h4>
+        <p class="definition"><strong>Encapsulation</strong> — bundling state together with the methods that operate on it and hiding the internal representation behind a public API. In Angular keep a service's state <code>private</code>/<code>protected</code> and expose only a read API.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class QuoteStore {
+  // private internal state — nobody can next() into it from outside
+  private readonly quotes$ = new BehaviorSubject&lt;Quote[]&gt;([]);
+
+  // public read-only API — the only way in
+  getQuotes(): Observable&lt;Quote[]&gt; {
+    return this.quotes$.asObservable();
+  }
+
+  setQuotes(quotes: Quote[]): void {  // controlled mutation
+    this.quotes$.next(quotes);
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Abstraction</h4>
+        <p class="definition"><strong>Abstraction</strong> — exposing <em>what</em> something does rather than <em>how</em>. Define interfaces as contracts and depend on the abstraction rather than the concrete class — so the implementation can be swapped freely.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Contract — the abstraction
+export interface IOrderRepository {
+  getOrders(): Observable&lt;Order[]&gt;;
+  addOrder(order: Order): Observable&lt;Order&gt;;
+}
+
+// Consumers depend on IOrderRepository, NOT HttpOrderService.
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  // injected against the abstraction (see Repository section)
+  constructor(private readonly repo: IOrderRepository) {}
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Inheritance</h4>
+        <p class="definition"><strong>Inheritance</strong> — a class inherits state and behavior from a base class through <code>extends</code>, reusing common logic. Useful for a base component/service shared by several specialized ones.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Base holds shared chart plumbing
+@Directive()
+export abstract class BaseChartComponent {
+  protected readonly ctx = inject(ChartContextService);
+  protected destroy(): void { /* shared teardown */ }
+  abstract render(data: Quote[]): void;   // each subtype implements
+}
+
+export class CandlestickChartComponent extends BaseChartComponent {
+  render(data: Quote[]): void { /* candlestick drawing */ }
+}
+
+export class LineChartComponent extends BaseChartComponent {
+  render(data: Quote[]): void { /* line drawing */ }
+}</code></pre></div>
+        <div class="warn"><p><strong>Caution:</strong> prefer composition over deep inheritance trees. Reach for <code>extends</code> only when the subtypes share genuinely common, stable behavior.</p></div>
+      </div>
+
+      <div class="card">
+        <h4>Polymorphism</h4>
+        <p class="definition"><strong>Polymorphism</strong> — many types implementing one interface can be used interchangeably; the calling code works against the contract, and at runtime the right concrete behavior runs.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export interface IChart {
+  render(data: Quote[]): void;
+}
+
+class CandlestickChart implements IChart {
+  render(data: Quote[]): void { /* ... */ }
+}
+class LineChart implements IChart {
+  render(data: Quote[]): void { /* ... */ }
+}
+
+// Used interchangeably — same call, different behaviour.
+const charts: IChart[] = [new CandlestickChart(), new LineChart()];
+charts.forEach(chart =&gt; chart.render(quotes));</code></pre></div>
+      </div>
+    </section>
+
+    <!-- ===================== FACADE PATTERN ===================== -->
+    <section data-searchable>
+      <h2 id="facade-en">Facade Pattern</h2>
+      <p class="definition"><strong>Facade</strong> — a service that wraps complex state management (the NgRx store, effects, multiple services) and exposes a small, intent-revealing API. Components talk <em>only</em> to the facade: they read ready-made streams and call action methods, never touching the store directly.</p>
+
+      <div class="tip"><p><strong>Why:</strong> components stay free of NgRx imports and selectors, the store can be refactored without touching the UI, and the public surface is easy to test and mock.</p></div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// order.facade.ts — wraps the store behind a clean API
+import { Injectable, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { Order } from './order.model';
+import * as OrderActions from './order.actions';
+import * as OrderSelectors from './order.selectors';
+
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  private readonly store = inject(Store);
+
+  // --- exposed state (selectors hidden behind simple streams) ---
+  readonly orders$: Observable&lt;Order[]&gt; =
+    this.store.select(OrderSelectors.selectAllOrders);
+
+  readonly loading$: Observable&lt;boolean&gt; =
+    this.store.select(OrderSelectors.selectOrdersLoading);
+
+  // --- exposed commands (dispatch hidden) ---
+  loadOrders(): void {
+    this.store.dispatch(OrderActions.loadOrders());
+  }
+
+  addOrder(order: Order): void {
+    this.store.dispatch(OrderActions.addOrder({ order }));
+  }
+
+  cancelOrder(orderId: string): void {
+    this.store.dispatch(OrderActions.cancelOrder({ orderId }));
+  }
+}</code></pre>
+      </div>
+
+      <p>The smart component from the first section consumes this facade and never imports
+        <code>Store</code>, selectors or actions — staying thin while the store remains replaceable.</p>
+    </section>
+
+    <!-- ===================== REPOSITORY PATTERN ===================== -->
+    <section data-searchable>
+      <h2 id="repository-en">Repository Pattern</h2>
+      <p class="definition"><strong>Repository</strong> — abstracts data access behind an interface, so consumers depend on <code>IOrderRepository</code> rather than a concrete HTTP service. The implementation (REST, GraphQL, WebSocket, in-memory mock) can be swapped without changing a single consumer.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// 1. The contract (abstraction)
+export interface IOrderRepository {
+  getOrders(): Observable&lt;Order[]&gt;;
+  getPosition(symbol: string): Observable&lt;Position&gt;;
+  addOrder(order: Order): Observable&lt;Order&gt;;
+}
+
+// Position — FinTech domain type
+export interface Position {
+  readonly symbol: string;
+  readonly netQty: number;
+  readonly avgPrice: number;
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// 2. A concrete implementation
+@Injectable()
+export class HttpOrderRepository implements IOrderRepository {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/orders';
+
+  getOrders(): Observable&lt;Order[]&gt; {
+    return this.http.get&lt;Order[]&gt;(this.base);
+  }
+
+  getPosition(symbol: string): Observable&lt;Position&gt; {
+    return this.http.get&lt;Position&gt;(`/api/positions/${symbol}`);
+  }
+
+  addOrder(order: Order): Observable&lt;Order&gt; {
+    return this.http.post&lt;Order&gt;(this.base, order);
+  }
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// 3. DI token wiring — bind the abstraction to an implementation
+export const ORDER_REPOSITORY =
+  new InjectionToken&lt;IOrderRepository&gt;('OrderRepository');
+
+// app.config.ts
+providers: [
+  { provide: ORDER_REPOSITORY, useClass: HttpOrderRepository },
+];
+
+// Consumer depends ONLY on the token / interface:
+@Injectable({ providedIn: 'root' })
+export class OrderService {
+  private readonly repo = inject(ORDER_REPOSITORY);
+  orders(): Observable&lt;Order[]&gt; { return this.repo.getOrders(); }
+}</code></pre>
+      </div>
+
+      <div class="success"><p><strong>The swap test:</strong> point the token at <code>useClass: MockOrderRepository</code> in tests or <code>useClass: WsOrderRepository</code> for streaming — with no changes for consumers. That is the entire value of the pattern.</p></div>
+    </section>
+
+    <!-- ===================== BARREL EXPORTS ===================== -->
+    <section data-searchable>
+      <h2 id="barrel-en">Barrel Exports (index.ts)</h2>
+      <p class="definition"><strong>Barrel</strong> — an <code>index.ts</code> file that re-exports the public members of a folder/module, giving consumers one clean import path and hiding the internal file structure.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// features/orders/index.ts — the barrel (public API)
+export { OrderFacade } from './order.facade';
+export { OrdersContainerComponent } from './orders-container.component';
+export type { Order, OrderSide, OrderStatus } from './order.model';
+// internal helpers are intentionally NOT exported
+
+// Consumer — one tidy import instead of many deep paths
+import { OrderFacade, Order } from '@app/features/orders';</code></pre>
+      </div>
+
+      <div class="warn"><p><strong>Be careful:</strong> overly broad barrel files can hurt tree-shaking and create circular imports. Keep them at real public boundaries (a feature, a shared library), not at every folder.</p></div>
+    </section>
+
+    <!-- ===================== MONOREPO WITH NX ===================== -->
+    <section data-searchable>
+      <h2 id="nx-en">Monorepo with Nx</h2>
+      <p class="definition"><strong>Nx</strong> — a build system and tooling for monorepos that hosts many apps and libraries in one workspace, with a project graph, generators and computation caching tailored to enterprise Angular.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Workspace</strong> — a single repository containing all projects, with shared tooling, lint rules and dependency constraints.</p>
+        <p class="definition"><strong>apps/</strong> — deployable applications (e.g. <code>trading-web</code>, <code>admin</code>). These are thin shells that compose libraries.</p>
+        <p class="definition"><strong>libs/</strong> — the bulk of the code: feature, data-access, UI and util libraries that apps and other libraries import. Nx enforces which libraries may depend on which.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-text"># Scaffold a new lib or app with a generator
+nx generate @nx/angular:library orders-data-access
+
+# Build a single project (and only what it needs)
+nx build trading-web
+
+# Run tasks ONLY for projects affected by your changes
+nx affected --target=test
+nx affected --target=build --base=main</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>nx generate</code></td><td>Scaffolds apps, libraries, components via generators (consistent structure)</td></tr>
+            <tr><td><code>nx build</code></td><td>Builds a project; reuses cached output when inputs are unchanged</td></tr>
+            <tr><td><code>nx affected</code></td><td>Runs a target only for projects affected by the current diff</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Why for enterprise Angular:</strong> a single source of truth for shared libraries, enforced module boundaries between teams, dramatically faster CI by running only what's affected plus computation caching, and consistent scaffolding across dozens of projects.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Interview Questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between a smart and a dumb component?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A <strong>smart (container)</strong> component knows about the application state: it injects services or a facade, reads the store, dispatches actions and passes plain data down. A <strong>dumb (presentational)</strong> component knows nothing about services — it only receives data through <code>@Input()</code>, emits user intents through <code>@Output()</code> and renders. Dumb components are pure, reusable, OnPush-friendly and trivial to test; smart components should be few and thin.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Why is Angular described as an MVVM framework and how is the ViewModel realized?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Angular separates the <strong>Model</strong> (services, interfaces, domain types), the <strong>View</strong> (HTML template) and the <strong>ViewModel</strong> (component class). The component class is the ViewModel: it exposes state and command methods to the template. Angular's binding engine is the synchronization mechanism: interpolation/property bindings push the Model's data into the View, event bindings push intents back, and <code>[(ngModel)]</code> does both. Unlike MVC, the ViewModel never references the View; data binding does the wiring, which is why it tests so well.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. What problem does a Facade service solve compared with using NgRx directly in components?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>It hides the store's complexity behind a small, intent-revealing API. Components consume ready-made streams (<code>orders$</code>) and call methods (<code>loadOrders()</code>, <code>addOrder()</code>) without importing <code>Store</code>, selectors or actions. This keeps components thin and framework-agnostic, lets you refactor or replace state management without touching the UI, and makes the facade easy to mock in tests.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How does the Repository pattern improve testability and flexibility?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Consumers depend on an interface (<code>IOrderRepository</code>) bound to a concrete implementation via a DI token, rather than on a concrete HTTP service. Because the dependency is an abstraction, you can swap implementations — <code>HttpOrderRepository</code> in production, <code>MockOrderRepository</code> in tests, <code>WsOrderRepository</code> for streaming — by changing one provider, with no changes for consumers. This is the dependency inversion principle applied to data access.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Name three GoF patterns that the Angular framework itself uses, and where.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Many examples qualify: <strong>Observer</strong> in RxJS Observables/Subjects; <strong>Decorator</strong> in <code>@Component</code>/<code>@Injectable</code>/<code>@Pipe</code>; <strong>Singleton</strong> via <code>providedIn: 'root'</code>; <strong>Strategy</strong> in <code>ChangeDetectionStrategy</code>; <strong>Proxy</strong> and <strong>Chain of Responsibility</strong> in the HTTP interceptor chain; <strong>Factory</strong> in DI <code>useFactory</code>; <strong>Command</strong> in NgRx Actions; and <strong>Template Method</strong> in lifecycle hooks.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which statement correctly describes a dumb (presentational) component?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It injects services and dispatches store actions</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">It uses only @Input/@Output and renders, with no service dependencies</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It must always use ChangeDetectionStrategy.Default</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It owns the application state</button>
+        <div class="quiz-explain">Dumb components are pure: data in via @Input, intents out via @Output, with no services or store. That makes them reusable, OnPush-friendly and trivial to test. State is owned by smart/container components.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. In the MVVM mapping in Angular, what plays the role of the ViewModel?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">The HTML template</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">An injectable service</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">The component class</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">The router configuration</button>
+        <div class="quiz-explain">The component class is the ViewModel: it exposes state and command methods that the template (View) binds to. The Model is the services/interfaces; two-way binding [(ngModel)] is the synchronization mechanism.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Angular's HTTP interceptor chain is an example of which GoF pattern(s)?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Singleton</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Observer only</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Proxy and Chain of Responsibility</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Factory</button>
+        <div class="quiz-explain">Each interceptor is a Proxy that can inspect/modify/short-circuit the request, and the ordered list where each one calls next() is a Chain of Responsibility.</div>
+      </div>
+    </section>
+
+    </div>
+
+    <div class="lang-block" data-lang="ru">
 
     <!-- ===================== SMART VS DUMB COMPONENTS ===================== -->
     <section data-searchable>
@@ -742,10 +1419,12 @@ nx affected --target=build --base=main</code></pre>
       </div>
     </section>
 
+    </div>
+
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="http.html" class="btn-nav">← HTTP и интерцепторы</a>
-      <a href="solid-dry.html" class="btn-nav">SOLID и DRY →</a>
+      <a href="http.html" class="btn-nav">← <span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></a>
+      <a href="solid-dry.html" class="btn-nav">SOLID &amp; DRY →</a>
     </div>
   </main>
 

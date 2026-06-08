@@ -57,14 +57,16 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>HTTP и интерцепторы</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>HTTP и интерцепторы</h1>
-      <p class="page-desc">Сервис <code>HttpClient</code> в Angular, все методы и опции запросов, а также
+      <h1><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></h1>
+      <p class="page-desc"><span data-lang="en">Angular's <code>HttpClient</code> service, all request methods and options, plus
+        the interceptor pipeline that powers authorization, error handling, loading state and
+        logging — cross-cutting concerns every senior must be able to wire up correctly.</span><span data-lang="ru">Сервис <code>HttpClient</code> в Angular, все методы и опции запросов, а также
         конвейер интерцепторов, обеспечивающий авторизацию, обработку ошибок, состояние загрузки и
-        логирование — сквозные задачи, которые каждый senior обязан уметь корректно настроить.</p>
+        логирование — сквозные задачи, которые каждый senior обязан уметь корректно настроить.</span></p>
       <button class="btn-done" data-page="http" onclick="markDone('http')">✓ Отметить как пройдено</button>
     </div>
 
@@ -72,6 +74,502 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= HTTP METHODS ============================= -->
+    <section data-searchable>
+      <h2 id="http-methods-en">HTTP Methods</h2>
+      <p>The HTTP verb communicates <em>intent</em> to the server and to every cache or proxy along the
+        request path. Two properties drive design decisions: idempotency and safety.</p>
+
+      <p class="definition"><strong>Idempotency</strong> — sending the same request multiple times leaves
+        the server in the same state as sending it once. A <code>PUT</code> retried after a failure is
+        safe; a retried <code>POST</code> may create duplicate orders.</p>
+      <p class="definition"><strong>Safety</strong> — the request does not change server state at all
+        (read-only). Safe methods are inherently idempotent and freely cacheable.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Method</th><th>Definition</th><th>Has body</th><th>Idempotent</th><th>Safe</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET</code></td><td>Retrieve a resource</td><td>❌</td><td>✅</td><td>✅</td></tr>
+            <tr><td><code>POST</code></td><td>Create a resource</td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td><code>PUT</code></td><td>Fully replace a resource</td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>PATCH</code></td><td>Partially update a resource</td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td><code>DELETE</code></td><td>Delete a resource</td><td>optional</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>HEAD</code></td><td>Like GET but without a body (headers only)</td><td>❌</td><td>✅</td><td>✅</td></tr>
+            <tr><td><code>OPTIONS</code></td><td>Discover the allowed methods (CORS preflight)</td><td>❌</td><td>✅</td><td>✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Why idempotency matters for retries:</strong> an HTTP interceptor that
+        automatically retries failed requests is only safe for idempotent verbs. Retrying
+        <code>POST /orders</code> may place the same trade twice — protect it with an idempotency
+        key.</p></div>
+    </section>
+
+    <!-- ============================= TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="domain-types-en">Domain Types</h2>
+      <p>Every example below uses the same strongly typed FinTech domain — there is no <code>any</code>
+        anywhere.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export type Side = 'BUY' | 'SELL';
+export type OrderStatus = 'NEW' | 'FILLED' | 'CANCELLED' | 'REJECTED';
+
+export interface Order {
+  id: string;
+  symbol: string;
+  side: Side;
+  quantity: number;
+  price: number;
+  status: OrderStatus;
+}
+
+export interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+export interface Instrument {
+  symbol: string;
+  name: string;
+  exchange: string;
+  tickSize: number;
+}
+
+export interface Position {
+  symbol: string;
+  netQuantity: number;
+  averagePrice: number;
+  unrealizedPnl: number;
+}</code></pre></div>
+    </section>
+
+    <!-- ============================= HTTPCLIENT ============================= -->
+    <section data-searchable>
+      <h2 id="httpclient-en">HttpClient</h2>
+      <p class="definition"><strong>HttpClient</strong> — Angular's injectable service for making
+        HTTP requests. Every method returns a <strong>cold <code>Observable</code></strong> — nothing
+        happens until you call <code>subscribe</code> (or use the <code>async</code> pipe /
+        <code>firstValueFrom</code>). The generic parameter sets the type of the parsed JSON response
+        body.</p>
+
+      <div class="tip"><p>Wire it up once via <code>provideHttpClient()</code> in
+        <code>app.config.ts</code> (standalone) or import <code>HttpClientModule</code> (NgModule).</p></div>
+
+      <div class="card">
+        <h4><code>get&lt;T&gt;(url, options?)</code></h4>
+        <p class="definition"><strong>get</strong> — performs a <code>GET</code> request and emits the
+          response body typed as <code>T</code>. Safe and idempotent; used for reads.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">getOrder(id: string): Observable&lt;Order&gt; {
+  return this.http.get&lt;Order&gt;(`/api/orders/${id}`);
+}
+
+listInstruments(): Observable&lt;Instrument[]&gt; {
+  return this.http.get&lt;Instrument[]&gt;('/api/instruments');
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>post&lt;T&gt;(url, body, options?)</code></h4>
+        <p class="definition"><strong>post</strong> — sends a body to create a resource and emits the
+          created entity. Not idempotent — each call creates a new order.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">placeOrder(draft: Omit&lt;Order, 'id' | 'status'&gt;): Observable&lt;Order&gt; {
+  return this.http.post&lt;Order&gt;('/api/orders', draft);
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>put&lt;T&gt;(url, body, options?)</code></h4>
+        <p class="definition"><strong>put</strong> — replaces the resource <em>in its entirety</em> with
+          the supplied body. Idempotent — resending the same payload yields the same state.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">replaceOrder(id: string, order: Order): Observable&lt;Order&gt; {
+  return this.http.put&lt;Order&gt;(`/api/orders/${id}`, order);
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>patch&lt;T&gt;(url, body, options?)</code></h4>
+        <p class="definition"><strong>patch</strong> — applies a <em>partial</em> update; you send only
+          the fields that change. Idempotency is not guaranteed.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">updatePrice(id: string, price: number): Observable&lt;Order&gt; {
+  return this.http.patch&lt;Order&gt;(`/api/orders/${id}`, { price });
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>delete&lt;T&gt;(url, options?)</code></h4>
+        <p class="definition"><strong>delete</strong> — removes a resource. Idempotent — deleting an
+          already-deleted order leaves the same final state.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">cancelOrder(id: string): Observable&lt;void&gt; {
+  return this.http.delete&lt;void&gt;(`/api/orders/${id}`);
+}</code></pre></div>
+      </div>
+
+      <h3 id="httpparams-en">HttpParams — query strings</h3>
+      <p class="definition"><strong>HttpParams</strong> — an <em>immutable</em> builder for URL query
+        parameters. Each <code>set</code>/<code>append</code> returns a <em>new</em> instance, so you
+        must chain or reassign. Angular handles the encoding for you.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">searchOrders(symbol: string, status: OrderStatus): Observable&lt;Order[]&gt; {
+  const params = new HttpParams()
+    .set('symbol', symbol)
+    .set('status', status)
+    .set('limit', 50);            // numbers/booleans accepted
+
+  // GET /api/orders?symbol=EURUSD&amp;status=FILLED&amp;limit=50
+  return this.http.get&lt;Order[]&gt;('/api/orders', { params });
+}</code></pre></div>
+      <div class="warn"><p><strong>Immutability gotcha:</strong> <code>params.set('a', '1')</code> on its
+        own does nothing — it returns a new <code>HttpParams</code> that you must keep.</p></div>
+
+      <h3 id="httpheaders-en">HttpHeaders — request headers</h3>
+      <p class="definition"><strong>HttpHeaders</strong> — an <em>immutable</em> collection of request
+        headers with the same "chain or reassign" rule as <code>HttpParams</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">submitOrder(draft: Omit&lt;Order, 'id' | 'status'&gt;): Observable&lt;Order&gt; {
+  const headers = new HttpHeaders()
+    .set('Content-Type', 'application/json')
+    .set('X-Idempotency-Key', crypto.randomUUID());
+
+  return this.http.post&lt;Order&gt;('/api/orders', draft, { headers });
+}</code></pre></div>
+
+      <h3 id="observe-response-en">observe: 'response' — the full response</h3>
+      <p class="definition"><strong>observe: 'response'</strong> — emits the entire
+        <code>HttpResponse&lt;T&gt;</code> instead of just the body, giving you access to
+        <code>status</code>, <code>headers</code> and <code>statusText</code>.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">getOrderWithMeta(id: string): Observable&lt;Order | null&gt; {
+  return this.http
+    .get&lt;Order&gt;(`/api/orders/${id}`, { observe: 'response' })
+    .pipe(
+      map((res: HttpResponse&lt;Order&gt;) =&gt; {
+        console.log('status', res.status);              // 200
+        console.log('etag', res.headers.get('ETag'));   // read a header
+        return res.body;                                // Order | null
+      }),
+    );
+}</code></pre></div>
+
+      <h3 id="observe-events-en">observe: 'events' — progress and all events</h3>
+      <p class="definition"><strong>observe: 'events'</strong> — emits every
+        <code>HttpEvent&lt;T&gt;</code> as it occurs: the sent event, upload/download progress and the
+        final response. Combined with <code>reportProgress: true</code> this is what powers upload
+        progress bars.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">uploadOrders(file: File): Observable&lt;number&gt; {
+  const form = new FormData();
+  form.append('file', file);
+
+  return this.http
+    .post&lt;Order[]&gt;('/api/orders/bulk', form, {
+      observe: 'events',
+      reportProgress: true,
+    })
+    .pipe(
+      filter((e: HttpEvent&lt;Order[]&gt;): e is HttpProgressEvent =&gt;
+        e.type === HttpEventType.UploadProgress),
+      map((e: HttpProgressEvent) =&gt;
+        e.total ? Math.round((100 * e.loaded) / e.total) : 0),
+    );
+}</code></pre></div>
+
+      <h3 id="responsetype-blob-en">responseType: 'blob' — downloading files</h3>
+      <p class="definition"><strong>responseType: 'blob'</strong> — tells <code>HttpClient</code> to keep
+        the raw binary <code>Blob</code> instead of parsing JSON. Used for PDFs, CSV exports and
+        images.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">downloadStatement(id: string): Observable&lt;Blob&gt; {
+  return this.http.get(`/api/statements/${id}`, {
+    responseType: 'blob',           // no &lt;T&gt; — body is a Blob
+  });
+}
+
+saveStatement(id: string): void {
+  this.downloadStatement(id).subscribe((blob: Blob) =&gt; {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `statement-${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}</code></pre></div>
+    </section>
+
+    <!-- ============================= INTERCEPTORS ============================= -->
+    <section data-searchable>
+      <h2 id="interceptors-en">Interceptors</h2>
+      <p class="definition"><strong>Interceptor</strong> — a class or function that sits in the
+        <code>HttpClient</code> pipeline and intercepts <em>every</em> outgoing <code>HttpRequest</code>
+        and incoming response, letting you inspect, modify, retry, abort or log them before they reach
+        application code. This is the canonical place for cross-cutting concerns: authorization tokens,
+        error handling, loading state, logging and caching.</p>
+
+      <h3 id="req-clone-en">Why <code>req.clone()</code>?</h3>
+      <p class="definition"><strong><code>HttpRequest</code> immutability</strong> —
+        <code>HttpRequest</code> is <em>immutable</em>: its properties cannot be reassigned. To change
+        anything (headers, URL, body, params) you call <code>req.clone({ ... })</code>, which returns a
+        new request with the overrides applied. This guarantees that subsequent interceptors and retries
+        always see a consistent, untouched original.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// ❌ Throws / has no effect — request is frozen
+req.headers = req.headers.set('Authorization', token);
+
+// ✅ Produce a modified copy
+const authReq = req.clone({
+  setHeaders: { Authorization: `Bearer ${token}` },
+});</code></pre></div>
+
+      <h3 id="auth-interceptor-en">Auth interceptor (class-based)</h3>
+      <p>Attaches a bearer token to every outgoing request by cloning it with an extra header. Note the
+        <code>&lt;T&gt;</code> generic threaded through <code>intercept</code> so the body type is
+        preserved end to end.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  constructor(private readonly auth: AuthService) {}
+
+  intercept&lt;T&gt;(
+    req: HttpRequest&lt;T&gt;,
+    next: HttpHandler,
+  ): Observable&lt;HttpEvent&lt;T&gt;&gt; {
+    const token = this.auth.token();
+    if (!token) {
+      return next.handle(req);            // nothing to add
+    }
+
+    const authReq = req.clone({
+      setHeaders: { Authorization: `Bearer ${token}` },
+    });
+    return next.handle(authReq);          // always return the pipeline
+  }
+}</code></pre></div>
+
+      <h3 id="error-interceptor-en">Error interceptor (401 → redirect)</h3>
+      <p>Catches errors from the response stream with <code>catchError</code>, redirects to login on
+        <code>401 Unauthorized</code> and re-throws the error so component-level error handling still
+        fires.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable()
+export class ErrorInterceptor implements HttpInterceptor {
+  constructor(private readonly router: Router) {}
+
+  intercept&lt;T&gt;(
+    req: HttpRequest&lt;T&gt;,
+    next: HttpHandler,
+  ): Observable&lt;HttpEvent&lt;T&gt;&gt; {
+    return next.handle(req).pipe(
+      catchError((err: HttpErrorResponse) =&gt; {
+        if (err.status === 401) {
+          this.router.navigate(['/login']);
+        }
+        return throwError(() =&gt; err);     // re-throw for callers
+      }),
+    );
+  }
+}</code></pre></div>
+
+      <h3 id="loading-interceptor-en">Loading interceptor (global spinner)</h3>
+      <p>Increments a counter on each outgoing request and decrements it in <code>finalize</code> (which
+        runs <em>both</em> on success <em>and</em> on error), driving a global loading indicator through
+        a service.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class LoadingService {
+  private count = 0;
+  readonly loading = signal(false);
+
+  show(): void { this.count++; this.loading.set(true); }
+  hide(): void { this.count = Math.max(0, this.count - 1); this.loading.set(this.count &gt; 0); }
+}
+
+@Injectable()
+export class LoadingInterceptor implements HttpInterceptor {
+  constructor(private readonly loader: LoadingService) {}
+
+  intercept&lt;T&gt;(
+    req: HttpRequest&lt;T&gt;,
+    next: HttpHandler,
+  ): Observable&lt;HttpEvent&lt;T&gt;&gt; {
+    this.loader.show();
+    return next.handle(req).pipe(
+      finalize(() =&gt; this.loader.hide()), // runs on complete OR error
+    );
+  }
+}</code></pre></div>
+
+      <h3 id="logger-interceptor-en">Logger interceptor (timing)</h3>
+      <p>Records a start timestamp, then uses <code>tap</code> to measure the elapsed time when the final
+        response event arrives — a lightweight observability hook.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable()
+export class LoggerInterceptor implements HttpInterceptor {
+  intercept&lt;T&gt;(
+    req: HttpRequest&lt;T&gt;,
+    next: HttpHandler,
+  ): Observable&lt;HttpEvent&lt;T&gt;&gt; {
+    const started = Date.now();
+    return next.handle(req).pipe(
+      tap((event: HttpEvent&lt;T&gt;) =&gt; {
+        if (event instanceof HttpResponse) {
+          const elapsed = Date.now() - started;
+          console.log(`${req.method} ${req.urlWithParams} → ${event.status} (${elapsed}ms)`);
+        }
+      }),
+    );
+  }
+}</code></pre></div>
+
+      <h3 id="interceptor-order-en">Execution order</h3>
+      <p class="definition"><strong>Interceptor chain order</strong> — requests pass through interceptors
+        in <em>registration order</em> (top to bottom); responses come back through them in
+        <em>reverse</em> order (bottom to top), like the layers of an onion.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Registration order (class-based DI)
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor,    multi: true }, // 1st
+  { provide: HTTP_INTERCEPTORS, useClass: LoggerInterceptor,  multi: true }, // 2nd
+  { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor,   multi: true }, // 3rd
+]
+
+// Request : Auth  → Logger → Error → server
+// Response: server → Error  → Logger → Auth</code></pre></div>
+      <div class="tip"><p>Put <code>AuthInterceptor</code> first so the token is attached before
+        <code>LoggerInterceptor</code> logs the request, and so retries further down the chain still
+        carry authorization.</p></div>
+
+      <h3 id="functional-interceptors-en">Functional interceptors (Angular 15+)</h3>
+      <p class="definition"><strong>HttpInterceptorFn</strong> — the modern functional interceptor: a
+        plain function instead of a class, using <code>inject()</code> for dependencies and registered
+        via <code>withInterceptors([...])</code>. It is tree-shakable and requires significantly less
+        boilerplate.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const token = inject(AuthService).token();
+  return next(
+    req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }),
+  );
+};
+
+// Registration (standalone, app.config.ts)
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(
+      withInterceptors([authInterceptor, errorInterceptor]),
+    ),
+  ],
+};</code></pre></div>
+
+      <div class="card">
+        <h4>CRITICAL rules</h4>
+        <div class="danger"><p><strong>Never call <code>subscribe()</code> inside an
+          interceptor.</strong> Use only <code>.pipe()</code> operators. Subscribing executes the
+          request an extra time and breaks the contract — Angular subscribes to the returned stream
+          itself.</p></div>
+        <div class="danger"><p><strong>Always return <code>next.handle(cloned)</code></strong>
+          (or <code>next(cloned)</code> for functional interceptors). A forgotten <code>return</code>
+          breaks the pipeline — the request never goes out and the caller's observable emits nothing.</p></div>
+        <div class="warn"><p><strong><code>req.clone()</code> is the only way to change a
+          request</strong> — <code>HttpRequest</code> is immutable; direct assignment is ignored or
+          throws.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Interview Q&amp;A</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Why does <code>HttpClient</code> return a cold Observable and what does that mean?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>The Observable is <strong>cold</strong> — the HTTP request itself is not
+          sent until someone subscribes to it. Each subscription triggers a <em>separate</em> request, so
+          subscribing twice (or forgetting to share the stream) fires the call twice. The implications:
+          use the <code>async</code> pipe or <code>firstValueFrom</code> instead of manual double
+          subscriptions, add <code>shareReplay</code> when several consumers need a single result, and
+          remember that an HTTP Observable that is never subscribed to does not execute at all.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Why must you call <code>req.clone()</code> in an interceptor instead of mutating the request?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>HttpRequest</code> is <strong>immutable</strong> — its fields are
+          read-only and cannot be reassigned. <code>clone({ ... })</code> returns a new request with the
+          overrides applied (e.g. <code>setHeaders</code>, <code>url</code>, <code>params</code>). This
+          keeps the original request untouched so subsequent interceptors, retries and Angular's internals
+          always see a consistent value, and it prevents subtle bugs from shared mutable state.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. In what order do multiple interceptors run for the request and for the response?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Requests pass through interceptors in <strong>registration order</strong>
+          (top to bottom in the providers array or in the <code>withInterceptors</code> array). The
+          response then comes back through them in <strong>reverse</strong> order (bottom to top). It's an
+          onion: the first-registered interceptor is the outermost layer — it touches the request first
+          and touches the response last.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How do you implement a global loading spinner that correctly handles concurrent requests?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Use an interceptor backed by a service that holds a
+          <strong>counter</strong>, not a boolean. Increment it on each outgoing request and decrement it
+          inside <code>finalize</code> (which runs both on success and on error). The spinner is visible
+          while the counter is greater than zero, so it stays up until the <em>last</em> of several
+          concurrent requests completes. A plain boolean would be reset by the first response while the
+          others are still in flight.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What is the difference between class-based and functional interceptors?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Class-based interceptors implement <code>HttpInterceptor</code> with an
+          <code>intercept(req, next)</code> method, use constructor injection and are registered via the
+          <code>HTTP_INTERCEPTORS</code> multi-provider. Functional interceptors (Angular 15+) are plain
+          functions of type <code>HttpInterceptorFn</code> that use <code>inject()</code> for
+          dependencies, call <code>next(req)</code> directly and are registered via
+          <code>withInterceptors([...])</code> inside <code>provideHttpClient</code>. The functional form
+          is tree-shakable, requires less boilerplate and is the recommended default for new code.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which HTTP method is <strong>idempotent but not safe</strong>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">POST</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">PUT</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">GET</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">PATCH</button>
+        <div class="quiz-explain">PUT replaces the resource in full: retrying it leads to the same state (idempotent), but it changes the server (not safe). GET is both idempotent and safe; POST and PATCH are neither idempotent nor safe.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. How do you modify an outgoing request inside an interceptor?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">req.headers.set('Authorization', token)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">req.url = '/new' + req.url</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">req.clone({ setHeaders: { Authorization: token } })</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Object.assign(req, { headers })</button>
+        <div class="quiz-explain">HttpRequest is immutable. The only way to change it is req.clone({ ... }), which returns a new request with the overrides applied. Direct assignment is ignored or throws.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Which operator should drive a global loading spinner so it hides on both success and error?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">tap()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">map()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">finalize()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">catchError()</button>
+        <div class="quiz-explain">finalize() runs exactly once when the stream completes OR errors, which makes it the right place to decrement the loading counter. tap's next handler skips the error path, and catchError only fires on errors.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. What is the single most important mistake to avoid inside an interceptor?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Using .pipe() on the handler</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Calling .subscribe() on next.handle(req)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Cloning the request with setHeaders</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Reading req.method</button>
+        <div class="quiz-explain">Never call subscribe() inside an interceptor — Angular subscribes to the returned stream itself, so subscribing again fires the request an extra time and breaks the pipeline. Use only .pipe() operators and always return next.handle(req).</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= HTTP METHODS ============================= -->
     <section data-searchable>
       <h2 id="http-methods">HTTP-методы</h2>
@@ -566,11 +1064,12 @@ export const appConfig: ApplicationConfig = {
         <div class="quiz-explain">Никогда не вызывайте subscribe() внутри интерцептора — Angular подписывается на возвращённый поток сам, поэтому повторная подписка отправляет запрос лишний раз и ломает конвейер. Используйте только операторы .pipe() и всегда возвращайте next.handle(req).</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
       <a href="workers.html" class="btn-nav">← SW + WebWorker</a>
-      <a href="architecture.html" class="btn-nav">Архитектура →</a>
+      <a href="architecture.html" class="btn-nav"><span data-lang="en">Architecture</span><span data-lang="ru">Архитектура</span> →</a>
     </div>
   </main>
 

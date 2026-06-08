@@ -71,19 +71,283 @@
 
   <main class="main-content cheat">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Шпаргалка</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Cheatsheet</span><span data-lang="ru">Шпаргалка</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Шпаргалка</h1>
-      <p class="page-desc">Плотный, одностраничный, готовый к печати краткий справочник. Только факты — повторение
-        перед собеседованием по JS, TypeScript, Angular, RxJS и инженерным принципам. Распечатайте (боковая панель скроется автоматически).</p>
+      <h1><span data-lang="en">Cheatsheet</span><span data-lang="ru">Шпаргалка</span></h1>
+      <p class="page-desc"><span data-lang="en">A dense, single-page, print-ready quick reference. Just the facts — a review
+        before your interview on JS, TypeScript, Angular, RxJS and engineering principles. Print it (the sidebar hides automatically).</span><span data-lang="ru">Плотный, одностраничный, готовый к печати краткий справочник. Только факты — повторение
+        перед собеседованием по JS, TypeScript, Angular, RxJS и инженерным принципам. Распечатайте (боковая панель скроется автоматически).</span></p>
       <button class="btn-done" data-page="cheatsheet" onclick="markDone('cheatsheet')">✓ Отметить как пройдено</button>
     </div>
 
     <div class="search-bar">
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
+
+    <div class="lang-block" data-lang="en">
+
+    <!-- ===================== 1. ARRAY METHODS ===================== -->
+    <section data-searchable>
+      <h2 id="array-methods-en">1. Array methods — mutating vs. pure</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>❌ MUTATE the original</th><th>✅ PURE / return a new array</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>push</code>, <code>pop</code>, <code>shift</code>, <code>unshift</code>, <code>splice</code>, <code>sort</code>, <code>reverse</code>, <code>fill</code>, <code>copyWithin</code></td>
+              <td><code>map</code>, <code>filter</code>, <code>slice</code>, <code>concat</code>, <code>flat</code>, <code>flatMap</code>, <code>reduce</code>, <code>find</code>, <code>findIndex</code>, <code>some</code>, <code>every</code>, <code>includes</code>, <code>indexOf</code>, <code>join</code>, <code>at</code>, <code>toSorted</code>, <code>toReversed</code>, <code>toSpliced</code>, <code>with</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><code>sort</code> defaults to lexicographic string comparison; pass <code>(a,b)=&gt;a-b</code> for numbers.</li>
+        <li>Immutable equivalents (ES2023): <code>toSorted</code>, <code>toReversed</code>, <code>toSpliced</code>, <code>with</code>.</li>
+        <li>OnPush / NgRx require a <strong>new reference</strong> → never mutate, use spread.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 2. RXJS OPERATORS ===================== -->
+    <section data-searchable>
+      <h2 id="rxjs-operators-en">2. RxJS operators quick table</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Operator</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>of</code></td><td>Synchronously emits the listed values, then completes.</td></tr>
+            <tr><td><code>from</code></td><td>Turns an array / Promise / iterable / Observable into a stream.</td></tr>
+            <tr><td><code>map</code></td><td>Transforms each emitted value.</td></tr>
+            <tr><td><code>switchMap</code></td><td>Maps to an inner Observable; cancels the previous one on each new value.</td></tr>
+            <tr><td><code>mergeMap</code></td><td>Maps to an inner Observable; runs them all in parallel.</td></tr>
+            <tr><td><code>concatMap</code></td><td>Maps to an inner Observable; queues them, one at a time, in order.</td></tr>
+            <tr><td><code>exhaustMap</code></td><td>Maps to an inner Observable; ignores new values while the current one is active.</td></tr>
+            <tr><td><code>filter</code></td><td>Passes through only values that satisfy the predicate.</td></tr>
+            <tr><td><code>debounceTime</code></td><td>Emits only after N ms of silence (waits for a lull).</td></tr>
+            <tr><td><code>throttleTime</code></td><td>Emits the first value, then ignores for N ms.</td></tr>
+            <tr><td><code>distinctUntilChanged</code></td><td>Skips consecutive duplicate values.</td></tr>
+            <tr><td><code>take</code></td><td>Emits the first N values, then completes.</td></tr>
+            <tr><td><code>takeUntil</code></td><td>Emits until a notifier Observable fires; then completes.</td></tr>
+            <tr><td><code>takeUntilDestroyed</code></td><td>Auto-unsubscribes when the injection context / component is destroyed.</td></tr>
+            <tr><td><code>combineLatest</code></td><td>Emits an array of the latest values whenever any source emits.</td></tr>
+            <tr><td><code>forkJoin</code></td><td>Waits for all sources to complete, then emits their last values once.</td></tr>
+            <tr><td><code>withLatestFrom</code></td><td>On each source emit, appends the latest values of the other streams.</td></tr>
+            <tr><td><code>startWith</code></td><td>Emits an initial value before the source starts.</td></tr>
+            <tr><td><code>scan</code></td><td>Reduces over time, emitting each intermediate accumulator.</td></tr>
+            <tr><td><code>catchError</code></td><td>Handles an error; returns a fallback / recovery Observable.</td></tr>
+            <tr><td><code>retry</code></td><td>Re-subscribes to the source N times on error.</td></tr>
+            <tr><td><code>tap</code></td><td>Runs side effects without changing the stream.</td></tr>
+            <tr><td><code>finalize</code></td><td>Runs cleanup on completion or error (e.g. hide a spinner).</td></tr>
+            <tr><td><code>shareReplay</code></td><td>Multicasts and replays the last N emits to late subscribers.</td></tr>
+            <tr><td><code>mergeAll</code></td><td>Flattens a higher-order Observable by subscribing to all inner ones.</td></tr>
+            <tr><td><code>delay</code></td><td>Shifts all emits in time by N ms.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 3. FLATTENING OPERATORS ===================== -->
+    <section data-searchable>
+      <h2 id="flattening-en">3. switchMap vs mergeMap vs concatMap vs exhaustMap</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Operator</th><th>Behavior</th><th>Typical use</th></tr></thead>
+          <tbody>
+            <tr><td><code>switchMap</code></td><td>Cancels the previous inner when a new value arrives.</td><td>Autocomplete / type-ahead search, latest wins.</td></tr>
+            <tr><td><code>mergeMap</code></td><td>Runs all inner Observables in parallel, no ordering.</td><td>Independent parallel requests.</td></tr>
+            <tr><td><code>concatMap</code></td><td>Queues inners, runs strictly one at a time in order.</td><td>Sequential writes / ordered saves.</td></tr>
+            <tr><td><code>exhaustMap</code></td><td>Ignores new values while an inner is running.</td><td>Login button / double-submit protection.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 4. SUBJECT TYPES ===================== -->
+    <section data-searchable>
+      <h2 id="subjects-en">4. Subject types</h2>
+      <ul>
+        <li><code>Subject</code> — multicast, no initial value; subscribers receive only values emitted <em>after</em> they subscribe.</li>
+        <li><code>BehaviorSubject</code> — requires an initial value, replays the latest value to each new subscriber.</li>
+        <li><code>ReplaySubject</code> — replays the last N (or all, within a time window) values to new subscribers.</li>
+        <li><code>AsyncSubject</code> — emits only the final value, and only after the source completes.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 5. LIFECYCLE HOOKS ===================== -->
+    <section data-searchable>
+      <h2 id="lifecycle-en">5. Lifecycle hooks (in order)</h2>
+      <ol>
+        <li><code>ngOnChanges</code> — an input changed.</li>
+        <li><code>ngOnInit</code> — initialization.</li>
+        <li><code>ngDoCheck</code> — custom change detection.</li>
+        <li><code>ngAfterContentInit</code> — projected content is ready.</li>
+        <li><code>ngAfterContentChecked</code> — projected content checked.</li>
+        <li><code>ngAfterViewInit</code> — view is ready.</li>
+        <li><code>ngAfterViewChecked</code> — view checked.</li>
+        <li><code>ngOnDestroy</code> — cleanup.</li>
+      </ol>
+      <p class="qa-line">Modern alternatives: <code>afterNextRender</code>, <code>afterRender</code> (browser-only DOM work).</p>
+    </section>
+
+    <!-- ===================== 6. ONPUSH TRIGGERS ===================== -->
+    <section data-searchable>
+      <h2 id="onpush-en">6. OnPush change detection triggers</h2>
+      <ul>
+        <li>An <code>@Input()</code> reference changes (new object/array, not a mutation).</li>
+        <li>A DOM event fires from the component or its template.</li>
+        <li>An <code>async</code> pipe (or signal) bound in the template emits a new value.</li>
+        <li>Change detection is triggered manually via <code>ChangeDetectorRef.markForCheck()</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 7. SIGNALS API ===================== -->
+    <section data-searchable>
+      <h2 id="signals-en">7. Signals API</h2>
+      <ul>
+        <li><code>signal(v)</code> — writable reactive value; read via <code>s()</code>, updated via <code>set</code> / <code>update</code>.</li>
+        <li><code>computed(fn)</code> — derived, memoized, read-only signal, recomputed lazily.</li>
+        <li><code>effect(fn)</code> — runs a side effect whenever any read signal changes.</li>
+        <li><code>toSignal(obs$)</code> — converts an Observable into a signal (auto-unsubscribe).</li>
+        <li><code>toObservable(sig)</code> — converts a signal into an Observable.</li>
+        <li><code>input()</code> — signal-based component input (<code>input.required&lt;T&gt;()</code> for required).</li>
+        <li><code>model()</code> — two-way bindable input signal (<code>[(value)]</code>).</li>
+        <li><code>linkedSignal()</code> — writable signal that resets from a computed source.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 8. DI PROVIDERS ===================== -->
+    <section data-searchable>
+      <h2 id="di-providers-en">8. DI provider types</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Provider</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>useClass</code></td><td>Instantiates the given class for the token.</td></tr>
+            <tr><td><code>useValue</code></td><td>Provides a ready-made constant / object value.</td></tr>
+            <tr><td><code>useFactory</code></td><td>Calls a factory function (with <code>deps</code>) to create the value.</td></tr>
+            <tr><td><code>useExisting</code></td><td>Aliases one token to another already-registered token.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 9. SOLID ===================== -->
+    <section data-searchable>
+      <h2 id="solid-en">9. SOLID</h2>
+      <ul>
+        <li><strong>S</strong> — Single Responsibility: a class/module should have one reason to change.</li>
+        <li><strong>O</strong> — Open/Closed: open for extension, closed for modification.</li>
+        <li><strong>L</strong> — Liskov Substitution: subtypes must be usable wherever the base type is expected.</li>
+        <li><strong>I</strong> — Interface Segregation: prefer many small interfaces over one large one.</li>
+        <li><strong>D</strong> — Dependency Inversion: depend on abstractions, not implementations.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 10. COMMON Q&A ===================== -->
+    <section data-searchable>
+      <h2 id="qa-en">10. Common interview questions</h2>
+      <p class="qa-line"><strong>Q1.</strong> <code>==</code> vs <code>===</code>? <strong>A:</strong> <code>===</code> compares value+type without coercion; <code>==</code> coerces first — always use <code>===</code>.</p>
+      <p class="qa-line"><strong>Q2.</strong> <code>null</code> vs <code>undefined</code>? <strong>A:</strong> <code>undefined</code> = not assigned; <code>null</code> = intentionally empty value.</p>
+      <p class="qa-line"><strong>Q3.</strong> What is a closure? <strong>A:</strong> A function that retains access to its outer lexical scope even after that scope has returned.</p>
+      <p class="qa-line"><strong>Q4.</strong> <code>let</code> vs <code>var</code>? <strong>A:</strong> <code>let</code> is block-scoped with a TDZ; <code>var</code> is function-scoped and hoisted as <code>undefined</code>.</p>
+      <p class="qa-line"><strong>Q5.</strong> Microtask vs macrotask? <strong>A:</strong> Promises = microtasks (processed first); <code>setTimeout</code> = macrotasks (one per event-loop tick).</p>
+      <p class="qa-line"><strong>Q6.</strong> Arrow vs regular function? <strong>A:</strong> Arrows have no own <code>this</code>/<code>arguments</code>; they bind <code>this</code> lexically.</p>
+      <p class="qa-line"><strong>Q7.</strong> <code>interface</code> vs <code>type</code>? <strong>A:</strong> Interfaces merge and extend (objects); types do unions/intersections/primitives.</p>
+      <p class="qa-line"><strong>Q8.</strong> <code>any</code> vs <code>unknown</code>? <strong>A:</strong> <code>any</code> disables checks; <code>unknown</code> is safe — you must narrow before using it.</p>
+      <p class="qa-line"><strong>Q9.</strong> <code>readonly</code> vs <code>const</code>? <strong>A:</strong> <code>const</code> locks the binding; <code>readonly</code> locks a property at compile time.</p>
+      <p class="qa-line"><strong>Q10.</strong> Component vs Directive? <strong>A:</strong> A component has a template; a directive adds behavior to an existing element.</p>
+      <p class="qa-line"><strong>Q11.</strong> Standalone vs NgModule? <strong>A:</strong> Standalone components declare their own <code>imports</code>, no module needed (default in v17+).</p>
+      <p class="qa-line"><strong>Q12.</strong> Constructor vs <code>ngOnInit</code>? <strong>A:</strong> Constructor = DI setup; <code>ngOnInit</code> = initialization after inputs are set.</p>
+      <p class="qa-line"><strong>Q13.</strong> <code>ViewChild</code> vs <code>ContentChild</code>? <strong>A:</strong> <code>ViewChild</code> queries your own template; <code>ContentChild</code> queries projected content.</p>
+      <p class="qa-line"><strong>Q14.</strong> Template-driven vs reactive forms? <strong>A:</strong> Template-driven = directive-based in HTML; reactive = explicit model in TS (testable, scalable).</p>
+      <p class="qa-line"><strong>Q15.</strong> <code>Subject</code> vs <code>BehaviorSubject</code>? <strong>A:</strong> <code>BehaviorSubject</code> requires an initial value and replays the latest to new subscribers.</p>
+      <p class="qa-line"><strong>Q16.</strong> Cold vs hot Observable? <strong>A:</strong> Cold restarts for each subscriber (HTTP); hot is shared/multicast (Subject, events).</p>
+      <p class="qa-line"><strong>Q17.</strong> How to avoid memory leaks? <strong>A:</strong> Unsubscribe via <code>takeUntilDestroyed</code>, the <code>async</code> pipe, or <code>take(1)</code>.</p>
+      <p class="qa-line"><strong>Q18.</strong> <code>switchMap</code> vs <code>mergeMap</code>? <strong>A:</strong> <code>switchMap</code> cancels the previous inner; <code>mergeMap</code> runs them all in parallel.</p>
+      <p class="qa-line"><strong>Q19.</strong> What is change detection? <strong>A:</strong> Angular checking bindings to sync the model with the DOM (Zone.js or signals).</p>
+      <p class="qa-line"><strong>Q20.</strong> Lazy loading? <strong>A:</strong> Loading route bundles on demand via <code>loadComponent</code> / <code>loadChildren</code> to shrink the initial bundle.</p>
+    </section>
+
+    <!-- ===================== 11. HTTP METHODS ===================== -->
+    <section data-searchable>
+      <h2 id="http-methods-en">11. HTTP methods</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Method</th><th>Idempotent</th><th>Safe</th><th>Body</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>POST</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>PUT</code></td><td>✅</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>PATCH</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
+            <tr><td><code>DELETE</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td><code>HEAD</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td><code>OPTIONS</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="qa-line"><strong>Safe</strong> = read-only, no change to server state. <strong>Idempotent</strong> = repeating the request yields the same result.</p>
+    </section>
+
+    <!-- ===================== 12. GUARD TYPES ===================== -->
+    <section data-searchable>
+      <h2 id="guards-en">12. Router guard types</h2>
+      <ul>
+        <li><code>canActivate</code> — allows/blocks navigation <em>into</em> a route.</li>
+        <li><code>canActivateChild</code> — allows/blocks navigation into <em>child</em> routes.</li>
+        <li><code>canDeactivate</code> — allows/blocks <em>leaving</em> a route (e.g. unsaved-changes warning).</li>
+        <li><code>canMatch</code> — decides whether a route definition matches at all (replaces <code>canLoad</code>; controls lazy bundles).</li>
+        <li><code>resolve</code> — pre-fetches data before the route activates.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 13. CONTROL FLOW ===================== -->
+    <section data-searchable>
+      <h2 id="control-flow-en">13. Control flow in Angular 17+</h2>
+      <ul>
+        <li><code>@if (cond) { } @else if () { } @else { }</code> — conditional rendering (replaces <code>*ngIf</code>).</li>
+        <li><code>@for (item of items; track item.id) { }</code> — loop; <code>track</code> is required (replaces <code>*ngFor</code>).</li>
+        <li><code>@empty { }</code> — fallback block shown when the <code>@for</code> collection is empty.</li>
+        <li><code>@switch (val) { @case (x) {} @default {} }</code> — multi-way branching (replaces <code>*ngSwitch</code>).</li>
+        <li><code>@defer (on viewport) { } @placeholder { } @loading { } @error { }</code> — lazy-load a template block.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 14. GOF PATTERNS ===================== -->
+    <section data-searchable>
+      <h2 id="patterns-en">14. GoF patterns in Angular</h2>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Pattern</th><th>In Angular</th></tr></thead>
+          <tbody>
+            <tr><td>Observer</td><td>RxJS Observable / Subject pushing values to subscribers.</td></tr>
+            <tr><td>Factory</td><td><code>useFactory</code> providers creating dependencies.</td></tr>
+            <tr><td>Decorator</td><td>Metadata decorators <code>@Component</code>, <code>@Injectable</code>, <code>@Input</code>.</td></tr>
+            <tr><td>Strategy</td><td>Interchangeable algorithms injected via tokens (e.g. validators, CD strategy).</td></tr>
+            <tr><td>Command</td><td>NgRx actions / dispatched effects encapsulating a request.</td></tr>
+            <tr><td>Proxy</td><td>HTTP interceptors wrapping and intercepting requests.</td></tr>
+            <tr><td>Chain of Responsibility</td><td>Interceptor and guard chains passing control along.</td></tr>
+            <tr><td>Singleton</td><td><code>providedIn: 'root'</code> services — one instance per app.</td></tr>
+            <tr><td>Template Method</td><td>Lifecycle hooks invoked by the framework in a fixed sequence.</td></tr>
+            <tr><td>Facade</td><td>A service exposing a simple API over complex store/state logic.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15. OOP PRINCIPLES ===================== -->
+    <section data-searchable>
+      <h2 id="oop-en">15. OOP principles</h2>
+      <ul>
+        <li><strong>Encapsulation</strong> — bundles state and behavior, hides internals behind a public API (<code>#private</code>).</li>
+        <li><strong>Abstraction</strong> — exposes <em>what</em> an object does, hides <em>how</em> it does it.</li>
+        <li><strong>Inheritance</strong> — derives a class from another to reuse and extend behavior (<code>extends</code>).</li>
+        <li><strong>Polymorphism</strong> — one interface, many implementations; behavior resolved at call time.</li>
+      </ul>
+    </section>
+
+    </div>
+    <div class="lang-block" data-lang="ru">
 
     <!-- ===================== 1. ARRAY METHODS ===================== -->
     <section data-searchable>
@@ -343,10 +607,12 @@
       </ul>
     </section>
 
+    </div>
+
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="communication.html" class="btn-nav">← Общение с клиентом</a>
-      <a href="../index.html" class="btn-nav">Главная →</a>
+      <a href="communication.html" class="btn-nav">← <span data-lang="en">Client Comms</span><span data-lang="ru">Общение с клиентом</span></a>
+      <a href="../index.html" class="btn-nav"><span data-lang="en">Dashboard</span><span data-lang="ru">Главная</span> →</a>
     </div>
   </main>
 

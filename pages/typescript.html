@@ -57,13 +57,14 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>TypeScript</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">TypeScript</span><span data-lang="ru">TypeScript</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>TypeScript</h1>
-      <p class="page-desc">Система типов, на которой работает Angular: дженерики, утилитарные типы, размеченные
-        объединения, защитники типов, декораторы и инструментарий <code>keyof</code> / mapped-типов.</p>
+      <h1><span data-lang="en">TypeScript</span><span data-lang="ru">TypeScript</span></h1>
+      <p class="page-desc"><span data-lang="en">The type system Angular runs on: generics, utility types, discriminated
+        unions, type guards, decorators, and the <code>keyof</code> / mapped-type toolkit.</span><span data-lang="ru">Система типов, на которой работает Angular: дженерики, утилитарные типы, размеченные
+        объединения, защитники типов, декораторы и инструментарий <code>keyof</code> / mapped-типов.</span></p>
       <button class="btn-done" data-page="typescript" onclick="markDone('typescript')">✓ Отметить как пройдено</button>
     </div>
 
@@ -71,6 +72,619 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= GENERICS ============================= -->
+    <section data-searchable>
+      <h2 id="generics-en">Generics</h2>
+      <p class="definition"><strong>A generic</strong> is a type parameter (a placeholder such as <code>T</code>) that is filled in at the point of use, letting one definition work safely with many concrete types without losing type information.</p>
+
+      <p>Generics replace <code>any</code>: instead of throwing type information away, you <em>thread it through your code</em>.
+        The caller decides which concrete type to use, and the compiler checks every use against it.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// The canonical identity function — T is inferred from the argument
+function identity&lt;T&gt;(value: T): T {
+  return value;
+}
+
+const a = identity&lt;number&gt;(42);   // a: number
+const b = identity('EURUSD');      // b: string (T inferred as string)
+
+// Without generics you lose the type:
+function bad(value: any): any { return value; } // ❌ no safety</code></pre></div>
+
+      <h3 id="generic-constraints-en">Generic constraints</h3>
+      <p class="definition"><strong>A generic constraint</strong> is a <code>T extends X</code> expression that limits the allowed types of a parameter, so the function body can safely rely on the members of <code>X</code>.</p>
+
+      <div class="card">
+        <p class="definition"><strong>&lt;T extends object&gt;</strong> — allows object types only, blocking primitives.</p>
+        <p class="definition"><strong>&lt;K extends keyof T&gt;</strong> — constrains <code>K</code> to the literal keys of <code>T</code>, enabling type-safe property access.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface Order {
+  id: number;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  price: number;
+  status: 'NEW' | 'FILLED' | 'CANCELLED';
+}
+
+// Constrain to objects only
+function logKeys&lt;T extends object&gt;(obj: T): (keyof T)[] {
+  return Object.keys(obj) as (keyof T)[];
+}
+
+// K must be a real key of T → return type is precise
+function getProp&lt;T, K extends keyof T&gt;(obj: T, key: K): T[K] {
+  return obj[key];
+}
+
+const order: Order = { id: 1, symbol: 'EURUSD', side: 'BUY', quantity: 100, price: 1.07, status: 'NEW' };
+const side = getProp(order, 'side');   // side: 'BUY' | 'SELL'
+// getProp(order, 'foo');              // ❌ compile error — 'foo' is not a key</code></pre></div>
+      </div>
+
+      <h3 id="generic-defaults-en">Generic defaults</h3>
+      <p class="definition"><strong>A generic default</strong> is a fallback type (<code>&lt;T = string&gt;</code>) used when the caller passes no type argument and the compiler cannot infer one.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface ApiResponse&lt;T = unknown&gt; {
+  data: T;
+  status: number;
+}
+
+const r1: ApiResponse = { data: 'ok', status: 200 };          // T defaults to unknown
+const r2: ApiResponse&lt;Order[]&gt; = { data: [], status: 200 };    // explicit T</code></pre></div>
+
+      <h3 id="generics-interfaces-classes-en">Generics in interfaces and classes</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Generic interface
+interface Repository&lt;T&gt; {
+  getById(id: number): T | undefined;
+  add(item: T): void;
+}
+
+// Generic class implementing it
+class InMemoryStore&lt;T extends { id: number }&gt; implements Repository&lt;T&gt; {
+  private items = new Map&lt;number, T&gt;();
+  getById(id: number): T | undefined { return this.items.get(id); }
+  add(item: T): void { this.items.set(item.id, item); }
+}
+
+const orders = new InMemoryStore&lt;Order&gt;();
+orders.add(order);
+const found = orders.getById(1); // found: Order | undefined</code></pre></div>
+
+      <h3 id="generics-angular-en">Generics in Angular</h3>
+      <p>Angular's entire public API is generic, and this is where the concept pays off every day.</p>
+      <div class="card">
+        <p class="definition"><strong>Observable&lt;T&gt;</strong> — a stream whose emitted values are typed as <code>T</code>.</p>
+        <p class="definition"><strong>HttpClient.get&lt;User[]&gt;()</strong> — the generic argument tells <code>HttpClient</code> the shape of the response body, so the returned <code>Observable</code> is typed.</p>
+        <p class="definition"><strong>signal&lt;number&gt;(0)</strong> — a writable signal whose value type is <code>number</code>.</p>
+        <p class="definition"><strong>BehaviorSubject&lt;Order[]&gt;</strong> — a subject that stores and replays a current value of type <code>Order[]</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { HttpClient } from '@angular/common/http';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { signal, inject } from '@angular/core';
+
+class OrderService {
+  private http = inject(HttpClient);
+
+  // The &lt;Order[]&gt; flows all the way to the subscriber
+  getOrders(): Observable&lt;Order[]&gt; {
+    return this.http.get&lt;Order[]&gt;('/api/orders');
+  }
+
+  // Holds current value, typed Order[]
+  private orders$ = new BehaviorSubject&lt;Order[]&gt;([]);
+
+  // A signal of number, fully typed
+  count = signal&lt;number&gt;(0);
+}</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>Interview signal:</strong> always pass the generic to <code>http.get&lt;T&gt;()</code>. Forget it and the response becomes <code>Object</code>, and every downstream <code>.map()</code> loses type safety.</p></div>
+    </section>
+
+    <!-- ============================= UTILITY TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="utility-types-en">Utility types</h2>
+      <p class="definition"><strong>A utility type</strong> is a built-in generic type that transforms an existing type into a new one (makes fields optional, picks keys, infers return types, and so on) so you don't have to hand-write derived shapes.</p>
+
+      <div class="card">
+        <h4><code>Partial&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Partial&lt;T&gt;</strong> — makes every property of <code>T</code> optional.</p>
+        <p><strong>When to use:</strong> update DTOs and PATCH requests where the caller sends only the changed fields.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">function updateOrder(id: number, changes: Partial&lt;Order&gt;): void { /* ... */ }
+updateOrder(1, { price: 1.085, status: 'FILLED' }); // only the fields that changed</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Required&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Required&lt;T&gt;</strong> — makes every property of <code>T</code> required (removes <code>?</code>).</p>
+        <p><strong>When to use:</strong> asserting that a config object assembled from optional parts is now fully populated.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface ChartConfig { theme?: string; gridlines?: boolean; }
+function render(cfg: Required&lt;ChartConfig&gt;): void { /* theme & gridlines guaranteed */ }</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Readonly&lt;T&gt;</code></h4>
+        <p class="definition"><strong>Readonly&lt;T&gt;</strong> — marks every property of <code>T</code> as <code>readonly</code>, blocking reassignment.</p>
+        <p><strong>When to use:</strong> immutable state objects (NgRx) where mutation is a bug.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">const frozenOrder: Readonly&lt;Order&gt; = order;
+// frozenOrder.price = 2; // ❌ Cannot assign to 'price' because it is read-only</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Pick&lt;T, K&gt;</code></h4>
+        <p class="definition"><strong>Pick&lt;T, K&gt;</strong> — builds a type containing only the keys <code>K</code> from <code>T</code>.</p>
+        <p><strong>When to use:</strong> a lightweight view/summary of a larger model.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type OrderSummary = Pick&lt;Order, 'id' | 'symbol' | 'status'&gt;;
+const summary: OrderSummary = { id: 1, symbol: 'EURUSD', status: 'NEW' };</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Omit&lt;T, K&gt;</code></h4>
+        <p class="definition"><strong>Omit&lt;T, K&gt;</strong> — builds a type with all keys of <code>T</code> <em>except</em> <code>K</code>.</p>
+        <p><strong>When to use:</strong> a create DTO that drops server-generated fields, such as <code>id</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Client sends everything except the server-assigned id
+type CreateOrder = Omit&lt;Order, 'id'&gt;;
+const draft: CreateOrder = { symbol: 'BTCUSD', side: 'BUY', quantity: 2, price: 65000, status: 'NEW' };</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Record&lt;K, V&gt;</code></h4>
+        <p class="definition"><strong>Record&lt;K, V&gt;</strong> — builds an object type whose keys are <code>K</code> and whose values are all <code>V</code>.</p>
+        <p><strong>When to use:</strong> dictionaries / lookup maps keyed by id or symbol.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+
+// A live price map keyed by symbol
+const priceMap: Record&lt;string, Quote&gt; = {
+  EURUSD: { symbol: 'EURUSD', bid: 1.07, ask: 1.0702, timestamp: Date.now() },
+  BTCUSD: { symbol: 'BTCUSD', bid: 64990, ask: 65010, timestamp: Date.now() },
+};
+const eur = priceMap['EURUSD']; // Quote</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>NonNullable&lt;T&gt;</code></h4>
+        <p class="definition"><strong>NonNullable&lt;T&gt;</strong> — removes <code>null</code> and <code>undefined</code> from <code>T</code>.</p>
+        <p><strong>When to use:</strong> after a type guard, to express that a value can no longer be nullish.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type MaybeQuote = Quote | null | undefined;
+type DefiniteQuote = NonNullable&lt;MaybeQuote&gt;; // Quote</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>ReturnType&lt;F&gt;</code></h4>
+        <p class="definition"><strong>ReturnType&lt;F&gt;</strong> — extracts the return type of a function type <code>F</code>.</p>
+        <p><strong>When to use:</strong> deriving a type from a factory/selector instead of duplicating it.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">function buildPosition(symbol: string, qty: number) {
+  return { symbol, quantity: qty, avgPrice: 0, unrealizedPnl: 0 };
+}
+type Position = ReturnType&lt;typeof buildPosition&gt;; // { symbol; quantity; avgPrice; unrealizedPnl }</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Parameters&lt;F&gt;</code></h4>
+        <p class="definition"><strong>Parameters&lt;F&gt;</strong> — extracts the parameter types of a function type <code>F</code> as a tuple.</p>
+        <p><strong>When to use:</strong> wrapping/decorating a function while preserving its exact argument list.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type BuildArgs = Parameters&lt;typeof buildPosition&gt;; // [symbol: string, qty: number]
+
+function logged(...args: BuildArgs): Position {
+  console.log('building', args);
+  return buildPosition(...args);
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Exclude&lt;T, U&gt;</code></h4>
+        <p class="definition"><strong>Exclude&lt;T, U&gt;</strong> — removes from the union <code>T</code> the members assignable to <code>U</code>.</p>
+        <p><strong>When to use:</strong> narrowing a status union to a subset of states.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type Status = 'NEW' | 'FILLED' | 'CANCELLED';
+type ActiveStatus = Exclude&lt;Status, 'CANCELLED'&gt;; // 'NEW' | 'FILLED'</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Extract&lt;T, U&gt;</code></h4>
+        <p class="definition"><strong>Extract&lt;T, U&gt;</strong> — keeps from the union <code>T</code> only the members assignable to <code>U</code>. The opposite of <code>Exclude</code>.</p>
+        <p><strong>When to use:</strong> extracting one shape from a discriminated union by its tag.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type Side = 'BUY' | 'SELL' | 'HOLD';
+type Tradable = Extract&lt;Side, 'BUY' | 'SELL'&gt;; // 'BUY' | 'SELL'</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>InstanceType&lt;T&gt;</code></h4>
+        <p class="definition"><strong>InstanceType&lt;T&gt;</strong> — extracts the instance type produced by a constructor type <code>T</code>.</p>
+        <p><strong>When to use:</strong> typing a value created from a class reference (for example, a DI token class).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">class OrderBook { orders: Order[] = []; }
+type Book = InstanceType&lt;typeof OrderBook&gt;; // OrderBook
+const b: Book = new OrderBook();</code></pre></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Utility</th><th>Transformation</th><th>Typical FinTech use</th></tr></thead>
+          <tbody>
+            <tr><td><code>Partial&lt;T&gt;</code></td><td>All optional</td><td>Update DTO</td></tr>
+            <tr><td><code>Required&lt;T&gt;</code></td><td>All required</td><td>Resolved config</td></tr>
+            <tr><td><code>Readonly&lt;T&gt;</code></td><td>All read-only</td><td>Immutable state</td></tr>
+            <tr><td><code>Pick&lt;T,K&gt;</code></td><td>Subset of keys</td><td>Order summary</td></tr>
+            <tr><td><code>Omit&lt;T,K&gt;</code></td><td>All but keys</td><td>Create DTO (no id)</td></tr>
+            <tr><td><code>Record&lt;K,V&gt;</code></td><td>Key→value map</td><td>Quote price map</td></tr>
+            <tr><td><code>NonNullable&lt;T&gt;</code></td><td>Remove null/undefined</td><td>Value after a guard</td></tr>
+            <tr><td><code>ReturnType&lt;F&gt;</code></td><td>Function result</td><td>Selector result type</td></tr>
+            <tr><td><code>Parameters&lt;F&gt;</code></td><td>Function argument tuple</td><td>Wrapper functions</td></tr>
+            <tr><td><code>Exclude&lt;T,U&gt;</code></td><td>Remove union members</td><td>Active statuses</td></tr>
+            <tr><td><code>Extract&lt;T,U&gt;</code></td><td>Keep union members</td><td>Tradable sides</td></tr>
+            <tr><td><code>InstanceType&lt;T&gt;</code></td><td>Constructor → instance</td><td>Typing a token class</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================= TYPE VS INTERFACE ============================= -->
+    <section data-searchable>
+      <h2 id="type-vs-interface-en">type vs interface</h2>
+      <p class="definition"><strong>interface</strong> — a named contract describing the shape of an object or class, which supports declaration merging and <code>extends</code>.</p>
+      <p class="definition"><strong>type alias</strong> — a name for <em>any</em> type, including unions, intersections, tuples, primitives, and mapped types.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Feature</th><th><code>type</code></th><th><code>interface</code></th></tr></thead>
+          <tbody>
+            <tr><td>Object shape</td><td>✅</td><td>✅</td></tr>
+            <tr><td>Union types</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Intersection</td><td><code>&amp;</code></td><td><code>extends</code></td></tr>
+            <tr><td>Declaration merging</td><td>❌</td><td>✅</td></tr>
+            <tr><td>Primitive alias</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Tuple</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Mapped types</td><td>✅</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// interface — object/class contracts, can be merged & extended
+interface Instrument {
+  symbol: string;
+  type: 'FOREX' | 'STOCK' | 'CRYPTO';
+  price: number;
+  change: number;
+}
+interface Instrument { exchange?: string; } // declaration merging — now also has exchange
+
+// type — unions, intersections, tuples, primitives
+type Side = 'BUY' | 'SELL';                       // union (interface cannot)
+type PricedInstrument = Instrument &amp; { vwap: number }; // intersection
+type OHLC = [number, number, number, number];     // tuple
+type Symbol = string;                             // primitive alias</code></pre></div>
+
+      <div class="success"><p><strong>Rule of thumb:</strong> use <strong>interface</strong> for models and class contracts (extensible, supports merging, clearer errors); use <strong>type</strong> for unions, intersections, tuples, and utility-type aliases.</p></div>
+    </section>
+
+    <!-- ============================= DISCRIMINATED UNIONS ============================= -->
+    <section data-searchable>
+      <h2 id="discriminated-unions-en">Discriminated unions</h2>
+      <p class="definition"><strong>A discriminated union</strong> is a union of object types that all share a common literal "tag" property, which lets the compiler narrow the type to a single specific member as soon as you check the tag.</p>
+
+      <p>The shared literal field (here <code>type</code>) is the <em>discriminant</em>. A <code>switch</code> on it
+        narrows each branch to a single member, so <code>payload</code> is correctly typed in every case — ideal for
+        handling WebSocket messages in a trading platform.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+interface Order { id: number; symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number; status: string; }
+
+// Each member shares a literal `type` discriminant
+type ApiEvent =
+  | { type: 'quote'; payload: Quote }
+  | { type: 'order'; payload: Order }
+  | { type: 'error'; message: string };
+
+function handle(event: ApiEvent): void {
+  switch (event.type) {
+    case 'quote':
+      // event narrowed to { type: 'quote'; payload: Quote }
+      updateTicker(event.payload.symbol, event.payload.bid);
+      break;
+    case 'order':
+      // event.payload is Order here
+      console.log('order filled', event.payload.id);
+      break;
+    case 'error':
+      // no payload on this member — only message
+      console.error(event.message);
+      break;
+  }
+}
+
+// Real usage: parse incoming WebSocket frames
+socket.onmessage = (e: MessageEvent) =&gt; handle(JSON.parse(e.data) as ApiEvent);</code></pre></div>
+      <div class="tip"><p><strong>Why senior teams love it:</strong> adding a new message variant forces every <code>switch</code> to handle it (with an exhaustive <code>never</code> default — see below), turning a runtime bug into a compile-time error.</p></div>
+    </section>
+
+    <!-- ============================= NEVER / UNKNOWN / ANY ============================= -->
+    <section data-searchable>
+      <h2 id="never-unknown-any-en">never, unknown, any</h2>
+      <div class="card">
+        <p class="definition"><strong>any</strong> — completely disables type checking; any operation is allowed and type errors are suppressed. Avoid it — it's a hole in the type system.</p>
+        <p class="definition"><strong>unknown</strong> — the type-safe counterpart of <code>any</code>: it accepts any value but lets you do <em>nothing</em> with it until you narrow it with a type guard.</p>
+        <p class="definition"><strong>never</strong> — a type with no possible values; used for functions that never return control (throw/loop forever) and to prove a switch is exhaustive.</p>
+      </div>
+
+      <div class="danger"><p><strong>Why <code>any</code> is bad:</strong> it spreads silently — a single <code>any</code> can disable type checking across an entire call chain.</p></div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">const raw: any = JSON.parse('{}');
+raw.foo.bar.baz();        // compiles, then explodes at runtime — no safety
+
+// unknown forces you to check first
+const safe: unknown = JSON.parse('{}');
+// safe.foo;              // ❌ compile error — must narrow
+if (typeof safe === 'object' &amp;&amp; safe !== null &amp;&amp; 'symbol' in safe) {
+  console.log((safe as Quote).symbol); // ✅ only after narrowing
+}</code></pre></div>
+
+      <h3 id="exhaustive-never-en">Exhaustive checks with <code>never</code></h3>
+      <p>The <code>assertNever</code> pattern: in the <code>default</code> branch, assign the value to <code>never</code>.
+        If a new union member is added but not handled, the assignment fails to compile.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">function assertNever(x: never): never {
+  throw new Error('Unhandled case: ' + JSON.stringify(x));
+}
+
+function describe(event: ApiEvent): string {
+  switch (event.type) {
+    case 'quote': return 'quote ' + event.payload.symbol;
+    case 'order': return 'order ' + event.payload.id;
+    case 'error': return 'error ' + event.message;
+    default:
+      // If a new ApiEvent variant is added, `event` is no longer `never`
+      // here and this line fails to compile — forcing you to handle it.
+      return assertNever(event);
+  }
+}</code></pre></div>
+      <div class="success"><p><strong>Senior move:</strong> combine discriminated unions with <code>assertNever</code> so the compiler guarantees every case is handled — exhaustiveness checking for free.</p></div>
+    </section>
+
+    <!-- ============================= DECORATORS ============================= -->
+    <section data-searchable>
+      <h2 id="decorators-en">Decorators</h2>
+      <p class="definition"><strong>A decorator</strong> is a function prefixed with <code>@</code> that receives metadata about the class, method, property, or parameter it annotates, and can read or modify its behavior.</p>
+      <p>Angular reads decorator metadata at build/runtime to wire up components, injection, inputs, and DOM bindings.</p>
+
+      <h3 id="class-decorators-en">Class decorators</h3>
+      <div class="card">
+        <p class="definition"><strong>@Component</strong> — declares a class as a component with a template, selector, and styles.</p>
+        <p class="definition"><strong>@Directive</strong> — declares a class as a directive that adds behavior to an existing element.</p>
+        <p class="definition"><strong>@Injectable</strong> — marks a class as available for dependency injection (and where it is provided).</p>
+        <p class="definition"><strong>@Pipe</strong> — declares a class as a template pipe that transforms a value for display.</p>
+        <p class="definition"><strong>@NgModule</strong> — declares an NgModule, grouping declarations, imports, and providers (legacy in standalone apps).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({
+  selector: 'app-ticker',
+  standalone: true,
+  template: `{{ symbol }}: {{ price | number }}`,
+})
+export class TickerComponent {
+  symbol = 'EURUSD';
+  price = 1.07;
+}
+
+@Directive({ selector: '[appHighlight]', standalone: true })
+export class HighlightDirective {}
+
+@Injectable({ providedIn: 'root' })
+export class OrderService {}
+
+@Pipe({ name: 'pnl', standalone: true })
+export class PnlPipe {
+  transform(value: number): string { return (value &gt;= 0 ? '+' : '') + value.toFixed(2); }
+}
+
+@NgModule({ declarations: [], imports: [], providers: [] })
+export class LegacyModule {}</code></pre></div>
+      </div>
+
+      <h3 id="property-method-decorators-en">Property and method decorators</h3>
+      <div class="card">
+        <p class="definition"><strong>@Input</strong> — marks a property as a bindable input the parent can set.</p>
+        <p class="definition"><strong>@Output</strong> — exposes an <code>EventEmitter</code> the child uses to emit events to the parent.</p>
+        <p class="definition"><strong>@ViewChild</strong> — queries a single element/component/directive from the component's own template.</p>
+        <p class="definition"><strong>@ContentChild</strong> — queries a single projected element from the component's <code>ng-content</code>.</p>
+        <p class="definition"><strong>@ViewChildren</strong> — queries all matching elements in the view as a <code>QueryList</code>.</p>
+        <p class="definition"><strong>@ContentChildren</strong> — queries all matching projected elements as a <code>QueryList</code>.</p>
+        <p class="definition"><strong>@HostListener</strong> — binds a method to a DOM event on the host element.</p>
+        <p class="definition"><strong>@HostBinding</strong> — binds a property/attribute/class of the host element to a component field.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({ selector: 'app-order-row', standalone: true, template: `...` })
+export class OrderRowComponent {
+  @Input() order!: Order;
+  @Output() cancel = new EventEmitter&lt;number&gt;();
+
+  @ViewChild('priceCell') priceCell!: ElementRef&lt;HTMLElement&gt;;
+  @ViewChildren(TickerComponent) tickers!: QueryList&lt;TickerComponent&gt;;
+  @ContentChild('footer') footer?: ElementRef&lt;HTMLElement&gt;;
+  @ContentChildren(OrderRowComponent) rows!: QueryList&lt;OrderRowComponent&gt;;
+
+  @HostBinding('class.filled') get isFilled() { return this.order.status === 'FILLED'; }
+
+  @HostListener('click', ['$event'])
+  onClick(e: MouseEvent): void {
+    this.cancel.emit(this.order.id);
+  }
+}</code></pre></div>
+      </div>
+
+      <h3 id="ts-decorators-en">Plain TS class and method decorators</h3>
+      <p>Outside Angular, decorators are just functions. A class decorator receives the constructor; a method decorator
+        receives the target, key, and property descriptor and can wrap the original method.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Method decorator that logs every call
+function log(_target: object, key: string, desc: PropertyDescriptor): void {
+  const original = desc.value as (...args: unknown[]) =&gt; unknown;
+  desc.value = function (...args: unknown[]): unknown {
+    console.log('call', key, args);
+    return original.apply(this, args);
+  };
+}
+
+class PriceCalc {
+  @log
+  spread(q: Quote): number { return q.ask - q.bid; }
+}</code></pre></div>
+      <div class="warn"><p>Angular uses the legacy (experimental) decorator semantics, enabled via <code>experimentalDecorators</code> in <code>tsconfig.json</code>. The new TC39 Stage-3 decorators differ in signature.</p></div>
+    </section>
+
+    <!-- ============================= TYPE GUARDS ============================= -->
+    <section data-searchable>
+      <h2 id="type-guards-en">Type guards</h2>
+      <p class="definition"><strong>A type guard</strong> is a runtime check the compiler understands, which narrows a value to a more specific type inside the guarded block.</p>
+
+      <div class="card">
+        <p class="definition"><strong>typeof guard</strong> — narrows primitives (<code>string</code>, <code>number</code>, <code>boolean</code>, <code>symbol</code>, <code>undefined</code>, <code>function</code>, <code>bigint</code>).</p>
+        <p class="definition"><strong>instanceof guard</strong> — narrows to a class by checking the prototype chain.</p>
+        <p class="definition"><strong>in guard</strong> — narrows by checking whether a property exists on an object.</p>
+        <p class="definition"><strong>Custom type predicate</strong> — a function returning <code>value is SomeType</code> that teaches the compiler how to narrow the type.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// 1. typeof — primitives
+function format(price: number | string): string {
+  if (typeof price === 'number') return price.toFixed(2); // price: number here
+  return price.trim();                                     // price: string here
+}
+
+// 2. instanceof — classes
+function report(err: unknown): void {
+  if (err instanceof Error) console.error(err.message);   // err: Error
+}
+
+// 3. in — object property presence (discriminate two shapes)
+type Result = { data: Order } | { error: string };
+function show(r: Result): void {
+  if ('error' in r) console.error(r.error);               // r: { error: string }
+  else console.log(r.data.id);                            // r: { data: Order }
+}
+
+// 4. Custom type predicate — `x is Order`
+function isOrder(x: unknown): x is Order {
+  return typeof x === 'object' &amp;&amp; x !== null
+    &amp;&amp; 'id' in x &amp;&amp; 'symbol' in x &amp;&amp; 'side' in x;
+}
+
+function process(payload: unknown): void {
+  if (isOrder(payload)) {
+    // payload is now typed Order across this block
+    console.log(payload.symbol, payload.side);
+  }
+}</code></pre></div>
+      <div class="tip"><p><strong>Interview signal:</strong> a custom predicate returns <code>x is Order</code>, not <code>boolean</code>. With a plain <code>boolean</code> the compiler does <em>not</em> narrow the type after the call.</p></div>
+    </section>
+
+    <!-- ============================= KEYOF / TYPEOF / MAPPED ============================= -->
+    <section data-searchable>
+      <h2 id="keyof-typeof-mapped-en">keyof, typeof, Mapped types</h2>
+      <div class="card">
+        <p class="definition"><strong>keyof T</strong> — produces a union of the literal property keys of <code>T</code>.</p>
+        <p class="definition"><strong>typeof variable</strong> — in a type position, infers the static type from a runtime value or constant.</p>
+        <p class="definition"><strong>Mapped type</strong> — iterates over the keys of a type (<code>{ [K in keyof T]: ... }</code>) to transform every property at once.</p>
+      </div>
+
+      <h3 id="keyof-en">keyof</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">type OrderKey = keyof Order; // 'id' | 'symbol' | 'side' | 'quantity' | 'price' | 'status'
+
+function pluck&lt;T, K extends keyof T&gt;(rows: T[], key: K): T[K][] {
+  return rows.map(r =&gt; r[key]);
+}
+const symbols = pluck(orders, 'symbol'); // string[]</code></pre></div>
+
+      <h3 id="typeof-operator-en">typeof</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Derive a type from a runtime config constant — single source of truth
+const defaultQuote = { symbol: 'EURUSD', bid: 0, ask: 0, timestamp: 0 };
+type Quote = typeof defaultQuote; // { symbol: string; bid: number; ask: number; timestamp: number }
+
+// Combine with keyof for literal-union enums
+const SIDES = { buy: 'BUY', sell: 'SELL' } as const;
+type SideValue = (typeof SIDES)[keyof typeof SIDES]; // 'BUY' | 'SELL'</code></pre></div>
+
+      <h3 id="mapped-types-en">Mapped types</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Make every field optional (this is literally how Partial is defined)
+type MyPartial&lt;T&gt; = { [K in keyof T]?: T[K] };
+
+// Make every field readonly
+type Immutable&lt;T&gt; = { readonly [K in keyof T]: T[K] };
+
+// Transform value types: wrap each field of Quote in a signal
+import { Signal } from '@angular/core';
+type Signalify&lt;T&gt; = { [K in keyof T]: Signal&lt;T[K]&gt; };
+type QuoteSignals = Signalify&lt;Quote&gt;;
+// { symbol: Signal&lt;string&gt;; bid: Signal&lt;number&gt;; ask: Signal&lt;number&gt;; timestamp: Signal&lt;number&gt; }</code></pre></div>
+      <div class="tip"><p>Most utility types (<code>Partial</code>, <code>Readonly</code>, <code>Record</code>, <code>Pick</code>) are themselves mapped types — understanding mapped types means you can read the standard library source.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Interview Questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between <code>unknown</code> and <code>any</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Both accept any value, but <code>any</code> disables type checking — you can call/access anything without an error, so bugs leak into runtime. <code>unknown</code> is type-safe: the compiler forbids any operation on it until you narrow it with a guard (<code>typeof</code>, <code>instanceof</code>, <code>in</code>, or a predicate). Use <code>unknown</code> for values of uncertain shape (for example, <code>JSON.parse</code>, caught errors), and keep <code>any</code> for demonstrating why it's dangerous.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. When would you use an <code>interface</code> over a <code>type</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Use <code>interface</code> for object/model shapes and class contracts: it supports declaration merging, <code>extends</code>, and produces clearer error messages, and Angular conventions favor it for models. Use <code>type</code> when you need a union, intersection, tuple, primitive alias, or mapped/utility type — features <code>interface</code> lacks. Both can describe object shapes, so for simple models it's mostly a matter of style.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. How does a discriminated union enable exhaustive checking?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Each union member shares a literal discriminant (for example, <code>type: 'quote'</code>). A <code>switch</code> on that field narrows each branch to a single member. In the <code>default</code> branch, if every case is handled, the value's type is <code>never</code>; passing it to <code>assertNever(x: never)</code> compiles. Add a new variant and forget a case, and the value is no longer <code>never</code>, so the call fails to compile — the compiler forces you to handle it.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. What does a custom type guard return, and why not just <code>boolean</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>It returns a type predicate <code>value is SomeType</code>. This signature tells the compiler that when the function returns <code>true</code>, the argument can be narrowed to <code>SomeType</code> in the calling block. If it returned a plain <code>boolean</code>, the call would run, but the compiler would <em>not</em> narrow the variable afterward, so you'd still have to cast the type.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Why pass a generic to <code>HttpClient.get&lt;T&gt;()</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>get&lt;Order[]&gt;('/api/orders')</code> types the returned <code>Observable&lt;Order[]&gt;</code>, so every subscriber, <code>map</code>, and template binding is checked against the real shape. Omit it and the response defaults to <code>Object</code>, which erases type safety and IntelliSense for the rest of the chain. Note that this is a compile-time assertion, not runtime validation — the server can still send a different shape.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which utility type creates an update DTO where every field of <code>Order</code> is optional?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Required&lt;Order&gt;</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Partial&lt;Order&gt;</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Readonly&lt;Order&gt;</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Pick&lt;Order, 'id'&gt;</button>
+        <div class="quiz-explain">Partial&lt;T&gt; makes every property optional — perfect for PATCH/update requests. Required does the opposite; Readonly blocks reassignment; Pick selects a subset.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. What can a <code>type</code> alias express that an <code>interface</code> cannot?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">An object shape</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Extending another type</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">A union like 'BUY' | 'SELL'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Declaration merging</button>
+        <div class="quiz-explain">Only `type` can alias union types. Interfaces handle object shapes and extension and uniquely support declaration merging — but they cannot be a union.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. What is the type of <code>x</code> in the <code>default</code> branch of an exhaustive switch over a discriminated union?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">unknown</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">any</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">never</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">void</button>
+        <div class="quiz-explain">If every case is handled, no possible values remain, so the narrowed type is `never`. Passing it to assertNever(x: never) compiles only while the switch stays exhaustive.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. What does <code>keyof Order</code> produce for <code>Order { id; symbol; side; quantity; price; status }</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">The values of each property</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">'id' | 'symbol' | 'side' | 'quantity' | 'price' | 'status'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">number</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">string</button>
+        <div class="quiz-explain">keyof T produces a union of the literal property keys of T — here the six key names — not the types of their values.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= GENERICS ============================= -->
     <section data-searchable>
       <h2 id="generics">Дженерики</h2>
@@ -680,11 +1294,12 @@ type QuoteSignals = Signalify&lt;Quote&gt;;
         <div class="quiz-explain">keyof T порождает объединение литералов ключей свойств T — здесь шесть имён ключей — а не типы их значений.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="js-core.html" class="btn-nav">← Основы JS</a>
-      <a href="angular-core.html" class="btn-nav">Основы Angular →</a>
+      <a href="js-core.html" class="btn-nav">← <span data-lang="en">JS Core</span><span data-lang="ru">Основы JS</span></a>
+      <a href="angular-core.html" class="btn-nav"><span data-lang="en">Angular Core</span><span data-lang="ru">Основы Angular</span> →</a>
     </div>
   </main>
 

@@ -57,14 +57,16 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Внедрение зависимостей</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Dependency Injection</span><span data-lang="ru">Внедрение зависимостей</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Внедрение зависимостей (DI)</h1>
-      <p class="page-desc">Система DI в Angular — одна из её определяющих особенностей: иерархическое дерево
+      <h1><span data-lang="en">Dependency Injection (DI)</span><span data-lang="ru">Внедрение зависимостей (DI)</span></h1>
+      <p class="page-desc"><span data-lang="en">Angular's DI system is one of its defining features: a hierarchical tree
+        of injectors that resolves dependencies by walking up from the requesting class. Master <code>providedIn</code>,
+        provider types, <code>InjectionToken</code>, resolution decorators, and the modern <code>inject()</code> function.</span><span data-lang="ru">Система DI в Angular — одна из её определяющих особенностей: иерархическое дерево
         инжекторов, которое разрешает зависимости, поднимаясь вверх от запрашивающего класса. Освойте <code>providedIn</code>,
-        типы провайдеров, <code>InjectionToken</code>, декораторы разрешения и современную функцию <code>inject()</code>.</p>
+        типы провайдеров, <code>InjectionToken</code>, декораторы разрешения и современную функцию <code>inject()</code>.</span></p>
       <button class="btn-done" data-page="di" onclick="markDone('di')">✓ Отметить как пройдено</button>
     </div>
 
@@ -72,6 +74,486 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= HOW DI WORKS ============================= -->
+    <section data-searchable>
+      <h2 id="how-di-works-en">How DI works</h2>
+      <p>Angular builds an <strong>injector tree that mirrors the component tree</strong>. When a class requests
+        a dependency, Angular walks <em>up</em> this tree from the requesting injector until it finds the nearest
+        provider for that token. The first provider found wins; if there is none, Angular throws
+        <code>NullInjectorError: No provider for X</code>.</p>
+
+      <p class="definition"><strong>Injector</strong> — a container that knows how to create and cache dependencies for a given set of tokens. Every injector has a parent, which forms a tree.</p>
+      <p class="definition"><strong>Token</strong> — the key Angular uses to look up a provider. Usually a class type, but it can be an <code>InjectionToken</code> or a string.</p>
+      <p class="definition"><strong>Provider</strong> — a recipe that tells the injector how to produce a value for a token (<code>useClass</code>, <code>useValue</code>, <code>useFactory</code>, <code>useExisting</code>).</p>
+      <p class="definition"><strong>Resolution</strong> — walking up the parent injectors looking for the first matching provider. Once resolved, the instance is cached on that injector and reused by everyone below it.</p>
+
+      <h3 id="injector-hierarchy-en">Injector hierarchy (top to bottom)</h3>
+      <div class="card">
+        <p class="definition"><strong>1. Platform Injector</strong> — the topmost injector, created by <code>platformBrowserDynamic()</code>/<code>bootstrapApplication</code>. It holds platform-level singletons shared by all Angular apps running on the same page (for example, multiple apps in a single browser tab).</p>
+        <p class="definition"><strong>2. Root Injector</strong> — created when the application bootstraps. Everything declared as <code>providedIn: 'root'</code> lives here as a single instance for the whole app. The default home for application-level services.</p>
+        <p class="definition"><strong>3. Module Injector</strong> — created for each (eagerly or lazily loaded) <code>@NgModule</code>. Services listed in <code>@NgModule.providers</code> live here. Lazily loaded modules get their own child module injector.</p>
+        <p class="definition"><strong>4. Component (Element) Injector</strong> — created for each component that declares <code>@Component.providers</code>. It produces a <em>new instance per component subtree</em>, so each component (and its descendants) gets its own copy.</p>
+        <p class="definition"><strong>5. Element (directive) Injector</strong> — the most fine-grained injector, created for elements that host a <code>@Directive</code> with <code>providers</code>. Used for dependencies scoped to the directive.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Injector</th><th>Created by</th><th>Lifetime / scope</th></tr></thead>
+          <tbody>
+            <tr><td>Platform</td><td>Platform bootstrap</td><td>All apps on the page</td></tr>
+            <tr><td>Root</td><td>App bootstrap</td><td>Whole app (singleton)</td></tr>
+            <tr><td>Module</td><td>Each <code>@NgModule</code></td><td>That module (lazy = own child)</td></tr>
+            <tr><td>Component</td><td><code>@Component.providers</code></td><td>Component + its subtree</td></tr>
+            <tr><td>Element / directive</td><td><code>@Directive.providers</code></td><td>That element/host</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// Root-level singleton: ONE PriceService for the whole app
+@Injectable({ providedIn: 'root' })
+export class PriceService {
+  getQuote(symbol: string): Quote { /* ... */ }
+}
+
+// Component-level: a NEW instance per OrderPanel subtree
+@Component({
+  selector: 'app-order-panel',
+  standalone: true,
+  providers: [OrderDraftService],   // not shared across panels
+  template: `...`,
+})
+export class OrderPanelComponent {
+  // Angular walks up from THIS component's injector:
+  // OrderDraftService found here → fresh instance;
+  // PriceService not here → keeps walking up to the root injector.
+  private readonly draft = inject(OrderDraftService);
+  private readonly prices = inject(PriceService);
+}</code></pre>
+      </div>
+      <div class="tip"><p><strong>Mental model:</strong> resolution always goes <em>up</em>, never sideways or down. A sibling component cannot see a service you provided in another component — provide it higher (in the root or a shared parent) to share it.</p></div>
+    </section>
+
+    <!-- ============================= providedIn OPTIONS ============================= -->
+    <section data-searchable>
+      <h2 id="providedin-options-en">providedIn options</h2>
+      <p>The <code>providedIn</code> field of the <code>@Injectable</code> decorator declares <em>where</em> a service is registered, and
+        makes it <strong>tree-shakeable</strong>: if no one injects the service, the bundler can drop it entirely.</p>
+
+      <div class="card">
+        <p class="definition"><strong>'root'</strong> — registers in the root injector: a single singleton for the whole app, available everywhere, and tree-shakeable. The default choice for the vast majority of services.</p>
+        <p class="definition"><strong>'platform'</strong> — registers in the platform injector: one instance shared across <em>multiple Angular apps</em> loaded on the same page. Rare; used in micro-frontends sharing state.</p>
+        <p class="definition"><strong>'any'</strong> — creates a <em>separate instance for each injector that requests it</em> — in practice one per lazily loaded module plus one in the root. Use it when each lazy feature needs its own isolated copy.</p>
+        <p class="definition"><strong>MyModule</strong> — registers in a specific module's injector: the service exists only where that module is imported. It is bundled with and removed alongside the module.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// App-wide singleton (default, recommended)
+@Injectable({ providedIn: 'root' })
+export class PortfolioService {}
+
+// Shared across multiple Angular apps on the same page
+@Injectable({ providedIn: 'platform' })
+export class SharedSessionService {}
+
+// One instance per lazy-loaded module (isolated state)
+@Injectable({ providedIn: 'any' })
+export class FeatureStateService {}
+
+// Only available where TradingModule is imported
+@Injectable({ providedIn: TradingModule })
+export class TradingConfigService {}</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Value</th><th>Instances</th><th>Tree-shaking</th><th>Typical use</th></tr></thead>
+          <tbody>
+            <tr><td><code>'root'</code></td><td>One per app</td><td>✅</td><td>Almost everything</td></tr>
+            <tr><td><code>'platform'</code></td><td>One per page</td><td>✅</td><td>Micro-frontends</td></tr>
+            <tr><td><code>'any'</code></td><td>One per (lazy) injector</td><td>✅</td><td>Isolated lazy state</td></tr>
+            <tr><td><code>MyModule</code></td><td>One per module import</td><td>✅</td><td>Module-scoped configuration</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="warn"><p><strong>The <code>'any'</code> gotcha:</strong> since each lazy module gets its own instance, it is <em>not</em> a singleton. To share a single source of truth across lazy features, use <code>'root'</code>.</p></div>
+    </section>
+
+    <!-- ============================= PROVIDER TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="provider-types-en">Provider types</h2>
+      <p>A provider tells the injector <em>how</em> to build a value for a token. There are four recipes,
+        plus the <code>multi</code> flag for registering many providers under a single token.</p>
+
+      <div class="card">
+        <h4><code>useClass</code></h4>
+        <p class="definition"><strong>useClass</strong> — instantiates the given class (with its own dependencies injected) when the token is requested. Lets you swap one implementation for another behind the same token.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Provide a mock feed in tests, a real feed in prod — same token
+providers: [
+  { provide: PriceFeedService, useClass: MockPriceFeedService },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useValue</code></h4>
+        <p class="definition"><strong>useValue</strong> — supplies an exact, already-constructed value as-is (no instantiation). Ideal for configuration objects, constants, and primitives.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface TradingConfig { maxOrderQty: number; baseCurrency: string; }
+
+providers: [
+  { provide: TRADING_CONFIG, useValue: { maxOrderQty: 1_000_000, baseCurrency: 'USD' } as TradingConfig },
+];</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useFactory</code></h4>
+        <p class="definition"><strong>useFactory</strong> — calls a factory function to compute the value. The function can take its own dependencies, declared in order in the <code>deps</code> array.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Build a service that depends on runtime config + another service
+export function orderValidatorFactory(config: TradingConfig, prices: PriceService): OrderValidator {
+  return new OrderValidator(config.maxOrderQty, prices);
+}
+
+providers: [
+  {
+    provide: OrderValidator,
+    useFactory: orderValidatorFactory,
+    deps: [TRADING_CONFIG, PriceService],   // injected in this order
+  },
+];</code></pre></div>
+        <div class="tip"><p>Modern alternative: inside the factory you can call <code>inject()</code> directly instead of listing <code>deps</code>, because factories run in an injection context.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>useExisting</code></h4>
+        <p class="definition"><strong>useExisting</strong> — aliases one token to another: requesting the new token returns the <em>same instance</em> already registered for the target token. No new object is created.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Expose the same PriceService under a narrower read-only interface
+providers: [
+  PriceService,
+  { provide: ReadonlyQuoteSource, useExisting: PriceService },
+];
+// inject(ReadonlyQuoteSource) === inject(PriceService) → same object</code></pre></div>
+        <div class="warn"><p><strong>useExisting vs useClass:</strong> <code>useClass</code> creates a brand-new instance; <code>useExisting</code> reuses an existing one. Aliasing by mistake via <code>useClass</code> gives you two separate objects.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>multi: true</code></h4>
+        <p class="definition"><strong>multi: true</strong> — lets multiple providers register under one token; injecting the token returns an <em>array</em> of all the contributed values. The foundation of HTTP interceptors, validators, and initializers.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// Each provider adds one interceptor; inject(HTTP_INTERCEPTORS) → all of them
+providers: [
+  { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  { provide: HTTP_INTERCEPTORS, useClass: RetryInterceptor, multi: true },
+  { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true },
+];</code></pre></div>
+        <div class="danger"><p><strong>Pitfall:</strong> mixing <code>multi: true</code> and non-multi providers for the same token throws an error. A token is either always multi or never multi.</p></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Provider</th><th>Produces</th><th>New instance?</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td><code>useClass</code></td><td>Class instance</td><td>✅</td><td>Swappable implementations</td></tr>
+            <tr><td><code>useValue</code></td><td>Literal value</td><td>❌ (used as-is)</td><td>Configuration, constants</td></tr>
+            <tr><td><code>useFactory</code></td><td>Whatever the factory returns</td><td>Depends</td><td>Dependencies computed at runtime</td></tr>
+            <tr><td><code>useExisting</code></td><td>Alias of another token</td><td>❌ (shared)</td><td>Narrowing interfaces</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================= InjectionToken ============================= -->
+    <section data-searchable>
+      <h2 id="injection-token-en">InjectionToken</h2>
+      <p class="definition"><strong>InjectionToken</strong> — a typed, unique token used to inject <em>non-class</em> dependencies (configuration objects, strings, functions, primitives). Because each token is a distinct object, it avoids the key collisions inherent to plain string tokens, and it carries a generic type for type-safe injection.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// 1. Declare a typed token
+export const API_URL = new InjectionToken&lt;string&gt;('API_URL');
+
+// 2. Register a value for it
+providers: [
+  { provide: API_URL, useValue: 'https://api.trading.com' },
+];
+
+// 3a. Inject it the modern way (field initializer)
+@Injectable({ providedIn: 'root' })
+export class OrderApi {
+  private readonly apiUrl = inject(API_URL);   // typed as string
+}
+
+// 3b. Inject it the classic way (constructor + @Inject)
+@Injectable({ providedIn: 'root' })
+export class OrderApiClassic {
+  constructor(@Inject(API_URL) private apiUrl: string) {}
+}</code></pre>
+      </div>
+
+      <h3 id="token-factory-default-en">Token with a factory default value</h3>
+      <p>An <code>InjectionToken</code> can carry its own tree-shakeable default value via <code>providedIn</code> + <code>factory</code>,
+        so you don't need to register it explicitly unless you want to override it.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">export interface FeatureFlags {
+  darkMode: boolean;
+  betaFeatures: boolean;
+}
+
+export const FEATURE_FLAGS = new InjectionToken&lt;FeatureFlags&gt;('FeatureFlags', {
+  providedIn: 'root',
+  factory: () =&gt; ({ darkMode: false, betaFeatures: false }),
+});
+
+// Works with no explicit provider — the factory supplies the default
+@Injectable({ providedIn: 'root' })
+export class ThemeService {
+  private readonly flags = inject(FEATURE_FLAGS); // typed FeatureFlags
+}</code></pre>
+      </div>
+
+      <div class="danger">
+        <p><strong>Why not string tokens?</strong> Plain strings are global and untyped, so two libraries that both
+          use <code>'config'</code> as a token will silently conflict — whoever registers last wins. An
+          <code>InjectionToken</code> is a unique object reference that cannot collide, and it carries its type.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// ❌ Fragile — collides with any other 'config' string token, no type safety
+providers: [{ provide: 'config', useValue: { /* ... */ } }];
+
+// ✅ Unique object + generic type, collision-proof
+export const CONFIG = new InjectionToken&lt;TradingConfig&gt;('CONFIG');</code></pre></div>
+      </div>
+    </section>
+
+    <!-- ============================= DI DECORATORS ============================= -->
+    <section data-searchable>
+      <h2 id="di-decorators-en">DI decorators (@Self, @SkipSelf, @Optional, @Host)</h2>
+      <p>These modifier decorators (and their <code>inject()</code> option equivalents) change <em>how far</em> and
+        <em>where</em> Angular looks when resolving a dependency.</p>
+
+      <div class="card">
+        <h4><code>@Self()</code></h4>
+        <p class="definition"><strong>@Self()</strong> — restricts resolution to the <em>current</em> injector only. If there is no provider there, Angular throws instead of walking up.</p>
+        <p><strong>When to use:</strong> you need a locally provided instance and want a hard failure if it's missing.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({
+  selector: 'app-order-row',
+  standalone: true,
+  providers: [OrderDraftService],            // must be provided HERE
+})
+export class OrderRowComponent {
+  // constructor form
+  constructor(@Self() private draft: OrderDraftService) {}
+  // inject() form
+  // private readonly draft = inject(OrderDraftService, { self: true });
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@SkipSelf()</code></h4>
+        <p class="definition"><strong>@SkipSelf()</strong> — skips the current injector and starts resolution at the <em>parent</em>. Useful for reaching a parent's instance even when the same token is provided locally.</p>
+        <p><strong>When to use:</strong> hierarchical services where a child must reach its parent's copy (for example, nested form groups, tree structures).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({ selector: 'app-positions-node', standalone: true })
+export class PositionsNodeComponent {
+  // Reach the PARENT node's aggregator, not this node's own
+  constructor(@SkipSelf() @Optional() private parent: PositionAggregator | null) {}
+  // inject() form
+  // private readonly parent = inject(PositionAggregator, { skipSelf: true, optional: true });
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@Optional()</code></h4>
+        <p class="definition"><strong>@Optional()</strong> — returns <code>null</code> instead of throwing when no provider is found anywhere up the tree.</p>
+        <p><strong>When to use:</strong> optional collaborators, feature toggles, or tokens that may legitimately be absent.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class TradingService {
+  // No AnalyticsService registered? logger stays null, no crash.
+  constructor(@Optional() private analytics: AnalyticsService | null) {}
+
+  placeOrder(order: Order): void {
+    this.analytics?.track('order_placed', order.id);
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>@Host()</code></h4>
+        <p class="definition"><strong>@Host()</strong> — stops walking up at the <em>host component's</em> injector: it looks in the current and host element injectors, but no higher. Mainly for directives that need a dependency provided by their host component.</p>
+        <p><strong>When to use:</strong> a directive that should bind to a locally provided service of its host component (for example, a control bound to its host form).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Directive({ selector: '[appQtyControl]', standalone: true })
+export class QtyControlDirective {
+  // Find the validator on the host component, not somewhere up the app tree
+  constructor(@Host() private validator: OrderValidator) {}
+  // inject() form
+  // private readonly validator = inject(OrderValidator, { host: true });
+}</code></pre></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Decorator</th><th>Search scope</th><th>Not found →</th></tr></thead>
+          <tbody>
+            <tr><td><code>@Self()</code></td><td>Current injector only</td><td>Throws</td></tr>
+            <tr><td><code>@SkipSelf()</code></td><td>Parent and up</td><td>Throws</td></tr>
+            <tr><td><code>@Optional()</code></td><td>Normal walk up</td><td>Returns <code>null</code></td></tr>
+            <tr><td><code>@Host()</code></td><td>Up to the host element</td><td>Throws</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p>They combine: <code>@SkipSelf() @Optional()</code> means "start at the parent and give me <code>null</code> if no one above has it". The <code>inject()</code> equivalents are the options <code>{ skipSelf: true, optional: true }</code>.</p></div>
+    </section>
+
+    <!-- ============================= inject() vs constructor ============================= -->
+    <section data-searchable>
+      <h2 id="inject-vs-constructor-en">The inject() function vs constructor injection</h2>
+      <p class="definition"><strong>inject()</strong> — a function (Angular 14+) that retrieves a dependency from the current injector. It works in constructors, field initializers, and factory functions, and it is especially clean for standalone components, functional guards/interceptors, and composition helper functions.</p>
+      <p class="definition"><strong>Constructor injection</strong> — the classic approach: dependencies are declared as constructor parameters. It works everywhere and is required when an injected dependency must be available to a subclass constructor via <code>super(...)</code>.</p>
+      <p class="definition"><strong>Injection context</strong> — the limited window in which <code>inject()</code> is allowed to run: during construction (the constructor body or field initializers), inside provider factories, or explicitly via <code>runInInjectionContext()</code>. Calling <code>inject()</code> outside it throws <code>NG0203</code>.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// Modern: inject() in field initializers — no constructor boilerplate
+@Injectable({ providedIn: 'root' })
+export class OrderFacade {
+  private readonly http = inject(HttpClient);
+  private readonly prices = inject(PriceService);
+  private readonly apiUrl = inject(API_URL);
+
+  submit(order: Order) {
+    return this.http.post&lt;Order&gt;(`${this.apiUrl}/orders`, order);
+  }
+}
+
+// Classic: constructor injection — required when subclasses call super()
+@Injectable()
+export class BaseFeedService {
+  constructor(protected http: HttpClient) {}
+}
+@Injectable({ providedIn: 'root' })
+export class QuoteFeedService extends BaseFeedService {
+  constructor(http: HttpClient) { super(http); }   // must forward via super
+}</code></pre>
+      </div>
+
+      <h3 id="injection-context-en">Respecting the injection context</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">// ✅ inject() also powers functional guards / interceptors (Angular 15+)
+export const authGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);          // injection context here
+  return auth.isLoggedIn();
+};
+
+// ❌ Outside an injection context → NG0203
+function buildHelper() {
+  const prices = inject(PriceService);       // throws if called lazily later
+}
+
+// ✅ Wrap deferred work in runInInjectionContext
+@Injectable({ providedIn: 'root' })
+export class LazyLoader {
+  private readonly injector = inject(EnvironmentInjector);
+  loadLater() {
+    runInInjectionContext(this.injector, () =&gt; {
+      const prices = inject(PriceService);   // now valid
+    });
+  }
+}</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th><code>inject()</code></th><th>Constructor</th></tr></thead>
+          <tbody>
+            <tr><td>Since</td><td>Angular 14+</td><td>Always</td></tr>
+            <tr><td>Field initializers</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Functional guards/interceptors</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Inheritance via <code>super()</code></td><td>❌ (use constructor)</td><td>✅</td></tr>
+            <tr><td>Requires injection context</td><td>✅ (mandatory)</td><td>Implicitly</td></tr>
+            <tr><td>Modifiers</td><td>Options object <code>{ optional, self, skipSelf, host }</code></td><td>Decorators <code>@Optional()</code> …</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="success"><p><strong>Recommendation:</strong> prefer <code>inject()</code> for new standalone code — it's more concise, works in functional APIs, and keeps constructors empty. Keep constructor injection where you extend a base class and must forward dependencies via <code>super()</code>.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Interview Questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. How does Angular resolve a dependency, and what happens if a provider doesn't exist?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Angular starts at the requesting class's injector and walks <em>up</em> the injector tree — element/component → module → root → platform — returning the first matching provider it finds and caching the instance on that injector. If it reaches the top without a match, it throws <code>NullInjectorError: No provider for X</code>. Use <code>@Optional()</code> (or <code>inject(X, { optional: true })</code>) to get <code>null</code> instead of an error.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. What is the difference between <code>providedIn: 'root'</code> and <code>providedIn: 'any'</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>'root'</code> creates a single app-wide singleton in the root injector — everyone shares one instance. <code>'any'</code> creates a <em>separate</em> instance for each injector that requests it, which in practice means one instance per lazily loaded module (plus one in the root). Both are tree-shakeable. Use <code>'root'</code> for shared state; use <code>'any'</code> when each lazy feature needs an isolated copy.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. When would you reach for <code>useFactory</code> instead of <code>useClass</code> or <code>useValue</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>When the value must be <em>computed at runtime</em> and may depend on other injectables or configuration. <code>useValue</code> needs a value you already have; <code>useClass</code> simply instantiates a class. <code>useFactory</code> runs a function — listing its dependencies in <code>deps</code> (or calling <code>inject()</code> inside) — so you can branch on configuration, combine services, or build an object conditionally. Example: choosing a real or mock price feed based on an environment flag.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Why use an <code>InjectionToken</code> instead of a string token?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>String tokens are global and untyped: two libraries that both use <code>'config'</code> will collide, and the last registration silently wins. An <code>InjectionToken</code> is a unique object reference (collision-proof) and carries a generic type, so <code>inject(API_URL)</code> is typed as <code>string</code>, not <code>any</code>. Tokens can also supply a tree-shakeable default value via <code>{ providedIn: 'root', factory }</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What is the "injection context" and when does <code>inject()</code> fail?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>The injection context is the window in which Angular can resolve dependencies: during a class's construction (the constructor body and field initializers), inside provider factory functions, and inside functional guards/interceptors. Calling <code>inject()</code> outside it — for example, in a setTimeout callback, an event handler, or a lazily invoked plain function — throws <code>NG0203</code>. To run <code>inject()</code> later, capture an <code>EnvironmentInjector</code> and wrap the work in <code>runInInjectionContext()</code>.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which <code>providedIn</code> value gives a separate instance per lazily loaded module?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'root'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'platform'</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">'any'</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">'module'</button>
+        <div class="quiz-explain">'any' creates one instance per requesting injector — effectively one per lazy module (plus the root). 'root' is a single app-wide singleton; 'platform' is shared across apps on the page; 'module' is not a valid value.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Which provider type aliases a token to an <strong>existing</strong> instance without creating a new one?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useClass</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useValue</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">useFactory</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">useExisting</button>
+        <div class="quiz-explain">useExisting aliases one token to another, returning the same instance. useClass would create a separate object, breaking the "same instance" guarantee.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. What does <code>@SkipSelf()</code> do during resolution?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Looks in the current injector only</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Skips the current injector and starts at the parent</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Returns null instead of throwing</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Stops the search at the host component</button>
+        <div class="quiz-explain">@SkipSelf() skips the local injector and resolves the dependency starting from the parent and up. @Self() looks locally only; @Optional() returns null; @Host() stops at the host element.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Where can you safely call <code>inject()</code>?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Inside any setTimeout callback</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">In a DOM event handler</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">In a field initializer, constructor, or provider factory</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Anywhere in the app</button>
+        <div class="quiz-explain">inject() requires an injection context: constructor/field initializers, provider factories, functional guards/interceptors, or code wrapped in runInInjectionContext(). Calling it from a deferred callback throws NG0203.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= HOW DI WORKS ============================= -->
     <section data-searchable>
       <h2 id="how-di-works">Как работает DI</h2>
@@ -548,11 +1030,12 @@ export class LazyLoader {
         <div class="quiz-explain">inject() требует контекста инъекции: конструктор/инициализаторы полей, фабрики провайдеров, функциональные guard'ы/интерцепторы или код, обёрнутый в runInInjectionContext(). Вызов из отложенного колбэка выбрасывает NG0203.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
       <a href="signals.html" class="btn-nav">← Signals</a>
-      <a href="forms.html" class="btn-nav">Формы →</a>
+      <a href="forms.html" class="btn-nav"><span data-lang="en">Forms</span><span data-lang="ru">Формы</span> →</a>
     </div>
   </main>
 

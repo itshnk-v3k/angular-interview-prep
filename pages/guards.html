@@ -57,14 +57,16 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Гарды (Guards)</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Route Guards</span><span data-lang="ru">Гарды (Guards)</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Гарды роутера (Guards)</h1>
-      <p class="page-desc">Защита маршрутов: <code>CanActivate</code>, <code>CanActivateChild</code>,
+      <h1><span data-lang="en">Route Guards</span><span data-lang="ru">Гарды роутера (Guards)</span></h1>
+      <p class="page-desc"><span data-lang="en">Protecting routes: <code>CanActivate</code>, <code>CanActivateChild</code>,
+        <code>CanDeactivate</code>, <code>CanMatch</code> and <code>Resolve</code> — functional and
+        class-based guards with theory and examples built around a trading platform.</span><span data-lang="ru">Защита маршрутов: <code>CanActivate</code>, <code>CanActivateChild</code>,
         <code>CanDeactivate</code>, <code>CanMatch</code> и <code>Resolve</code> — функциональные и
-        классовые гарды с теорией и примерами на торговой платформе.</p>
+        классовые гарды с теорией и примерами на торговой платформе.</span></p>
       <button class="btn-done" data-page="guards" onclick="markDone('guards')">✓ Отметить как пройдено</button>
     </div>
 
@@ -72,6 +74,390 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ===================== WHAT IS A GUARD ===================== -->
+    <section data-searchable>
+      <h2 id="what-en">What is a guard</h2>
+      <p class="definition"><strong>A guard (route guard)</strong> is a function or class that the router
+        calls before navigation to decide whether to allow the transition, cancel it, or redirect
+        the user. It is the central place for authorization, permission checks, and preventing the loss
+        of unsaved data.</p>
+
+      <h3>Types of guards</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Guard</th><th>When it runs</th><th>Typical scenario</th></tr></thead>
+          <tbody>
+            <tr><td><code>CanActivate</code></td><td>Before entering a route</td><td>Authentication required</td></tr>
+            <tr><td><code>CanActivateChild</code></td><td>Before entering a child route</td><td>Protect an entire section (e.g. <code>/admin/*</code>)</td></tr>
+            <tr><td><code>CanDeactivate</code></td><td>Before leaving a route</td><td>Warn about an unsaved order form</td></tr>
+            <tr><td><code>CanMatch</code></td><td>Before matching a route (and lazy loading)</td><td>Feature flags, A/B, roles before loading the chunk</td></tr>
+            <tr><td><code>Resolve</code></td><td>Before activation — preloading data</td><td>Load the instrument before rendering the page</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What a guard can return</h3>
+      <p>Any guard can return a synchronous value or an asynchronous stream — the router will wait for it:</p>
+      <ul>
+        <li><code>boolean</code> — <code>true</code> allows the transition, <code>false</code> cancels it.</li>
+        <li><code>UrlTree</code> — cancels the transition and performs a <strong>redirect</strong> to that URL.</li>
+        <li><code>Observable&lt;boolean | UrlTree&gt;</code> or <code>Promise&lt;...&gt;</code> — for asynchronous checks (HTTP, store state).</li>
+      </ul>
+      <div class="tip"><p><strong>Tip:</strong> return a <code>UrlTree</code> instead of manually calling
+        <code>router.navigate()</code> inside a guard — this keeps navigation atomic, without a "flash" of the intermediate route.</p></div>
+
+      <div class="warn"><p><strong>Modern approach:</strong> since Angular 14, <strong>functional guards</strong>
+        (<code>CanActivateFn</code>, etc.) are preferred — they are simply functions that
+        use <code>inject()</code>. Class-based guards (<code>implements CanActivate</code>) are considered
+        legacy; <code>CanLoad</code> has been replaced by <code>CanMatch</code>.</p></div>
+    </section>
+
+    <!-- ===================== CanActivate ===================== -->
+    <section data-searchable>
+      <h2 id="can-activate-en">CanActivate</h2>
+      <p class="definition"><strong>CanActivate</strong> is a guard that denies or allows
+        <em>entry</em> to a route. It returns a <code>boolean</code> or a <code>UrlTree</code> (redirect).</p>
+
+      <h3>Functional guard (recommended)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from './auth.service';
+
+export const authGuard: CanActivateFn = (route, state) =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated()) {
+    return true;
+  }
+  // Cancel the transition and redirect to /login, preserving the return address
+  return router.createUrlTree(['/login'], {
+    queryParams: { returnUrl: state.url },
+  });
+};</code></pre>
+      </div>
+
+      <h3>Role check (guard factory)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+
+// Parameterized guard: roleGuard('TRADER')
+export function roleGuard(required: string): CanActivateFn {
+  return () =&gt; {
+    const auth = inject(AuthService);
+    const router = inject(Router);
+    return auth.hasRole(required) ? true : router.createUrlTree(['/forbidden']);
+  };
+}</code></pre>
+      </div>
+
+      <h3>Asynchronous check via the store</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { map } from 'rxjs';
+
+export const sessionGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  // isAuthenticated$ — Observable&lt;boolean&gt;
+  return auth.isAuthenticated$.pipe(
+    map(ok =&gt; ok ? true : router.createUrlTree(['/login'])),
+  );
+};</code></pre>
+      </div>
+
+      <h3>Class-based guard (legacy style)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class AuthGuard implements CanActivate {
+  constructor(private auth: AuthService, private router: Router) {}
+
+  canActivate(): boolean | UrlTree {
+    return this.auth.isAuthenticated() ? true : this.router.createUrlTree(['/login']);
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== CanActivateChild ===================== -->
+    <section data-searchable>
+      <h2 id="can-activate-child-en">CanActivateChild</h2>
+      <p class="definition"><strong>CanActivateChild</strong> is the same as <code>CanActivate</code>, but it
+        runs before entering <em>each child</em> route. It is convenient for protecting an entire section of
+        the application with a single guard attached to the parent.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanActivateChildFn } from '@angular/router';
+
+export const adminAreaGuard: CanActivateChildFn = (childRoute, state) =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.hasRole('ADMIN') ? true : router.createUrlTree(['/forbidden']);
+};
+
+// In the route config, a guard on the parent protects all nested paths:
+const routes: Routes = [
+  {
+    path: 'admin',
+    canActivateChild: [adminAreaGuard],
+    children: [
+      { path: 'users', component: UsersComponent },
+      { path: 'audit', component: AuditComponent },
+    ],
+  },
+];</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== CanDeactivate ===================== -->
+    <section data-searchable>
+      <h2 id="can-deactivate-en">CanDeactivate</h2>
+      <p class="definition"><strong>CanDeactivate</strong> is a guard that denies or allows
+        <em>leaving</em> a route. The main scenario is to warn the user about unsaved
+        changes (for example, a half-filled order ticket).</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanDeactivateFn } from '@angular/router';
+
+// The contract implemented by components with a "dirty" form
+export interface CanComponentDeactivate {
+  canDeactivate: () =&gt; boolean | Observable&lt;boolean&gt;;
+}
+
+export const pendingChangesGuard: CanDeactivateFn&lt;CanComponentDeactivate&gt; =
+  (component) =&gt; component.canDeactivate ? component.canDeactivate() : true;</code></pre>
+      </div>
+
+      <p>The component itself decides whether leaving is allowed:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">@Component({ /* ... */ })
+export class OrderTicketComponent implements CanComponentDeactivate {
+  form = inject(FormBuilder).group({ symbol: [''], quantity: [0] });
+
+  canDeactivate(): boolean {
+    // If the form is untouched or already saved — leaving is allowed without questions
+    if (this.form.pristine) return true;
+    return confirm('Заявка не сохранена. Покинуть страницу?');
+  }
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Gotcha:</strong> <code>CanDeactivate</code> does not intercept
+        closing the tab or refreshing the page. For that you need a separate
+        <code>beforeunload</code> listener at the browser level.</p></div>
+    </section>
+
+    <!-- ===================== CanMatch ===================== -->
+    <section data-searchable>
+      <h2 id="can-match-en">CanMatch (and the legacy CanLoad)</h2>
+      <p class="definition"><strong>CanMatch</strong> is a guard that decides whether a route <em>matches</em>
+        at all. If it returns <code>false</code>, the router behaves as if this route does not exist and
+        tries the next one. It runs <em>before</em> lazy loading the chunk, so it saves traffic.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { CanMatchFn, Route } from '@angular/router';
+
+export const featureFlagGuard = (flag: string): CanMatchFn =&gt; {
+  return () =&gt; inject(FeatureFlagsService).isEnabled(flag);
+};
+
+const routes: Routes = [
+  {
+    path: 'analytics',
+    canMatch: [featureFlagGuard('advancedAnalytics')],
+    loadComponent: () =&gt; import('./analytics.component').then(c =&gt; c.AnalyticsComponent),
+  },
+  // Fallback if the feature is off — the same path leads to a stub
+  { path: 'analytics', component: ComingSoonComponent },
+];</code></pre>
+      </div>
+      <div class="tip"><p><strong>CanMatch vs CanActivate:</strong> <code>CanMatch</code> can be used
+        to pick <em>different components</em> for the same path (by role, by flag), and also to avoid loading
+        the lazy module entirely. <code>CanActivate</code> runs only after the route has been matched.</p></div>
+      <div class="warn"><p><strong>Legacy:</strong> <code>CanLoad</code> has been replaced by <code>CanMatch</code>.
+        In new projects, use only <code>CanMatch</code>.</p></div>
+    </section>
+
+    <!-- ===================== Resolve ===================== -->
+    <section data-searchable>
+      <h2 id="resolve-en">Resolve</h2>
+      <p class="definition"><strong>Resolve</strong> is a data-preloading guard: the router waits until the resolver
+        fetches the data, and only then activates the component. This removes the "flash" of an empty screen and
+        the loading state inside the component.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { ResolveFn } from '@angular/router';
+
+export const instrumentResolver: ResolveFn&lt;Instrument&gt; = (route) =&gt; {
+  const service = inject(InstrumentService);
+  const symbol = route.paramMap.get('symbol')!;
+  return service.getOne(symbol); // Observable&lt;Instrument&gt;
+};
+
+const routes: Routes = [
+  {
+    path: 'instruments/:symbol',
+    component: InstrumentComponent,
+    resolve: { instrument: instrumentResolver },
+  },
+];</code></pre>
+      </div>
+      <p>In the component, the ready data is available from <code>ActivatedRoute</code>:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">export class InstrumentComponent {
+  private route = inject(ActivatedRoute);
+  // The data is already loaded by the resolver — no spinner and no undefined
+  instrument = this.route.snapshot.data['instrument'] as Instrument;
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Gotcha:</strong> a heavy resolver delays the <em>entire</em>
+        navigation — the user sees a "freeze". For long-running requests it is better to show the page right away and
+        load the data inside the component (a skeleton), and keep the resolver for fast, critical data.</p></div>
+    </section>
+
+    <!-- ===================== Order ===================== -->
+    <section data-searchable>
+      <h2 id="order-en">Execution order</h2>
+      <p>During navigation, the router runs guards in a strict order. If any of them returns <code>false</code>
+        or a <code>UrlTree</code>, navigation is aborted and the rest do not run:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-text">CanDeactivate (уход с текущего маршрута)
+   ↓
+CanMatch (сопоставление маршрута, до ленивой загрузки)
+   ↓
+CanActivate (вход на маршрут)
+   ↓
+CanActivateChild (вход на дочерние маршруты)
+   ↓
+Resolve (предзагрузка данных)
+   ↓
+Активация компонента</code></pre>
+      </div>
+      <div class="tip"><p>Guards of the same type on the same route run in the order they are listed in
+        the array (<code>canActivate: [a, b]</code> → <code>a</code> first). If they all return streams,
+        the router waits for them to complete.</p></div>
+    </section>
+
+    <!-- ===================== Registration ===================== -->
+    <section data-searchable>
+      <h2 id="register-en">Registration in the route config</h2>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  {
+    path: 'orders',
+    canActivate: [authGuard, roleGuard('TRADER')],
+    canDeactivate: [pendingChangesGuard],
+    component: OrdersComponent,
+  },
+  {
+    path: 'instruments/:symbol',
+    canActivate: [authGuard],
+    resolve: { instrument: instrumentResolver },
+    component: InstrumentComponent,
+  },
+  {
+    path: 'admin',
+    canMatch: [featureFlagGuard('adminPanel')],
+    canActivateChild: [adminAreaGuard],
+    loadChildren: () =&gt; import('./admin/admin.routes').then(m =&gt; m.ADMIN_ROUTES),
+  },
+];</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== Q&A ===================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Questions &amp; Answers</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between <code>CanActivate</code> and <code>CanMatch</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>CanMatch</code> runs at the route <em>matching</em> stage — before lazy loading the chunk — and on <code>false</code> the router treats the route as not matching and tries the next one. <code>CanActivate</code> runs only after matching, right before the component is activated. That is why <code>CanMatch</code> is used for feature flags, roles, and selecting different components for the same path, as well as to avoid loading lazy code at all.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Why is it better to return a <code>UrlTree</code> rather than call <code>router.navigate()</code> inside a guard?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Returning a <code>UrlTree</code> makes the redirect part of the current navigation — it is cancelled and immediately replaced by a new one, atomically. A manual <code>navigate()</code> starts a <em>second</em> navigation in parallel with cancelling the first, which can cause races and a brief "flash" of the original route.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. How do you build a guard that protects against losing an unsaved form?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Use <code>CanDeactivate</code>. You declare an interface with a <code>canDeactivate()</code> method that the component implements; the functional guard simply delegates the call to this method. The component returns <code>true</code> if the form is <code>pristine</code> or saved, otherwise it asks for confirmation. Important: closing/refreshing the tab is not caught by this guard — you need <code>beforeunload</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. What can a guard return and how does the router handle it?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>boolean</code> (<code>true</code> — allow, <code>false</code> — cancel), <code>UrlTree</code> (cancel and redirect), or an <code>Observable</code>/<code>Promise</code> of these values for asynchronous checks. The router waits for the stream/promise to complete before continuing navigation.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Why do you need <code>Resolve</code> if you can load the data in <code>ngOnInit</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>Resolve</code> guarantees that the data is ready <em>before</em> the component renders — there is no intermediate empty/loading state and no <code>undefined</code> in the template. This is convenient for critical data (an instrument card by symbol). The downside is that it delays the entire navigation, so for long-running requests it is better to show the page right away with a skeleton and keep the resolver for fast data.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== Quiz ===================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which guard runs <strong>before</strong> lazy loading a module?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">CanMatch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Resolve</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanDeactivate</button>
+        <div class="quiz-explain">CanMatch is checked at the route matching stage, before loading the chunk, so on false the lazy code is not downloaded.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. To cancel a transition and immediately redirect the user, a guard must return…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">false</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">null</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">UrlTree</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">void</button>
+        <div class="quiz-explain">UrlTree cancels the current navigation and atomically replaces it with a redirect. It is created via router.createUrlTree([...]) or parseUrl.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Which modern API is preferred for guards in Angular 14+?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Classes with implements CanActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Functional guards (CanActivateFn) with inject()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanLoad classes</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">@HostListener on the component</button>
+        <div class="quiz-explain">Functional guards are plain functions that use inject(). Class-based guards and CanLoad are considered legacy.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Which guard is used to warn about unsaved form changes?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanActivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Resolve</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">CanDeactivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanMatch</button>
+        <div class="quiz-explain">CanDeactivate runs when leaving a route and lets the component ask for confirmation if the form is "dirty".</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ===================== ЧТО ТАКОЕ ГАРД ===================== -->
     <section data-searchable>
       <h2 id="what">Что такое гард</h2>
@@ -452,11 +838,12 @@ export const routes: Routes = [
         <div class="quiz-explain">CanDeactivate срабатывает при уходе с маршрута и позволяет компоненту запросить подтверждение, если форма «грязная».</div>
       </div>
     </section>
+    </div>
 
     <!-- ===================== PAGE NAV ===================== -->
     <div class="page-nav">
-      <a href="routing.html" class="btn-nav">← Маршрутизация</a>
-      <a href="rxjs.html" class="btn-nav">RxJS →</a>
+      <a href="routing.html" class="btn-nav">← <span data-lang="en">Router</span><span data-lang="ru">Маршрутизация</span></a>
+      <a href="auth.html" class="btn-nav"><span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span> →</a>
     </div>
   </main>
 

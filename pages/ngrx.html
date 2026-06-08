@@ -57,14 +57,16 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>NgRx</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">NgRx</span><span data-lang="ru">NgRx</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>NgRx — управление состоянием</h1>
-      <p class="page-desc">Реактивное управление состоянием в стиле Redux для Angular: однонаправленный поток данных,
+      <h1><span data-lang="en">NgRx — state management</span><span data-lang="ru">NgRx — управление состоянием</span></h1>
+      <p class="page-desc"><span data-lang="en">Redux-style reactive state management for Angular: unidirectional data flow,
+        immutable state, pure reducers, memoized selectors, and side-effect handling — built around an end-to-end
+        FinTech <code>Orders</code> feature.</span><span data-lang="ru">Реактивное управление состоянием в стиле Redux для Angular: однонаправленный поток данных,
         иммутабельное состояние, чистые редьюсеры, мемоизированные селекторы и обработка побочных эффектов — на сквозном примере
-        FinTech-фичи <code>Orders</code> (заявки).</p>
+        FinTech-фичи <code>Orders</code> (заявки).</span></p>
       <button class="btn-done" data-page="ngrx" onclick="markDone('ngrx')">✓ Отметить как пройдено</button>
     </div>
 
@@ -72,6 +74,510 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ===================== WHAT IS NGRX ===================== -->
+    <section data-searchable>
+      <h2 id="what-is-ngrx-en">What is NgRx and when to use it</h2>
+      <p class="definition"><strong>NgRx</strong> is a reactive state management library for Angular based on the Redux pattern. It enforces three principles: <strong>unidirectional data flow</strong> (data moves in only one direction), <strong>immutable state</strong> (state is never mutated, only replaced), and <strong>pure functions</strong> (reducers and selectors have no side effects). State lives in a single observable store built on top of RxJS.</p>
+
+      <div class="card">
+        <p class="definition"><strong>Single source of truth</strong> — the entire application state is stored in one immutable object tree inside the store.</p>
+        <p class="definition"><strong>Unidirectional data flow</strong> — components dispatch actions, reducers produce new state, selectors read it, and the cycle repeats. Data never flows backwards.</p>
+        <p class="definition"><strong>Redux DevTools</strong> — every action and every state transition is recorded, enabling time-travel debugging and full traceability.</p>
+      </div>
+
+      <h3 id="when-to-use-en">When to use it</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Scenario</th><th>NgRx?</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Complex state shared across many components</td><td>✅</td><td>A single store eliminates prop drilling and duplicated state</td></tr>
+            <tr><td>Large teams</td><td>✅</td><td>Predictable patterns and DevTools traceability scale across many developers</td></tr>
+            <tr><td>Complex async flows / optimistic updates</td><td>✅</td><td>Effects isolate side effects; actions model every step</td></tr>
+            <tr><td>Small apps with local state</td><td>❌</td><td>A <code>BehaviorSubject</code> service or Signals is simpler — NgRx is overkill</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip"><p><strong>Rule of thumb:</strong> use NgRx when state is shared, long-lived, and changed from many places. For transient UI state of a single component, the right tool is a Signal or a small service.</p></div>
+    </section>
+
+    <!-- ===================== CORE CONCEPTS ===================== -->
+    <section data-searchable>
+      <h2 id="core-concepts-en">Core concepts</h2>
+      <p>NgRx is built from five building blocks: <strong>Actions</strong>, <strong>Reducers</strong>, <strong>Store</strong>, <strong>Selectors</strong>, and <strong>Effects</strong>. We model an <code>Orders</code> feature for a trading desk.</p>
+
+      <div class="card">
+        <h3 id="domain-types-en">Domain types</h3>
+        <p>All examples below build on these FinTech types — there is no <code>any</code> anywhere.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export type Side = 'BUY' | 'SELL';
+export type OrderStatus = 'pending' | 'filled' | 'cancelled' | 'rejected';
+
+export interface Order {
+  id: string;
+  symbol: string;
+  side: Side;
+  quantity: number;
+  price: number;
+  status: OrderStatus;
+}
+
+export interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+}
+
+export interface Instrument {
+  symbol: string;
+  name: string;
+  exchange: string;
+  tickSize: number;
+}
+
+export interface Position {
+  symbol: string;
+  netQuantity: number;
+  averagePrice: number;
+}</code></pre></div>
+      </div>
+
+      <!-- ACTION -->
+      <div class="card">
+        <h3 id="action-en">Action</h3>
+        <p class="definition"><strong>An Action</strong> is a plain object with a <code>type</code> string describing <em>what happened</em>, plus optional payload properties. Actions are the only way to express intent or report an event; they are dispatched, not called directly. The <code>'[Source] Event'</code> convention keeps them readable in DevTools.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.actions.ts
+import { createAction, props } from '@ngrx/store';
+import { Order } from './orders.state';
+
+export const loadOrders = createAction('[Orders] Load');
+
+export const loadOrdersSuccess = createAction(
+  '[Orders] Load Success',
+  props&lt;{ orders: Order[] }&gt;()
+);
+
+export const loadOrdersFailure = createAction(
+  '[Orders] Load Failure',
+  props&lt;{ error: string }&gt;()
+);</code></pre></div>
+        <div class="tip"><p><strong>props&lt;T&gt;()</strong> binds a strongly typed payload. <code>loadOrdersSuccess({ orders })</code> is fully type-checked — passing the wrong shape is a compile-time error.</p></div>
+      </div>
+
+      <!-- REDUCER -->
+      <div class="card">
+        <h3 id="reducer-en">Reducer</h3>
+        <p class="definition"><strong>A Reducer</strong> is a pure function <code>(state, action) =&gt; newState</code>. It has <em>no</em> side effects (no HTTP, no logging, no <code>Date.now()</code>) and <strong>must return a brand-new object</strong> — never mutate the existing state. Given the same inputs, it always produces the same output.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.reducer.ts
+import { createReducer, on } from '@ngrx/store';
+import { OrdersState, initialOrdersState } from './orders.state';
+import { loadOrders, loadOrdersSuccess, loadOrdersFailure } from './orders.actions';
+
+export const ordersReducer = createReducer(
+  initialOrdersState,
+  on(loadOrders, (state): OrdersState =&gt; ({
+    ...state,
+    loading: true,
+    error: null,
+  })),
+  on(loadOrdersSuccess, (state, { orders }): OrdersState =&gt; ({
+    ...state,
+    orders,
+    loading: false,
+  })),
+  on(loadOrdersFailure, (state, { error }): OrdersState =&gt; ({
+    ...state,
+    loading: false,
+    error,
+  }))
+);</code></pre></div>
+        <div class="danger"><p><strong>Pitfall:</strong> <code>state.orders.push(order)</code> mutates the existing array and breaks change detection, DevTools time-travel, and memoized selectors. Always use spread: <code>{ ...state, orders: [...state.orders, order] }</code>.</p></div>
+      </div>
+
+      <!-- STORE -->
+      <div class="card">
+        <h3 id="store-en">Store</h3>
+        <p class="definition"><strong>The Store</strong> is the single immutable state tree exposed as an RxJS Observable. You <em>read</em> from it via <code>store.select(selector)</code> and <em>write</em> by dispatching actions via <code>store.dispatch(action)</code>. You cannot assign to the store directly.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Component, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { Order } from './state/orders.state';
+import { loadOrders } from './state/orders.actions';
+import { selectAllOrders } from './state/orders.selectors';
+
+@Component({ selector: 'app-orders', standalone: true, template: '' })
+export class OrdersComponent {
+  private readonly store = inject(Store);
+
+  // READ — a live, memoized stream of orders
+  readonly orders$: Observable&lt;Order[]&gt; = this.store.select(selectAllOrders);
+
+  // WRITE — express intent; the effect + reducer do the work
+  load(): void {
+    this.store.dispatch(loadOrders());
+  }
+}</code></pre></div>
+      </div>
+
+      <!-- SELECTOR -->
+      <div class="card">
+        <h3 id="selector-en">Selector</h3>
+        <p class="definition"><strong>A Selector</strong> is a pure, <em>memoized</em> function that extracts and derives a slice of state. It recomputes only when its input slices change, so deriving "expensive" data is cheap. <code>createFeatureSelector</code> grabs a top-level feature slice; <code>createSelector</code> composes selectors and adds a projector.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.selectors.ts
+import { createFeatureSelector, createSelector } from '@ngrx/store';
+import { OrdersState } from './orders.state';
+import { Order } from './orders.state';
+
+export const selectOrdersState =
+  createFeatureSelector&lt;OrdersState&gt;('orders');
+
+export const selectAllOrders = createSelector(
+  selectOrdersState,
+  (state: OrdersState): Order[] =&gt; state.orders
+);
+
+export const selectPendingOrders = createSelector(
+  selectAllOrders,
+  (orders: Order[]): Order[] =&gt;
+    orders.filter((o) =&gt; o.status === 'pending')
+);
+
+export const selectOrdersLoading = createSelector(
+  selectOrdersState,
+  (state: OrdersState): boolean =&gt; state.loading
+);</code></pre></div>
+        <div class="tip"><p><strong>Memoization:</strong> <code>selectPendingOrders</code> re-runs <code>filter</code> only when <code>selectAllOrders</code> returns a new reference. If state changed elsewhere, the cached result is reused — a big win for OnPush components.</p></div>
+      </div>
+
+      <!-- EFFECT -->
+      <div class="card">
+        <h3 id="effect-en">Effect</h3>
+        <p class="definition"><strong>An Effect</strong> is an isolated handler for <em>side effects</em> (HTTP, WebSocket, navigation, storage). It listens to the action stream, performs async work, and dispatches a new action with the result. The contract is simple: <strong>actions in → actions out</strong>. Reducers stay pure because all the "impurity" lives here.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.effects.ts
+import { inject } from '@angular/core';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { of } from 'rxjs';
+import { switchMap, map, catchError } from 'rxjs/operators';
+import { OrderService } from './order.service';
+import { loadOrders, loadOrdersSuccess, loadOrdersFailure } from './orders.actions';
+
+export class OrdersEffects {
+  private readonly actions$ = inject(Actions);
+  private readonly orderService = inject(OrderService);
+
+  loadOrders$ = createEffect(() =&gt;
+    this.actions$.pipe(
+      ofType(loadOrders),
+      switchMap(() =&gt;
+        this.orderService.getAll().pipe(
+          map((orders) =&gt; loadOrdersSuccess({ orders })),
+          catchError((error: Error) =&gt;
+            of(loadOrdersFailure({ error: error.message }))
+          )
+        )
+      )
+    )
+  );
+}</code></pre></div>
+        <div class="warn"><p><strong>The flattening operator choice matters:</strong> <code>switchMap</code> cancels the previous request (great for reloads/autocomplete), <code>concatMap</code> queues them in order (great for writes), <code>mergeMap</code> runs them all in parallel, <code>exhaustMap</code> ignores new ones while busy (great for login/submit).</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== DATA FLOW DIAGRAM ===================== -->
+    <section data-searchable>
+      <h2 id="data-flow-en">Data flow diagram</h2>
+      <p>NgRx is a closed unidirectional loop. An action enters the loop, passes through effects and reducers, and the resulting state is projected back into the view by selectors.</p>
+
+      <div class="code-block"><pre><code class="language-text"> ┌────────────────────────────────────────────────────────────────┐
+ │                                                                  │
+ │   ┌─────────────┐   dispatch(action)    ┌──────────────────┐     │
+ │   │  Component  │ ────────────────────► │      Store       │     │
+ │   └─────────────┘                       └──────────────────┘     │
+ │          ▲                                  │         │          │
+ │          │ selector                action   │         │ action   │
+ │          │ (derived data)                   ▼         ▼          │
+ │   ┌─────────────┐                  ┌──────────┐  ┌──────────┐    │
+ │   │  Selector   │ ◄── new State ── │ Reducer  │  │  Effect  │    │
+ │   │ (memoized)  │                  │ (pure)   │  │ (async)  │    │
+ │   └─────────────┘                  └──────────┘  └──────────┘    │
+ │                                         ▲              │         │
+ │                                         │  Success /   │ HTTP /  │
+ │                                         └── Failure ───┘ WS      │
+ │                                            action                │
+ └────────────────────────────────────────────────────────────────┘</code></pre></div>
+
+      <div class="card">
+        <p>Read the loop as numbered steps:</p>
+        <ol>
+          <li><strong>The component dispatches an Action</strong> — e.g. <code>store.dispatch(loadOrders())</code>.</li>
+          <li><strong>An Effect performs async work</strong> — it intercepts <code>loadOrders</code> and calls the HTTP/WebSocket service.</li>
+          <li><strong>The Effect dispatches a success or failure Action</strong> — <code>loadOrdersSuccess({ orders })</code> or <code>loadOrdersFailure({ error })</code>.</li>
+          <li><strong>The Reducer updates state</strong> — the pure function returns a new immutable state object.</li>
+          <li><strong>A Selector derives data</strong> — a memoized projection (e.g. pending orders) recomputes only when its inputs change.</li>
+          <li><strong>The component re-renders</strong> — the selected stream emits, OnPush change detection fires, and the view updates.</li>
+        </ol>
+      </div>
+      <div class="success"><p><strong>Why it scales:</strong> because every state change is an explicit, serializable action, the entire history is replayable in DevTools, and reasoning about "how did the state get here?" becomes trivial.</p></div>
+    </section>
+
+    <!-- ===================== FOLDER STRUCTURE ===================== -->
+    <section data-searchable>
+      <h2 id="folder-structure-en">Feature state folder structure</h2>
+      <p>A feature slice keeps all NgRx artifacts together and close to the feature they serve, making the slice lazy-loadable and self-contained.</p>
+
+      <div class="code-block"><pre><code class="language-text">src/app/features/orders/
+├── state/
+│   ├── orders.actions.ts      # createAction / props
+│   ├── orders.reducer.ts      # createReducer + on(...)
+│   ├── orders.effects.ts      # createEffect (HTTP / WebSocket)
+│   ├── orders.selectors.ts    # createFeatureSelector + createSelector
+│   └── orders.state.ts        # OrdersState interface + initialState + domain types
+├── orders.component.ts        # dispatches actions, selects state
+└── orders.routes.ts           # lazy route config with providers</code></pre></div>
+
+      <div class="card">
+        <h3 id="state-file-en">orders.state.ts</h3>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export interface OrdersState {
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+}
+
+export const initialOrdersState: OrdersState = {
+  orders: [],
+  loading: false,
+  error: null,
+};</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h3 id="registration-en">Registration</h3>
+        <p>NgRx is registered via standalone providers — either globally (root) or lazily (per feature route).</p>
+        <p class="definition"><strong>Root registration</strong> — registers the whole store and effects once at application startup.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// main.ts / app.config.ts (root)
+import { provideStore } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { ordersReducer } from './features/orders/state/orders.reducer';
+import { OrdersEffects } from './features/orders/state/orders.effects';
+
+export const appConfig = {
+  providers: [
+    provideStore({ orders: ordersReducer }),
+    provideEffects([OrdersEffects]),
+  ],
+};</code></pre></div>
+        <p class="definition"><strong>Lazy (feature) registration</strong> — registers a single feature slice only when its route loads, via <code>provideState</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.routes.ts (lazy feature)
+import { Routes } from '@angular/router';
+import { provideState } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { ordersReducer } from './state/orders.reducer';
+import { OrdersEffects } from './state/orders.effects';
+
+export const ordersRoutes: Routes = [
+  {
+    path: '',
+    providers: [
+      provideState('orders', ordersReducer),
+      provideEffects([OrdersEffects]),
+    ],
+    loadComponent: () =&gt;
+      import('./orders.component').then((m) =&gt; m.OrdersComponent),
+  },
+];</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>provideStore vs provideState:</strong> use <code>provideStore</code> once at the root for the global state shape, and <code>provideState</code> inside lazy routes to plug in feature slices on demand — keeping the initial bundle small.</p></div>
+    </section>
+
+    <!-- ===================== ENTITY ADAPTER ===================== -->
+    <section data-searchable>
+      <h2 id="entity-adapter-en">EntityAdapter (@ngrx/entity)</h2>
+      <p class="definition"><strong>EntityAdapter</strong> is a utility from <code>@ngrx/entity</code> for managing <em>normalized</em> collections of objects indexed by ID. Instead of an array, the state holds <code>{ ids: string[], entities: Record&lt;string, Order&gt; }</code>, giving O(1) lookups and boilerplate-free CRUD helpers.</p>
+
+      <div class="card">
+        <p class="definition"><strong>getInitialState()</strong> — returns an empty <code>{ ids, entities }</code> shape with room for extra fields.</p>
+        <p class="definition"><strong>addOne(entity, state)</strong> — adds a single entity (does nothing if the ID already exists).</p>
+        <p class="definition"><strong>addMany(entities, state)</strong> — adds several entities at once.</p>
+        <p class="definition"><strong>setAll(entities, state)</strong> — replaces the whole collection (perfect for a fresh load).</p>
+        <p class="definition"><strong>updateOne({ id, changes }, state)</strong> — shallow-merges partial changes into a single entity.</p>
+        <p class="definition"><strong>removeOne(id, state)</strong> — removes a single entity by ID.</p>
+        <p class="definition"><strong>getSelectors()</strong> — returns ready-made memoized selectors: <code>selectAll</code>, <code>selectEntities</code>, <code>selectIds</code>, <code>selectTotal</code>.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.state.ts (entity version)
+import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
+import { Order } from './orders.state';
+
+export interface OrdersState extends EntityState&lt;Order&gt; {
+  loading: boolean;
+  error: string | null;
+}
+
+export const ordersAdapter: EntityAdapter&lt;Order&gt; =
+  createEntityAdapter&lt;Order&gt;({
+    selectId: (order: Order) =&gt; order.id,
+    sortComparer: (a: Order, b: Order) =&gt; a.symbol.localeCompare(b.symbol),
+  });
+
+export const initialOrdersState: OrdersState =
+  ordersAdapter.getInitialState({ loading: false, error: null });</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.reducer.ts (entity version)
+import { createReducer, on } from '@ngrx/store';
+import { ordersAdapter, initialOrdersState, OrdersState } from './orders.state';
+import { loadOrdersSuccess, updateOrderStatus, removeOrder } from './orders.actions';
+
+export const ordersReducer = createReducer(
+  initialOrdersState,
+  on(loadOrdersSuccess, (state, { orders }): OrdersState =&gt;
+    ordersAdapter.setAll(orders, { ...state, loading: false })
+  ),
+  on(updateOrderStatus, (state, { id, status }): OrdersState =&gt;
+    ordersAdapter.updateOne({ id, changes: { status } }, state)
+  ),
+  on(removeOrder, (state, { id }): OrdersState =&gt;
+    ordersAdapter.removeOne(id, state)
+  )
+);</code></pre></div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.selectors.ts — reuse the adapter's selectors
+import { createFeatureSelector } from '@ngrx/store';
+import { ordersAdapter, OrdersState } from './orders.state';
+
+export const selectOrdersState =
+  createFeatureSelector&lt;OrdersState&gt;('orders');
+
+const { selectAll, selectEntities, selectTotal } =
+  ordersAdapter.getSelectors();
+
+export const selectAllOrders =
+  createSelectorWrapper(selectOrdersState, selectAll);
+// In practice:
+// export const selectAllOrders = createSelector(selectOrdersState, selectAll);</code></pre></div>
+      <div class="success"><p><strong>Why normalize:</strong> updating a single order is O(1) (<code>entities[id]</code>) instead of walking the array, and there is never a risk of duplicate entries.</p></div>
+    </section>
+
+    <!-- ===================== SIGNAL STORE ===================== -->
+    <section data-searchable>
+      <h2 id="signal-store-en">@ngrx/signals (SignalStore)</h2>
+      <p class="definition"><strong>SignalStore</strong> is a modern, lightweight alternative to NgRx, built on Angular Signals instead of RxJS and Redux ceremony. State is a signal; you compose the store from features: <code>withState</code> (initial state), <code>withComputed</code> (derived signals, like selectors), and <code>withMethods</code> (updates and async logic, like reducers and effects combined).</p>
+
+      <div class="card">
+        <p class="definition"><strong>withState(initial)</strong> — declares reactive state as signals.</p>
+        <p class="definition"><strong>withComputed(store =&gt; ...)</strong> — declares memoized derived signals from state.</p>
+        <p class="definition"><strong>withMethods(store =&gt; ...)</strong> — declares methods that update state via <code>patchState</code> and run side effects.</p>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">// orders.store.ts
+import { computed, inject } from '@angular/core';
+import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { OrderService } from './order.service';
+import { Order } from './orders.state';
+
+interface OrdersState {
+  orders: Order[];
+  loading: boolean;
+}
+
+export const OrdersStore = signalStore(
+  { providedIn: 'root' },
+  withState&lt;OrdersState&gt;({ orders: [], loading: false }),
+  withComputed(({ orders }) =&gt; ({
+    pendingOrders: computed(() =&gt;
+      orders().filter((o) =&gt; o.status === 'pending')
+    ),
+    orderCount: computed(() =&gt; orders().length),
+  })),
+  withMethods((store, orderService = inject(OrderService)) =&gt; ({
+    async load(): Promise&lt;void&gt; {
+      patchState(store, { loading: true });
+      const orders = await orderService.getAllAsync();
+      patchState(store, { orders, loading: false });
+    },
+  }))
+);</code></pre></div>
+      <div class="tip"><p><strong>When to choose SignalStore:</strong> it removes the boilerplate of actions, reducers, and effects and integrates natively with Signals — ideal for new apps and feature-local state. The classic <code>@ngrx/store</code> is still a good fit for very large apps that need strict action traceability and a full action log in DevTools.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — interview questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Why must a reducer be a pure function?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Purity guarantees that the same <code>(state, action)</code> pair always produces the same new state with no side effects. This makes state transitions deterministic and replayable, which is exactly what enables time-travel in Redux DevTools. It also means reducers never trigger HTTP or mutate the existing object — so memoized selectors and OnPush change detection (which compare references) work correctly. Side effects belong in effects, not reducers.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. What is the difference between a selector and reading state directly?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A selector is a <em>memoized</em>, composable, pure function. It caches its last result and recomputes only when its input slices change, so deriving "expensive" data (e.g. filtering pending orders) is cheap and emits a stable reference when nothing meaningful has changed. Reading state directly skips memoization, recomputes on every emission, and couples components to the state shape. Selectors also centralize derivation logic, making it testable and reusable.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. What is the role of an effect, and why are side effects kept out of reducers?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>An effect listens to the action stream and performs side effects — HTTP calls, WebSocket subscriptions, navigation, storage — then dispatches a resulting action (<em>actions in → actions out</em>). Keeping the "impurity" here lets reducers stay pure and deterministic. For example, <code>loadOrders$</code> intercepts <code>loadOrders</code>, calls the service, and maps the response to <code>loadOrdersSuccess</code> or <code>loadOrdersFailure</code>. The choice of <code>switchMap</code>/<code>concatMap</code>/<code>exhaustMap</code> determines how concurrent requests are handled.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. When should you NOT use NgRx?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>For small apps or state that is local to a single component and short-lived, NgRx adds boilerplate and indirection without benefit. A <code>BehaviorSubject</code>-based service or Angular Signals is simpler. NgRx earns its complexity when state is shared across many components, changed from many places, involves complex async/optimistic flows, or when a large team benefits from predictable patterns and DevTools traceability. For modern apps that want less ceremony, <code>@ngrx/signals</code> is the sweet spot.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What problem does @ngrx/entity solve?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>It manages normalized collections indexed by ID — the state becomes <code>{ ids: string[], entities: Record&lt;string, Order&gt; }</code> instead of a raw array. This gives O(1) lookups and updates, prevents duplicate entries, and removes CRUD boilerplate through adapter methods (<code>addOne</code>, <code>setAll</code>, <code>updateOne</code>, <code>removeOne</code>). <code>getSelectors()</code> provides ready-made memoized selectors (<code>selectAll</code>, <code>selectEntities</code>, <code>selectIds</code>, <code>selectTotal</code>). Updating a single order by ID is far cheaper than walking an array.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which statement about a reducer is true?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It can make HTTP calls to load data</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It mutates the existing state object in place</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">It is a pure function returning a new state object</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It subscribes to the action stream and dispatches actions</button>
+        <div class="quiz-explain">Reducers are pure functions <code>(state, action) =&gt; newState</code> with no side effects. HTTP and dispatching belong to effects; state must be replaced, not mutated.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. What is the main advantage of a selector?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It performs an HTTP request for a slice</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">It is memoized and recomputes only when its inputs change</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It mutates state to keep derived values in sync</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">It removes the need for a reducer</button>
+        <div class="quiz-explain">Selectors are memoized pure functions. They cache the last result and recompute only when an input slice changes — cheap derivation and stable references for OnPush.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. In <code>loadOrders$</code>, which operator <strong>cancels</strong> the previous in-flight request when a new <code>loadOrders</code> arrives?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">concatMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">mergeMap</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">switchMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">exhaustMap</button>
+        <div class="quiz-explain"><code>switchMap</code> unsubscribes from the previous inner observable when a new action arrives — perfect for reloads. <code>concatMap</code> queues, <code>mergeMap</code> parallelizes, <code>exhaustMap</code> ignores new ones while busy.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Which provider plugs a feature slice in lazily inside a route?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">provideStore('orders', ordersReducer)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">provideState('orders', ordersReducer)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">provideReducer('orders', ordersReducer)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">forFeature('orders', ordersReducer)</button>
+        <div class="quiz-explain"><code>provideStore</code> registers the root store once; <code>provideState</code> plugs a feature slice into a lazy route's <code>providers</code>, paired with <code>provideEffects([OrdersEffects])</code>.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ===================== WHAT IS NGRX ===================== -->
     <section data-searchable>
       <h2 id="what-is-ngrx">Что такое NgRx и когда его применять</h2>
@@ -572,6 +1078,7 @@ export const OrdersStore = signalStore(
         <div class="quiz-explain"><code>provideStore</code> регистрирует корневое хранилище один раз; <code>provideState</code> подключает срез фичи в <code>providers</code> ленивого маршрута, в паре с <code>provideEffects([OrdersEffects])</code>.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">

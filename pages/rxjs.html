@@ -57,15 +57,18 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>RxJS</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">RxJS</span><span data-lang="ru">RxJS</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>RxJS — операторы и паттерны</h1>
-      <p class="page-desc">Реактивное программирование с Observable: холодные и горячие потоки, четыре вида Subject,
+      <h1><span data-lang="en">RxJS — operators &amp; patterns</span><span data-lang="ru">RxJS — операторы и паттерны</span></h1>
+      <p class="page-desc"><span data-lang="en">Reactive programming with Observables: cold vs hot streams, the four kinds of Subject,
+        <code>pipe()</code>, the full operator catalog (creation, transformation, filtering, combination,
+        error handling, utilities), <code>firstValueFrom</code> and four ways to avoid memory leaks.
+        The most frequently discussed topic in a senior Angular interview.</span><span data-lang="ru">Реактивное программирование с Observable: холодные и горячие потоки, четыре вида Subject,
         <code>pipe()</code>, полный каталог операторов (создание, преобразование, фильтрация, комбинирование,
         обработка ошибок, утилиты), <code>firstValueFrom</code> и четыре способа избежать утечек памяти.
-        Самая часто разбираемая тема на senior-собеседовании по Angular.</p>
+        Самая часто разбираемая тема на senior-собеседовании по Angular.</span></p>
       <button class="btn-done" data-page="rxjs" onclick="markDone('rxjs')">✓ Отметить как пройдено</button>
     </div>
 
@@ -75,6 +78,40 @@
 
     <!-- ============================= OBSERVABLE ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="observable-en">What is an Observable</h2>
+      <p class="definition"><strong>Observable</strong> — a lazy push stream that, over time, emits zero or more values and then either <em>completes</em> or <em>errors</em>. Nothing happens until you subscribe; once subscribed, the Observable <em>pushes</em> values to its observer as they arrive.</p>
+      <p class="definition"><strong>Observer</strong> — the consumer: an object with three callbacks. <code>next(value)</code> receives every emitted value, <code>error(err)</code> is called once on failure (terminating the stream), and <code>complete()</code> is called once when the stream finishes (with no value).</p>
+      <p class="definition"><strong>Observer pattern vs Observable</strong> — the classic Observer pattern is push-only and has no notion of completion, cancellation, or composition. Observable adds a terminal contract (complete/error), lazy execution, cancellation via <code>unsubscribe()</code>, and a rich algebra of operators for composing streams.</p>
+      <p class="definition"><strong>subscribe()</strong> — activates the Observable (runs its producer function) by hooking up the observer's callbacks. Returns a <code>Subscription</code> handle representing the ongoing execution.</p>
+      <p class="definition"><strong>unsubscribe()</strong> — called on the returned <code>Subscription</code>; stops the execution and releases resources (timers, listeners, sockets). Critical for preventing memory leaks.</p>
+
+      <div class="card">
+        <h4>The next / error / complete contract</h4>
+        <p>The grammar is strict: zero or more <code>next</code> notifications, optionally followed by a <em>single</em> <code>error</code> <strong>or</strong> a <em>single</em> <code>complete</code>. After a terminal notification nothing more is emitted.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Observable, Subscription } from 'rxjs';
+
+interface Quote { symbol: string; bid: number; ask: number; timestamp: number; }
+
+// Producer function receives the subscriber (observer)
+const quote$ = new Observable&lt;Quote&gt;((subscriber) =&gt; {
+  subscriber.next({ symbol: 'EURUSD', bid: 1.0700, ask: 1.0702, timestamp: Date.now() });
+  subscriber.next({ symbol: 'EURUSD', bid: 1.0701, ask: 1.0703, timestamp: Date.now() });
+  subscriber.complete();                 // terminal — no values after this
+  subscriber.next({ symbol: 'X' } as Quote); // ignored: stream already completed
+});
+
+const sub: Subscription = quote$.subscribe({
+  next:     (q) =&gt; console.log('quote', q.bid),
+  error:    (err) =&gt; console.error('stream error', err),
+  complete: () =&gt; console.log('done'),
+});
+
+sub.unsubscribe(); // stop execution, release resources</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>Lazy:</strong> the producer callback above does not run until <code>.subscribe()</code> is called. Declaring an Observable has no side effects — subscription is what "pulls the trigger".</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="observable">Что такое Observable</h2>
       <p class="definition"><strong>Observable</strong> — ленивый push-поток, который во времени испускает ноль или более значений, а затем либо <em>завершается</em> (complete), либо <em>завершается с ошибкой</em> (error). Ничего не происходит, пока вы не подпишетесь; после подписки Observable <em>проталкивает</em> значения своему наблюдателю по мере их поступления.</p>
       <p class="definition"><strong>Observer (наблюдатель)</strong> — потребитель: объект с тремя колбэками. <code>next(value)</code> получает каждое испущенное значение, <code>error(err)</code> вызывается один раз при сбое (завершая поток), а <code>complete()</code> вызывается один раз при завершении потока (без значения).</p>
@@ -106,10 +143,56 @@ const sub: Subscription = quote$.subscribe({
 sub.unsubscribe(); // stop execution, release resources</code></pre></div>
       </div>
       <div class="tip"><p><strong>Лениво:</strong> колбэк-продюсер выше не выполняется, пока не вызван <code>.subscribe()</code>. Объявление Observable не имеет побочных эффектов — именно подписка «спускает курок».</p></div>
+      </div>
     </section>
 
     <!-- ============================= COLD VS HOT ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="cold-vs-hot-en">Cold vs hot Observables</h2>
+      <p class="definition"><strong>Cold Observable</strong> — the producer is created <em>inside</em> the Observable, so each subscriber gets its own independent execution. It does not start until subscription, and every subscription re-runs the producer from scratch. Example: <code>http.get()</code> — each subscription fires a new HTTP request.</p>
+      <p class="definition"><strong>Hot Observable</strong> — the producer lives <em>outside</em> the Observable and is shared; all subscribers see the same execution, and values are emitted regardless of whether anyone is listening. Late-joining subscribers miss earlier values. Example: a WebSocket quote feed, mouse events, or a <code>Subject</code>.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>Cold</th><th>Hot</th></tr></thead>
+          <tbody>
+            <tr><td>Producer location</td><td>Inside (per subscriber)</td><td>Outside (shared)</td></tr>
+            <tr><td>Execution per subscriber</td><td>Independent ✅</td><td>Shared ❌</td></tr>
+            <tr><td>Start of emission</td><td>On subscribe</td><td>Independent of subscribers</td></tr>
+            <tr><td>Late subscribers</td><td>Receive the whole stream from the start</td><td>Miss earlier values</td></tr>
+            <tr><td>Examples</td><td><code>of</code>, <code>from</code>, <code>http.get()</code>, <code>interval</code></td><td><code>Subject</code>, WebSocket, <code>fromEvent</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Observable, Subject } from 'rxjs';
+
+// COLD — producer (Math.random) created INSIDE; each subscriber differs
+const cold$ = new Observable&lt;number&gt;((sub) =&gt; sub.next(Math.random()));
+cold$.subscribe((v) =&gt; console.log('A', v)); // e.g. 0.12
+cold$.subscribe((v) =&gt; console.log('B', v)); // e.g. 0.87 — different execution
+
+// HOT — producer (the Subject) lives OUTSIDE; subscribers share emissions
+const hot$ = new Subject&lt;number&gt;();
+hot$.subscribe((v) =&gt; console.log('A', v));
+hot$.next(0.5);                               // A: 0.5
+hot$.subscribe((v) =&gt; console.log('B', v));   // B subscribed AFTER 0.5
+hot$.next(0.9);                               // A: 0.9, B: 0.9 (shared)
+// B never sees 0.5 — it joined late</code></pre></div>
+
+      <div class="card">
+        <h4>Trading scenario — a quote feed is hot</h4>
+        <p>The market emits quotes continuously; whether a component is subscribed is irrelevant. A multicast WebSocket per chart and ticker is inherently hot. Late-joining components only see quotes from the moment they subscribe.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Observable, share } from 'rxjs';
+
+// A cold http.get() can be made hot/shared so N components reuse one request
+const cold = this.http.get&lt;Quote[]&gt;('/api/quotes'); // cold: 3 subs = 3 requests
+const shared$ = cold.pipe(share());                 // hot: 3 subs = 1 request</code></pre></div>
+      </div>
+      <div class="warn"><p><strong>Cold Observable pitfall #1:</strong> subscribing twice to <code>http.get()</code> (e.g. once in TS and once via the <code>async</code> pipe) fires the request <em>twice</em>. Use <code>shareReplay(1)</code> to multicast a single response.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="cold-vs-hot">Холодные и горячие Observable</h2>
       <p class="definition"><strong>Холодный Observable</strong> — продюсер создаётся <em>внутри</em> Observable, поэтому каждый подписчик получает собственное независимое выполнение. Он не стартует до подписки, и каждая подписка заново запускает продюсер с нуля. Пример: <code>http.get()</code> — каждая подписка инициирует новый HTTP-запрос.</p>
       <p class="definition"><strong>Горячий Observable</strong> — продюсер живёт <em>вне</em> Observable и является общим; все подписчики видят одно и то же выполнение, а значения испускаются независимо от того, слушает ли кто-то. Подписчики, присоединившиеся поздно, пропускают ранние значения. Пример: WebSocket-фид котировок, события мыши или <code>Subject</code>.</p>
@@ -152,10 +235,70 @@ const cold = this.http.get&lt;Quote[]&gt;('/api/quotes'); // cold: 3 subs = 3 re
 const shared$ = cold.pipe(share());                 // hot: 3 subs = 1 request</code></pre></div>
       </div>
       <div class="warn"><p><strong>Подводный камень №1 у холодных Observable:</strong> двойная подписка на <code>http.get()</code> (например, один раз в TS и один раз через пайп <code>async</code>) инициирует запрос <em>дважды</em>. Используйте <code>shareReplay(1)</code>, чтобы мультикастить единственный ответ.</p></div>
+      </div>
     </section>
 
     <!-- ============================= SUBJECTS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="subjects-en">Subject types (all four)</h2>
+      <p class="definition"><strong>Subject</strong> — is both an Observable <em>and</em> an Observer. It multicasts: calling <code>next()</code> pushes a value to all current subscribers at once. It has no initial value, and new subscribers miss any values emitted before they subscribed.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Subject } from 'rxjs';
+
+const orders$ = new Subject&lt;number&gt;();
+orders$.subscribe((v) =&gt; console.log('A', v));
+orders$.next(1);                              // A: 1
+orders$.next(2);                              // A: 2
+orders$.subscribe((v) =&gt; console.log('B', v));// B missed 1 and 2
+orders$.next(3);                              // A: 3, B: 3</code></pre></div>
+
+      <p class="definition"><strong>BehaviorSubject(initialValue)</strong> — a Subject that holds the <em>current</em> value. It requires an initial value, and every new subscriber immediately receives the latest value on subscription. Ideal for state that always has a "current" answer (selected instrument, auth status).</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { BehaviorSubject } from 'rxjs';
+
+const selected$ = new BehaviorSubject&lt;string&gt;('EURUSD'); // initial value
+selected$.subscribe((v) =&gt; console.log('A', v));         // A: EURUSD (immediately)
+selected$.next('BTCUSD');                                // A: BTCUSD
+selected$.subscribe((v) =&gt; console.log('B', v));         // B: BTCUSD (current value!)
+console.log(selected$.value);                            // synchronous read: BTCUSD</code></pre></div>
+
+      <p class="definition"><strong>ReplaySubject(bufferSize)</strong> — buffers the last <code>bufferSize</code> values and replays them all to each new subscriber, no matter how late it joins. Without a buffer size it replays the entire history. Useful for "the last N ticks" or caching.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { ReplaySubject } from 'rxjs';
+
+const ticks$ = new ReplaySubject&lt;number&gt;(2);  // buffer last 2
+ticks$.next(1);
+ticks$.next(2);
+ticks$.next(3);
+ticks$.subscribe((v) =&gt; console.log('A', v)); // A: 2, A: 3 (last 2 replayed)
+ticks$.next(4);                               // A: 4</code></pre></div>
+
+      <p class="definition"><strong>AsyncSubject</strong> — emits only the <em>last</em> value, and only when <code>complete()</code> is called. All earlier values are discarded. Behaves like a Promise resolving to a single final result.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { AsyncSubject } from 'rxjs';
+
+const result$ = new AsyncSubject&lt;number&gt;();
+result$.subscribe((v) =&gt; console.log('A', v));
+result$.next(10);
+result$.next(20);
+result$.next(30);   // nothing emitted yet
+result$.complete(); // NOW A: 30 (only the last value, on complete)</code></pre></div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th></th><th>Subject</th><th>BehaviorSubject</th><th>ReplaySubject</th><th>AsyncSubject</th></tr></thead>
+          <tbody>
+            <tr><td>Has initial value</td><td>❌</td><td>✅ (required)</td><td>❌</td><td>❌</td></tr>
+            <tr><td>Replays to new subscribers</td><td>❌ nothing</td><td>✅ last (1)</td><td>✅ last N</td><td>✅ last (on complete)</td></tr>
+            <tr><td>When it emits</td><td>On <code>next()</code></td><td>On subscribe + <code>next()</code></td><td>On subscribe + <code>next()</code></td><td>Only on <code>complete()</code></td></tr>
+            <tr><td>Use case</td><td>Event / action bus</td><td>Current state (selected symbol)</td><td>Last-N history (ticks)</td><td>Single final result</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Senior-level heuristic:</strong> for component/service state reach for <code>BehaviorSubject</code> (or, in Angular 16+, a Signal). For an event/action bus, a plain <code>Subject</code>. For "replay the last value to anyone who joins" without an initial seed, <code>ReplaySubject(1)</code>.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="subjects">Типы Subject (все четыре)</h2>
       <p class="definition"><strong>Subject</strong> — это одновременно и Observable, <em>и</em> Observer. Он делает мультикаст: вызов <code>next()</code> проталкивает значение всем текущим подписчикам одновременно. У него нет начального значения, и новые подписчики пропускают любые значения, испущенные до их подписки.</p>
 
@@ -212,10 +355,45 @@ result$.complete(); // NOW A: 30 (only the last value, on complete)</code></pre>
         </table>
       </div>
       <div class="tip"><p><strong>Эвристика senior-уровня:</strong> для состояния компонента/сервиса берите <code>BehaviorSubject</code> (или, в Angular 16+, Signal). Для шины событий/действий — обычный <code>Subject</code>. Для «переиграть последнее значение всем, кто присоединится» без начального зерна — <code>ReplaySubject(1)</code>.</p></div>
+      </div>
     </section>
 
     <!-- ============================= PIPE ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="pipe-en">pipe() — how it works</h2>
+      <p class="definition"><strong>pipe()</strong> — a method on every Observable that takes a sequence of operators and applies them left to right as <em>function composition</em>. Each operator takes the source Observable and returns a new one; the source is never mutated. <code>source$.pipe(f, g, h)</code> is equivalent to <code>h(g(f(source$)))</code>.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+// Instrument search: each operator returns a NEW Observable, composed in order
+this.searchControl.valueChanges.pipe(
+  debounceTime(300),                  // wait for 300ms of silence
+  distinctUntilChanged(),             // skip if query unchanged
+  filter((q): q is string =&gt; !!q &amp;&amp; q.length &gt;= 2),
+  switchMap((q) =&gt; this.api.searchInstruments(q)), // cancel previous search
+  takeUntilDestroyed(this.destroyRef),// auto-unsubscribe on destroy
+).subscribe((results) =&gt; this.results.set(results));</code></pre></div>
+
+      <h3 id="reusable-pipes-en">Reusable pipe chains</h3>
+      <p>Because operators are just functions, you can build a reusable pipeline with the standalone <code>pipe()</code> function from <code>'rxjs'</code> and apply it to any compatible stream.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { pipe, Observable } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter } from 'rxjs/operators';
+
+// A reusable operator: takes string-emitting source, returns cleaned string stream
+const searchPipeline = () =&gt; pipe(
+  debounceTime&lt;string&gt;(300),
+  distinctUntilChanged(),
+  filter((q: string) =&gt; q.length &gt;= 2),
+);
+
+// Apply the SAME pipeline to multiple independent streams
+const instrumentSearch$ = this.instrumentInput$.pipe(searchPipeline());
+const newsSearch$       = this.newsInput$.pipe(searchPipeline());</code></pre></div>
+      <div class="tip"><p>Returning <code>pipe(...)</code> from a factory creates a reusable, testable, named operator — the cleanest way to stay DRY with repeated chains across the codebase.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="pipe">pipe() — как это работает</h2>
       <p class="definition"><strong>pipe()</strong> — метод на каждом Observable, который принимает последовательность операторов и применяет их слева направо как <em>композицию функций</em>. Каждый оператор принимает исходный Observable и возвращает новый; исходный никогда не мутируется. <code>source$.pipe(f, g, h)</code> эквивалентно <code>h(g(f(source$)))</code>.</p>
 
@@ -247,10 +425,53 @@ const searchPipeline = () =&gt; pipe(
 const instrumentSearch$ = this.instrumentInput$.pipe(searchPipeline());
 const newsSearch$       = this.newsInput$.pipe(searchPipeline());</code></pre></div>
       <div class="tip"><p>Возврат <code>pipe(...)</code> из фабрики создаёт переиспользуемый, тестируемый именованный оператор — самый чистый способ соблюсти DRY для повторяющихся цепочек по всей кодовой базе.</p></div>
+      </div>
     </section>
 
     <!-- ============================= CREATION OPERATORS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="creation-en">Creation operators</h2>
+      <p class="definition"><strong>of(...values)</strong> — emits the given arguments in order, synchronously, then completes.</p>
+      <p class="definition"><strong>from(input)</strong> — converts an array, iterable, Promise, or another Observable into an Observable that emits each value.</p>
+      <p class="definition"><strong>fromEvent(target, eventName)</strong> — creates a (hot) Observable from a DOM/emitter event, emitting each event object.</p>
+      <p class="definition"><strong>interval(period)</strong> — emits increasing integers (0, 1, 2…) every <code>period</code> ms. By itself it never completes.</p>
+      <p class="definition"><strong>timer(delay, period?)</strong> — emits <code>0</code> after <code>delay</code>; if <code>period</code> is given, keeps emitting 1, 2, 3… every <code>period</code> ms.</p>
+      <p class="definition"><strong>EMPTY</strong> — an Observable that emits no values and completes immediately. Useful as a no-op fallback.</p>
+      <p class="definition"><strong>NEVER</strong> — an Observable that never emits and never completes. Rarely used outside tests/stubs.</p>
+      <p class="definition"><strong>throwError(() =&gt; err)</strong> — creates an Observable that immediately errors. Takes a <em>factory</em> function (RxJS 7+) so the error is created lazily per subscription.</p>
+      <p class="definition"><strong>defer(factory)</strong> — lazily creates an Observable per subscriber by calling <code>factory</code> at subscription time, making an eager source cold.</p>
+      <p class="definition"><strong>merge(...sources)</strong> — subscribes to all sources at once and emits their values interleaved as they arrive.</p>
+      <p class="definition"><strong>concat(...sources)</strong> — subscribes to sources in order; each starts only after the previous one completes. Preserves order.</p>
+      <p class="definition"><strong>combineLatest([...sources])</strong> — emits an array of the latest value from each source whenever any source emits (after all have emitted at least once).</p>
+      <p class="definition"><strong>forkJoin([...sources])</strong> — waits for every source to complete, then emits a single array of their last values. The RxJS analog of <code>Promise.all</code>.</p>
+      <p class="definition"><strong>zip([...sources])</strong> — combines the nth value of each source into an array; emits the nth tuple only when every source has produced its nth value.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import {
+  of, from, fromEvent, interval, timer, EMPTY, NEVER,
+  throwError, defer, merge, concat, combineLatest, forkJoin, zip,
+} from 'rxjs';
+
+of('EURUSD', 'BTCUSD');                       // → EURUSD, BTCUSD, complete
+from([1, 2, 3]);                              // → 1, 2, 3
+from(fetch('/api/quotes'));                   // Promise → Observable
+fromEvent(window, 'resize');                  // hot stream of resize events
+interval(1000);                               // 0, 1, 2… every second
+timer(2000, 1000);                            // 0 after 2s, then 1, 2… each 1s
+EMPTY;                                         // completes, emits nothing
+NEVER;                                         // emits nothing, never completes
+throwError(() =&gt; new Error('feed down'));      // errors on subscribe
+defer(() =&gt; of(Date.now()));                   // re-evaluated per subscriber
+
+// Combine three quote sources
+merge(fx$, crypto$, equities$);               // interleaved as they arrive
+concat(historical$, live$);                   // history first, THEN live feed
+combineLatest([bid$, ask$]);                  // [latestBid, latestAsk] on any emit
+forkJoin([instrument$, position$, quote$]);   // all complete → [i, p, q]
+zip([symbol$, price$]);                        // [sym0, px0], [sym1, px1]…</code></pre></div>
+      <div class="warn"><p><strong>throwError gotcha:</strong> in RxJS 7+ pass a factory <code>throwError(() =&gt; err)</code>, not the error itself. Passing a value directly is deprecated and evaluated eagerly.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="creation">Операторы создания</h2>
       <p class="definition"><strong>of(...values)</strong> — испускает переданные аргументы по порядку, синхронно, затем завершается.</p>
       <p class="definition"><strong>from(input)</strong> — преобразует массив, итерируемый объект, Promise или другой Observable в Observable, испускающий каждое значение.</p>
@@ -290,10 +511,113 @@ combineLatest([bid$, ask$]);                  // [latestBid, latestAsk] on any e
 forkJoin([instrument$, position$, quote$]);   // all complete → [i, p, q]
 zip([symbol$, price$]);                        // [sym0, px0], [sym1, px1]…</code></pre></div>
       <div class="warn"><p><strong>Ловушка throwError:</strong> в RxJS 7+ передавайте фабрику <code>throwError(() =&gt; err)</code>, а не саму ошибку. Передача значения напрямую устарела и вычисляется жадно.</p></div>
+      </div>
     </section>
 
     <!-- ============================= TRANSFORMATION OPERATORS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="transformation-en">Transformation operators</h2>
+      <p class="definition"><strong>map(fn)</strong> — transforms each emitted value with a projection function and emits the result. Fully synchronous and does <em>not</em> subscribe to inner Observables (the *Map flattening operators do that).</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { map } from 'rxjs/operators';
+quote$.pipe(map((q: Quote) =&gt; q.ask - q.bid)); // emit the spread per quote</code></pre></div>
+
+      <h3 id="flattening-en">Flattening (higher-order) operators</h3>
+      <p>These operators take a value, map it into an <em>inner</em> Observable, subscribe to it, and flatten its emissions into the output stream. They differ in how they handle <em>concurrent</em> inner Observables — the single most important distinction in RxJS.</p>
+
+      <div class="card">
+        <h4><code>switchMap(fn)</code></h4>
+        <p class="definition"><strong>switchMap</strong> — maps to an inner Observable and <em>cancels (unsubscribes from) the previous inner</em> whenever a new source value arrives. Only the most recent inner stream survives.</p>
+        <ul><li><strong>When to use:</strong> autocomplete / instrument search, route param changes — anywhere only the newest result matters.</li><li><strong>Pitfall:</strong> do <em>not</em> use it for parallel independent requests — it cancels work you wanted in flight.</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { switchMap } from 'rxjs/operators';
+search$.pipe(
+  switchMap((q: string) =&gt; this.api.searchInstruments(q)), // cancels stale search
+);</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>mergeMap(fn)</code> (aka flatMap)</h4>
+        <p class="definition"><strong>mergeMap</strong> — maps to an inner Observable and merges them all <em>concurrently</em>, without cancellation. Each inner runs to completion in parallel.</p>
+        <ul><li><strong>When to use:</strong> fire N independent requests in parallel — uploading several files, writing to many endpoints.</li><li><strong>Pitfall:</strong> output order is <em>not</em> guaranteed; whichever inner emits first wins. It can also overwhelm the server (cap it with the <code>concurrent</code> argument).</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { mergeMap } from 'rxjs/operators';
+files$.pipe(
+  mergeMap((file: File) =&gt; this.api.upload(file), 4), // up to 4 concurrent uploads
+);</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>concatMap(fn)</code></h4>
+        <p class="definition"><strong>concatMap</strong> — maps to an inner Observable and runs them strictly <em>sequentially</em>, queuing each new source value until the previous inner completes. Preserves order.</p>
+        <ul><li><strong>When to use:</strong> an ordered order-submission queue where each request must complete before the next starts.</li><li><strong>Pitfall:</strong> if an inner Observable never completes (e.g. <code>interval</code>), the queue hangs forever — nothing after it runs.</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { concatMap } from 'rxjs/operators';
+orderQueue$.pipe(
+  concatMap((order: Order) =&gt; this.api.placeOrder(order)), // one at a time, in order
+);</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>exhaustMap(fn)</code></h4>
+        <p class="definition"><strong>exhaustMap</strong> — maps to an inner Observable and <em>ignores new source values while the current inner is still active</em>. The current execution must finish ("exhaust") before a new one can start.</p>
+        <ul><li><strong>When to use:</strong> submit / login buttons — ignore double-clicks while a request is in flight.</li><li><strong>Pitfall:</strong> values arriving during an active inner are dropped entirely (not queued), which can feel unresponsive if misapplied.</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { exhaustMap } from 'rxjs/operators';
+submitClick$.pipe(
+  exhaustMap(() =&gt; this.api.placeOrder(this.form.value)), // ignore re-clicks
+);</code></pre></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Operator</th><th>Cancels previous?</th><th>Concurrent?</th><th>Sequential?</th><th>Ignores new?</th><th>FinTech use</th></tr></thead>
+          <tbody>
+            <tr><td><code>switchMap</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>Instrument search / autocomplete</td></tr>
+            <tr><td><code>mergeMap</code></td><td>❌</td><td>✅</td><td>❌</td><td>❌</td><td>Upload N files in parallel</td></tr>
+            <tr><td><code>concatMap</code></td><td>❌</td><td>❌</td><td>✅</td><td>❌</td><td>Order queue in strict order</td></tr>
+            <tr><td><code>exhaustMap</code></td><td>❌</td><td>❌</td><td>❌</td><td>✅</td><td>Submit / login button (ignore re-clicks)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="scan-buffer-en">scan, buffer, pairwise, groupBy, expand</h3>
+      <p class="definition"><strong>scan(accumulator, seed)</strong> — like <code>Array.reduce</code>, but emits the <em>intermediate</em> accumulated value after each source emission, not just the final one. Ideal for running totals.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { scan } from 'rxjs/operators';
+
+// Running P&amp;L — emits the cumulative total on every trade
+trade$.pipe(
+  scan((pnl: number, t: { pnl: number }) =&gt; pnl + t.pnl, 0),
+);
+
+// Keep a rolling history of the last 100 ticks
+tick$.pipe(
+  scan((hist: number[], px: number) =&gt; [...hist, px].slice(-100), []),
+);</code></pre></div>
+
+      <p class="definition"><strong>buffer(closingNotifier$)</strong> — collects emitted values into an array and emits that array each time the notifier Observable emits.</p>
+      <p class="definition"><strong>bufferTime(ms)</strong> — collects values into arrays, emitting each batch every <code>ms</code> milliseconds. Great for batching high-frequency ticks.</p>
+      <p class="definition"><strong>pairwise()</strong> — emits the previous and current value together as a <code>[prev, curr]</code> tuple (outputs nothing until the second value). Ideal for computing deltas.</p>
+      <p class="definition"><strong>groupBy(keyFn)</strong> — splits the source into multiple inner Observables by <code>keyFn</code>, one per unique key.</p>
+      <p class="definition"><strong>expand(fn)</strong> — recursively maps each value into an inner Observable and feeds its emissions back into <code>fn</code> — used for recursive/paginated fetching.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { buffer, bufferTime, pairwise, groupBy, expand, map, mergeMap, takeWhile } from 'rxjs/operators';
+
+tick$.pipe(buffer(flush$));            // emit collected ticks when flush$ fires
+tick$.pipe(bufferTime(1000));         // emit an array of ticks each second
+
+price$.pipe(
+  pairwise(),                          // [prev, curr]
+  map(([prev, curr]) =&gt; curr - prev),  // per-tick delta
+);
+
+order$.pipe(
+  groupBy((o: Order) =&gt; o.symbol),     // one inner stream per symbol
+  mergeMap((group$) =&gt; group$.pipe(/* per-symbol logic */)),
+);
+
+// Paginated fetch: keep requesting next page until empty
+this.api.getPage(0).pipe(
+  expand((page) =&gt; page.hasNext ? this.api.getPage(page.next) : EMPTY),
+  takeWhile((page) =&gt; page.items.length &gt; 0, true),
+);</code></pre></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="transformation">Операторы преобразования</h2>
       <p class="definition"><strong>map(fn)</strong> — преобразует каждое испущенное значение функцией проекции и испускает результат. Полностью синхронный и <em>не</em> подписывается на внутренние Observable (для этого нужны flattening-операторы *Map).</p>
       <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">import { map } from 'rxjs/operators';
@@ -393,10 +717,49 @@ this.api.getPage(0).pipe(
   expand((page) =&gt; page.hasNext ? this.api.getPage(page.next) : EMPTY),
   takeWhile((page) =&gt; page.items.length &gt; 0, true),
 );</code></pre></div>
+      </div>
     </section>
 
     <!-- ============================= FILTERING OPERATORS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="filtering-en">Filtering operators</h2>
+      <p class="definition"><strong>filter(predicate)</strong> — emits only values for which the predicate returns <code>true</code>.</p>
+      <p class="definition"><strong>take(n)</strong> — emits the first <code>n</code> values, then completes automatically.</p>
+      <p class="definition"><strong>takeUntil(notifier$)</strong> — emits source values until <code>notifier$</code> emits its first value, then completes. The classic unsubscribe mechanism.</p>
+      <p class="definition"><strong>takeWhile(predicate)</strong> — emits while the predicate is <code>true</code>; completes as soon as it returns <code>false</code> (optionally including the non-matching value).</p>
+      <p class="definition"><strong>takeUntilDestroyed(destroyRef?)</strong> — an Angular 16+ operator that completes the stream when the component/directive/service is destroyed. Called inside an injection context it needs no argument; otherwise pass a <code>DestroyRef</code>.</p>
+      <p class="definition"><strong>skip(n)</strong> — ignores the first <code>n</code> values, then emits the rest.</p>
+      <p class="definition"><strong>skipUntil(notifier$)</strong> — ignores source values until <code>notifier$</code> emits, then lets everything through.</p>
+      <p class="definition"><strong>debounceTime(ms)</strong> — waits for <code>ms</code> of silence after a value, then emits the most recent one. Drops intermediate values. Ideal for search fields.</p>
+      <p class="definition"><strong>throttleTime(ms)</strong> — emits the first value, then ignores subsequent ones for <code>ms</code> milliseconds. Ideal for scroll/resize/rate-limiting.</p>
+      <p class="definition"><strong>distinctUntilChanged(compareFn?)</strong> — emits a value only if it differs from the <em>previous</em> emitted one (by <code>===</code> or a custom comparator).</p>
+      <p class="definition"><strong>first(predicate?)</strong> — emits the first value (optionally matching a predicate), then completes; errors with <code>EmptyError</code> if nothing matched.</p>
+      <p class="definition"><strong>last(predicate?)</strong> — emits the last value (optionally matching a predicate) after the source completes.</p>
+      <p class="definition"><strong>elementAt(n)</strong> — emits only the value at index <code>n</code>, then completes.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import {
+  filter, take, takeUntil, takeWhile, skip, skipUntil,
+  debounceTime, throttleTime, distinctUntilChanged, first, last, elementAt,
+} from 'rxjs/operators';
+
+quote$.pipe(filter((q: Quote) =&gt; q.ask - q.bid &lt; 0.0005)); // tight spreads only
+quote$.pipe(take(1));                          // first quote, then complete
+quote$.pipe(takeUntil(this.destroy$));         // until destroy$ fires
+price$.pipe(takeWhile((p: number) =&gt; p &lt; 100)); // while below 100
+tick$.pipe(skip(1));                           // drop the first (stale) tick
+
+// Search input: wait for silence, dedupe identical queries
+this.search$.pipe(
+  debounceTime(300),
+  distinctUntilChanged(),
+);
+
+scroll$.pipe(throttleTime(200));               // at most one event / 200ms
+quote$.pipe(first((q: Quote) =&gt; q.bid &gt; 1.07)); // first crossing 1.07</code></pre></div>
+      <div class="tip"><p><strong>debounce vs throttle:</strong> <em>debounce</em> waits for a pause, then emits the latest value (search field). <em>throttle</em> emits immediately, then rate-limits (scroll handler). They solve opposite ends of the same problem.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="filtering">Операторы фильтрации</h2>
       <p class="definition"><strong>filter(predicate)</strong> — испускает только значения, для которых предикат вернул <code>true</code>.</p>
       <p class="definition"><strong>take(n)</strong> — испускает первые <code>n</code> значений, затем автоматически завершается.</p>
@@ -432,10 +795,54 @@ this.search$.pipe(
 scroll$.pipe(throttleTime(200));               // at most one event / 200ms
 quote$.pipe(first((q: Quote) =&gt; q.bid &gt; 1.07)); // first crossing 1.07</code></pre></div>
       <div class="tip"><p><strong>debounce vs throttle:</strong> <em>debounce</em> ждёт паузу, затем испускает последнее значение (поле поиска). <em>throttle</em> испускает сразу, затем ограничивает частоту (обработчик прокрутки). Они решают противоположные концы одной задачи.</p></div>
+      </div>
     </section>
 
     <!-- ============================= COMBINATION OPERATORS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="combination-en">Combination operators</h2>
+      <p class="definition"><strong>combineLatest([a$, b$])</strong> — emits an array of the latest value of each input whenever <em>any</em> input emits, but only after every input has emitted at least once.</p>
+      <p class="definition"><strong>forkJoin([a$, b$])</strong> — waits for <em>all</em> inputs to complete, then emits a single array of their last values. The Observable equivalent of <code>Promise.all</code>.</p>
+      <p class="definition"><strong>zip([a$, b$])</strong> — pairs values by index: emits <code>[a0, b0]</code>, then <code>[a1, b1]</code>… only when each input has produced that index.</p>
+      <p class="definition"><strong>withLatestFrom(other$)</strong> — for each source emission, attaches the latest value from <code>other$</code> without using <code>other$</code> as a trigger. Emissions are driven by the source alone.</p>
+      <p class="definition"><strong>startWith(value)</strong> — prepends one or more synchronous values before the source begins emitting. Useful for seeding an initial UI state.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { combineLatest, forkJoin, zip } from 'rxjs';
+import { withLatestFrom, startWith, map } from 'rxjs/operators';
+
+// Recompute a derived total whenever selected symbol OR its quote changes
+combineLatest([selectedSymbol$, quote$]).pipe(
+  map(([symbol, quote]) =&gt; ({ symbol, mid: (quote.bid + quote.ask) / 2 })),
+);
+
+// Load everything a dashboard needs, once, in parallel
+forkJoin({
+  instrument: this.api.getInstrument(id),
+  position:   this.api.getPosition(id),
+  quote:      this.api.getQuote(id),
+}); // emits { instrument, position, quote } when all complete
+
+zip([orderId$, fillPrice$]);                   // pair the nth id with nth fill
+
+// On each submit click, grab the latest form value without re-triggering
+submit$.pipe(withLatestFrom(formValue$));
+
+connectionStatus$.pipe(startWith('connecting')); // seed UI before first event</code></pre></div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th></th><th>combineLatest</th><th>forkJoin</th><th>zip</th></tr></thead>
+          <tbody>
+            <tr><td>When it emits</td><td>On any source emission (after all have emitted once)</td><td>Once, when all complete</td><td>When all have an nth value</td></tr>
+            <tr><td>Requires completion</td><td>❌</td><td>✅</td><td>❌</td></tr>
+            <tr><td>Use case</td><td>Live derived state (mid price)</td><td>Parallel one-shot loads</td><td>Strictly index-paired streams</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="warn"><p><strong>forkJoin gotcha:</strong> if any input <em>never completes</em> (e.g. a <code>Subject</code> or <code>interval</code>), <code>forkJoin</code> will never emit. Use it only with completing sources like HTTP requests, or add <code>take(1)</code>.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="combination">Операторы комбинирования</h2>
       <p class="definition"><strong>combineLatest([a$, b$])</strong> — испускает массив последних значений каждого входа всякий раз, когда <em>любой</em> вход испускает, но только после того как каждый вход испустил хотя бы раз.</p>
       <p class="definition"><strong>forkJoin([a$, b$])</strong> — ждёт завершения <em>всех</em> входов, затем испускает единственный массив их последних значений. Observable-эквивалент <code>Promise.all</code>.</p>
@@ -476,10 +883,47 @@ connectionStatus$.pipe(startWith('connecting')); // seed UI before first event</
         </table>
       </div>
       <div class="warn"><p><strong>Ловушка forkJoin:</strong> если какой-то вход <em>никогда не завершается</em> (например, <code>Subject</code> или <code>interval</code>), <code>forkJoin</code> никогда не испустит. Используйте его только с завершающимися источниками вроде HTTP-запросов или добавьте <code>take(1)</code>.</p></div>
+      </div>
     </section>
 
     <!-- ============================= ERROR HANDLING ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="error-handling-en">Error handling</h2>
+      <p class="definition"><strong>catchError((err, caught) =&gt; Observable)</strong> — intercepts an error notification and <em>must return a new Observable</em> to continue. Return <code>of(fallback)</code> for graceful recovery, or <code>throwError(() =&gt; err)</code> to rethrow.</p>
+      <p class="definition"><strong>retry(count)</strong> — on error, re-subscribes to the source up to <code>count</code> times before giving up and propagating the error.</p>
+      <p class="definition"><strong>retryWhen(notifier =&gt; Observable)</strong> — controlled retry driven by a notifier Observable. <em>Deprecated in RxJS 7</em>; prefer <code>retry({ count, delay })</code>.</p>
+      <p class="definition"><strong>retry({ count, delay })</strong> — the modern, configurable retry: retries <code>count</code> times, waiting <code>delay</code> ms (or a function returning a notifier) between attempts.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { of, throwError } from 'rxjs';
+import { catchError, retry } from 'rxjs/operators';
+
+// 1. Recover with a fallback value — stream CONTINUES
+this.api.getQuote(id).pipe(
+  catchError((err: unknown) =&gt; {
+    console.error('quote failed', err);
+    return of({ symbol: id, bid: 0, ask: 0, timestamp: Date.now() } as Quote);
+  }),
+);
+
+// 2. Rethrow after logging — stream ERRORS
+this.api.placeOrder(order).pipe(
+  catchError((err: unknown) =&gt; {
+    this.logger.error(err);
+    return throwError(() =&gt; err); // propagate to the subscriber's error callback
+  }),
+);
+
+// 3. Modern retry with backoff (RxJS 7+)
+this.api.getQuote(id).pipe(
+  retry({ count: 3, delay: 2000 }), // up to 3 retries, 2s apart
+);
+
+// retryWhen is deprecated — do NOT reach for it in new code
+// (use retry({ count, delay }) instead)</code></pre></div>
+      <div class="danger"><p><strong>Critical:</strong> an unhandled error <em>terminates the stream forever</em> — no more values. On a long-lived feed always call <code>catchError</code> on the <em>inner</em> Observable (inside <code>switchMap</code>/<code>mergeMap</code>) so a single failed request does not kill the whole subscription.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="error-handling">Обработка ошибок</h2>
       <p class="definition"><strong>catchError((err, caught) =&gt; Observable)</strong> — перехватывает уведомление об ошибке и <em>обязан вернуть новый Observable</em> для продолжения. Верните <code>of(fallback)</code> для аккуратного восстановления или <code>throwError(() =&gt; err)</code> для повторного выброса.</p>
       <p class="definition"><strong>retry(count)</strong> — при ошибке переподписывается на источник до <code>count</code> раз, прежде чем сдаться и пробросить ошибку.</p>
@@ -513,10 +957,41 @@ this.api.getQuote(id).pipe(
 // retryWhen is deprecated — do NOT reach for it in new code
 // (use retry({ count, delay }) instead)</code></pre></div>
       <div class="danger"><p><strong>Критично:</strong> необработанная ошибка <em>навсегда завершает поток</em> — больше ни одного значения. На долгоживущем фиде всегда вызывайте <code>catchError</code> на <em>внутреннем</em> Observable (внутри <code>switchMap</code>/<code>mergeMap</code>), чтобы единичный неудавшийся запрос не убил всю подписку.</p></div>
+      </div>
     </section>
 
     <!-- ============================= UTILITY OPERATORS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="utility-en">Utility operators</h2>
+      <p class="definition"><strong>tap(observerOrFn)</strong> — performs side effects (logging, analytics, setting a loading flag) for each notification, <em>without altering</em> the values passing through.</p>
+      <p class="definition"><strong>delay(ms)</strong> — time-shifts each emission by <code>ms</code> milliseconds.</p>
+      <p class="definition"><strong>timeout(ms)</strong> — errors with a <code>TimeoutError</code> if the source does not emit within <code>ms</code> milliseconds after subscription (or between emissions).</p>
+      <p class="definition"><strong>finalize(fn)</strong> — runs a callback when the stream terminates for any reason — complete <em>or</em> error <em>or</em> unsubscribe. Ideal for hiding a spinner.</p>
+      <p class="definition"><strong>shareReplay(bufferSize)</strong> — multicasts the source to all subscribers <em>and</em> replays the last <code>bufferSize</code> values to late subscribers. Turns a cold HTTP call into a shared, cached one.</p>
+      <p class="definition"><strong>share()</strong> — multicasts the source so subscribers share one execution, but <em>without</em> replay — late subscribers miss prior values.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { tap, delay, timeout, finalize, shareReplay, share, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+this.loading.set(true);
+this.api.getInstrument(id).pipe(
+  tap((i) =&gt; console.log('loaded', i.symbol)), // side effect only
+  timeout(5000),                               // error if &gt; 5s with no response
+  catchError(() =&gt; of(null)),
+  finalize(() =&gt; this.loading.set(false)),      // ALWAYS hide spinner
+).subscribe();
+
+// Share ONE HTTP response across many components (cold → hot + cached)
+readonly instruments$ = this.http.get&lt;Instrument[]&gt;('/api/instruments').pipe(
+  shareReplay(1),                              // 1 request, replayed to all
+);
+
+// share() — multicast a live feed, no replay for late joiners
+readonly liveQuotes$ = this.socket.quotes$.pipe(share());</code></pre></div>
+      <div class="tip"><p><strong>shareReplay refCount:</strong> use <code>shareReplay({ bufferSize: 1, refCount: true })</code> if you want the underlying source to unsubscribe (and the cache to reset) after the last subscriber leaves — important for long-lived feeds so you do not keep a socket open forever.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="utility">Утилитарные операторы</h2>
       <p class="definition"><strong>tap(observerOrFn)</strong> — выполняет побочные эффекты (логирование, аналитика, установка флага загрузки) для каждого уведомления, <em>не изменяя</em> проходящие значения.</p>
       <p class="definition"><strong>delay(ms)</strong> — сдвигает во времени каждую эмиссию на <code>ms</code> миллисекунд.</p>
@@ -544,10 +1019,53 @@ readonly instruments$ = this.http.get&lt;Instrument[]&gt;('/api/instruments').pi
 // share() — multicast a live feed, no replay for late joiners
 readonly liveQuotes$ = this.socket.quotes$.pipe(share());</code></pre></div>
       <div class="tip"><p><strong>shareReplay refCount:</strong> используйте <code>shareReplay({ bufferSize: 1, refCount: true })</code>, если хотите, чтобы базовый источник отписывался (а кэш сбрасывался) после ухода последнего подписчика — важно для долгоживущих фидов, чтобы не держать сокет открытым вечно.</p></div>
+      </div>
     </section>
 
     <!-- ============================= firstValueFrom / lastValueFrom ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="value-from-en">firstValueFrom / lastValueFrom</h2>
+      <p class="definition"><strong>firstValueFrom(observable$)</strong> — subscribes, resolves a Promise with the <em>first</em> emitted value, then auto-unsubscribes. Rejects with <code>EmptyError</code> if the Observable completes without emitting. The modern replacement for the deprecated <code>.toPromise()</code>.</p>
+      <p class="definition"><strong>lastValueFrom(observable$)</strong> — subscribes and resolves a Promise with the <em>last</em> emitted value after the Observable completes. Also rejects with <code>EmptyError</code> if nothing was emitted.</p>
+      <p><strong>When to use:</strong> in route guards and resolvers that want <code>async/await</code>, when interoperating with Promise-based code, or for one-shot reads (a single HTTP GET). Avoid them for long-lived streams that never complete (<code>lastValueFrom</code> will hang).</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { firstValueFrom, lastValueFrom } from 'rxjs';
+import { inject } from '@angular/core';
+import { CanActivateFn, ResolveFn, Router } from '@angular/router';
+
+// Functional auth guard using async/await via firstValueFrom
+export const authGuard: CanActivateFn = async () =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const isAuthed = await firstValueFrom(auth.isAuthenticated$); // first value, auto-unsub
+  return isAuthed ? true : router.createUrlTree(['/login']);
+};
+
+// Resolver pre-fetching an instrument before the route activates
+export const instrumentResolver: ResolveFn&lt;Instrument&gt; = (route) =&gt; {
+  const api = inject(InstrumentService);
+  const id = route.paramMap.get('id')!;
+  return firstValueFrom(api.getInstrument(id)); // HTTP completes → resolves
+};
+
+// lastValueFrom — wait for a completing stream's final value
+const finalPrice = await lastValueFrom(this.api.getQuote('EURUSD'));</code></pre></div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Method</th><th>Returns</th><th>Auto-unsubscribe</th><th>Throws when empty</th></tr></thead>
+          <tbody>
+            <tr><td><code>firstValueFrom(obs$)</code></td><td>Promise of the first value</td><td>✅</td><td>✅ EmptyError</td></tr>
+            <tr><td><code>lastValueFrom(obs$)</code></td><td>Promise of the last value (on complete)</td><td>✅</td><td>✅ EmptyError</td></tr>
+            <tr><td><code>.toPromise()</code> (deprecated)</td><td>Promise of the last value or <code>undefined</code></td><td>✅</td><td>❌ resolves to <code>undefined</code></td></tr>
+            <tr><td><code>.subscribe()</code></td><td>Subscription (not a Promise)</td><td>❌ (manual)</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="warn"><p><strong>Why <code>.toPromise()</code> is deprecated:</strong> it ambiguously resolved to <code>undefined</code> for empty streams, giving no way to distinguish "emitted undefined" from "emitted nothing". <code>firstValueFrom</code>/<code>lastValueFrom</code> fix this by throwing <code>EmptyError</code>.</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="value-from">firstValueFrom / lastValueFrom</h2>
       <p class="definition"><strong>firstValueFrom(observable$)</strong> — подписывается, разрешает Promise <em>первым</em> испущенным значением, затем автоматически отписывается. Отклоняется с <code>EmptyError</code>, если Observable завершается ничего не испустив. Современная замена устаревшему <code>.toPromise()</code>.</p>
       <p class="definition"><strong>lastValueFrom(observable$)</strong> — подписывается и разрешает Promise <em>последним</em> испущенным значением после завершения Observable. Также отклоняется с <code>EmptyError</code>, если ничего не было испущено.</p>
@@ -587,10 +1105,111 @@ const finalPrice = await lastValueFrom(this.api.getQuote('EURUSD'));</code></pre
         </table>
       </div>
       <div class="warn"><p><strong>Почему <code>.toPromise()</code> устарел:</strong> он неоднозначно разрешался в <code>undefined</code> для пустых потоков, не давая способа отличить «испустил undefined» от «не испустил ничего». <code>firstValueFrom</code>/<code>lastValueFrom</code> исправляют это, бросая <code>EmptyError</code>.</p></div>
+      </div>
     </section>
 
     <!-- ============================= MEMORY LEAKS ============================= -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="memory-leaks-en">Memory leaks and unsubscribing</h2>
+      <p class="definition"><strong>Memory leak (RxJS)</strong> — a subscription that is never torn down. Its producer (a timer, event listener, socket, HTTP) keeps running, and the closure keeps the component instance alive after Angular destroyed it, causing a memory leak and duplicate/zombie work (e.g. change detection on a dead component).</p>
+
+      <div class="card">
+        <h4>1. <code>takeUntil(destroy$)</code> — the classic pattern</h4>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+export class QuotesComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject&lt;void&gt;();
+
+  ngOnInit(): void {
+    this.quotes.stream$.pipe(
+      takeUntil(this.destroy$), // place LAST so everything above is torn down
+    ).subscribe((q) =&gt; this.render(q));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}</code></pre></div>
+        <p>Works everywhere, but verbose and error-prone (forget <code>ngOnDestroy</code> and you have a leak).</p>
+      </div>
+
+      <div class="card">
+        <h4>2. <code>takeUntilDestroyed(destroyRef)</code> — Angular 16+ (cleaner)</h4>
+        <p class="definition"><strong>takeUntilDestroyed</strong> — automatically completes the stream when the current injection context (component/directive/service) is destroyed, removing all the <code>destroy$</code> boilerplate.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+export class QuotesComponent {
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    // In an injection context (constructor) you can omit the argument:
+    this.quotes.stream$
+      .pipe(takeUntilDestroyed()) // no destroyRef needed in constructor
+      .subscribe((q) =&gt; this.render(q));
+  }
+
+  start(): void {
+    // Outside the injection context, pass the DestroyRef explicitly:
+    this.quotes.stream$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((q) =&gt; this.render(q));
+  }
+}</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>3. The <code>async</code> pipe in the template — BEST</h4>
+        <p class="definition"><strong>async pipe</strong> — subscribes to an Observable directly in the template, automatically unsubscribes when the component is destroyed, and triggers change detection on each new value (works seamlessly with <code>OnPush</code>). No manual subscription, no possible leak.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    &#64;if (quote$ | async; as quote) {
+      &lt;span&gt;{{ quote.bid }} / {{ quote.ask }}&lt;/span&gt;
+    }
+  `,
+})
+export class TickerComponent {
+  readonly quote$ = this.quotes.stream$; // Angular manages the lifecycle
+}</code></pre></div>
+        <div class="success"><p><strong>Prefer this whenever possible.</strong> Angular owns the subscription lifecycle, so leaks are structurally impossible, and change detection under <code>OnPush</code> is handled for you.</p></div>
+      </div>
+
+      <div class="card">
+        <h4>4. Manual <code>unsubscribe()</code> — fragile</h4>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">import { Subscription } from 'rxjs';
+
+export class QuotesComponent implements OnDestroy {
+  private sub?: Subscription;
+
+  start(): void {
+    this.sub = this.quotes.stream$.subscribe((q) =&gt; this.render(q));
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe(); // easy to forget; multiplies with many streams
+  }
+}</code></pre></div>
+        <p>Acceptable for a single subscription, but it does not scale — manually managing many <code>Subscription</code> fields is exactly how leaks creep in.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Approach</th><th>Boilerplate</th><th>Leak safety</th><th>OnPush CD</th><th>When to use</th></tr></thead>
+          <tbody>
+            <tr><td>async pipe</td><td>None ✅</td><td>✅</td><td>✅ automatic</td><td>Default — a value bound in the template</td></tr>
+            <tr><td>takeUntilDestroyed</td><td>Little ✅</td><td>✅</td><td>Manual</td><td>Side-effecting subscriptions in Angular 16+</td></tr>
+            <tr><td>takeUntil(destroy$)</td><td>Lots ❌</td><td>✅ (if wired up)</td><td>Manual</td><td>Pre-16 / outside injection contexts</td></tr>
+            <tr><td>manual unsubscribe</td><td>Lots ❌</td><td>❌ fragile</td><td>Manual</td><td>Only a single subscription</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Senior-level answer:</strong> "I prefer the <code>async</code> pipe so Angular owns the lifecycle. For imperative side effects I use <code>takeUntilDestroyed()</code>. I only reach for <code>takeUntil(destroy$)</code> in pre-16 code, and I avoid manual <code>unsubscribe()</code> except for a single subscription."</p></div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="memory-leaks">Утечки памяти и отписка</h2>
       <p class="definition"><strong>Утечка памяти (RxJS)</strong> — подписка, которая никогда не уничтожается. Её продюсер (таймер, слушатель событий, сокет, HTTP) продолжает работать, а замыкание удерживает экземпляр компонента живым после того, как Angular его уничтожил, что приводит к утечке памяти и дублирующей/зомби-работе (например, обнаружение изменений на мёртвом компоненте).</p>
 
@@ -688,10 +1307,63 @@ export class QuotesComponent implements OnDestroy {
         </table>
       </div>
       <div class="tip"><p><strong>Ответ senior-уровня:</strong> «Предпочитаю <code>async</code>-пайп, чтобы жизненным циклом владел Angular. Для императивных побочных эффектов использую <code>takeUntilDestroyed()</code>. К <code>takeUntil(destroy$)</code> прибегаю только в коде до 16-й версии и избегаю ручного <code>unsubscribe()</code>, кроме случая единственной подписки».</p></div>
+      </div>
     </section>
 
     <!-- =================== Q&A =================== -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="qa-en">Q&amp;A — interview questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between a cold and a hot Observable?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A <strong>cold</strong> Observable creates its producer <em>inside</em>, so each subscriber gets an independent execution that starts on subscription — <code>http.get()</code> fires a new request per subscription. A <strong>hot</strong> Observable shares a single producer living <em>outside</em>; all subscribers see the same emissions, which happen regardless of subscribers, so late joiners miss earlier values — e.g. a WebSocket quote feed or a <code>Subject</code>. A cold Observable can be made hot via <code>share()</code>/<code>shareReplay()</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. switchMap vs mergeMap vs concatMap vs exhaustMap — when to use which?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><strong>switchMap</strong> cancels the previous inner — for autocomplete/search where only the latest matters. <strong>mergeMap</strong> runs inners concurrently with no order guarantee — parallel uploads. <strong>concatMap</strong> queues inners sequentially, preserving order — an order-submission queue. <strong>exhaustMap</strong> ignores new values while an inner is active — a submit/login button that ignores double-clicks. Key pitfall: <code>switchMap</code> on a save request can cancel the save; <code>concatMap</code> with a non-completing inner freezes the queue.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Compare the four Subject types.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><strong>Subject</strong>: no initial value, new subscribers miss prior emissions — an event bus. <strong>BehaviorSubject</strong>: requires an initial value, replays the latest value to new subscribers, exposes <code>.value</code> — current state. <strong>ReplaySubject(n)</strong>: replays the last n values to any new subscriber — last-N history. <strong>AsyncSubject</strong>: emits only the final value and only on <code>complete()</code> — a single result. For state in Angular you usually pick <code>BehaviorSubject</code> (or a Signal).</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How do you prevent memory leaks from subscriptions?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>Four approaches: the <strong>async pipe</strong> (best — Angular auto-unsubscribes on destroy and handles OnPush CD); <strong>takeUntilDestroyed()</strong> (Angular 16+, cleanest for imperative subscriptions); <strong>takeUntil(destroy$)</strong> with a <code>Subject</code> emitted in <code>ngOnDestroy</code> (the classic pre-16 pattern, place it last in the pipe); and manual <strong>unsubscribe()</strong> (fragile, only for a single subscription). A leak happens because the producer keeps a destroyed component alive through the subscription closure.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What does <code>pipe()</code> actually do?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>pipe()</code> composes operators left to right as function composition: <code>source$.pipe(f, g, h)</code> equals <code>h(g(f(source$)))</code>. Each operator is a function taking the source Observable and returning a new one; the source is never mutated. Because operators are plain functions, you can extract a reusable chain with the standalone <code>pipe()</code> function from <code>'rxjs'</code> and apply it to multiple streams.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">6. catchError — how do you both recover and rethrow, and where do you place it?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>catchError</code> must return a new Observable. To <em>recover</em>, return <code>of(fallback)</code> so the stream continues with a default value. To <em>rethrow</em>, return <code>throwError(() =&gt; err)</code> so the subscriber's error callback fires. Placement matters: an error terminates the stream forever, so on a long-lived feed put <code>catchError</code> on the <strong>inner</strong> Observable inside <code>switchMap</code>/<code>mergeMap</code> — that way a single failed request does not kill the outer subscription.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">7. firstValueFrom vs lastValueFrom vs the old toPromise()?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>firstValueFrom</code> resolves with the first value, then auto-unsubscribes; <code>lastValueFrom</code> resolves with the last value after the source completes. Both throw <code>EmptyError</code> if nothing is emitted. They replace the deprecated <code>.toPromise()</code>, which ambiguously resolved to <code>undefined</code> for empty streams. Use them in guards/resolvers that want <code>async/await</code>, and for one-shot reads; never use <code>lastValueFrom</code> on a stream that never completes — it will hang.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">8. When do you use combineLatest vs forkJoin vs zip?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><strong>combineLatest</strong> emits the latest value of each source on every emission (after all have emitted once) — live derived state like a mid price from bid$ and ask$. <strong>forkJoin</strong> waits for all sources to <em>complete</em>, then emits their last values once — parallel one-shot loads (like <code>Promise.all</code>). <strong>zip</strong> pairs values by index. forkJoin pitfall: if any source never completes, it never emits, so use it only with completing sources (HTTP) or add <code>take(1)</code>.</p></div>
+      </div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="qa">Вопросы и ответы — вопросы с собеседования</h2>
 
       <div class="qa-block">
@@ -741,10 +1413,61 @@ export class QuotesComponent implements OnDestroy {
         <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
         <div class="qa-answer"><p><strong>combineLatest</strong> испускает последнее значение каждого источника на каждую эмиссию (после первой эмиссии всех) — живое производное состояние вроде mid-цены из bid$ и ask$. <strong>forkJoin</strong> ждёт <em>завершения</em> всех источников, затем испускает их последние значения один раз — параллельные разовые загрузки (как <code>Promise.all</code>). <strong>zip</strong> спаривает значения по индексу. Ловушка forkJoin: если какой-то источник никогда не завершается, он никогда не испустит, поэтому используйте его только с завершающимися источниками (HTTP) или добавьте <code>take(1)</code>.</p></div>
       </div>
+      </div>
     </section>
 
     <!-- =================== QUIZ =================== -->
     <section data-searchable>
+      <div class="lang-block" data-lang="en">
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which operator <strong>cancels</strong> the previous inner Observable when a new value arrives?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">mergeMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">concatMap</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">switchMap</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">exhaustMap</button>
+        <div class="quiz-explain">switchMap unsubscribes from the previous inner on every new source value — ideal for autocomplete. mergeMap runs in parallel, concatMap queues, exhaustMap ignores new values while active.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. A new subscriber to a <code>BehaviorSubject</code> immediately receives…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">nothing until the next emission</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">the current (latest) value</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">all previously emitted values</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">only the value on complete()</button>
+        <div class="quiz-explain">BehaviorSubject holds the current value and replays it (1) to every new subscriber. "All previous" is ReplaySubject; "only on complete" is AsyncSubject; "nothing until next" is a plain Subject.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Which approach BEST avoids subscription memory leaks for a value bound in the template?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Manual unsubscribe() in ngOnDestroy</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">async pipe</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Never unsubscribe (GC handles it)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Call complete() on the source</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Cleanup via setTimeout</button>
+        <div class="quiz-explain">The async pipe subscribes in the template and auto-unsubscribes on destroy, and also manages OnPush change detection. GC will NOT collect a component still referenced by a live subscription.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. <code>forkJoin([a$, b$])</code> emits…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">every time a$ or b$ emits</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">values paired by index</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">once, the last values, when both complete</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">the first value from any source</button>
+        <div class="quiz-explain">forkJoin is the Observable analog of Promise.all: it waits for each source to COMPLETE, then emits an array of their last values once. "Every emission" is combineLatest; "paired by index" is zip.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">5. What does <code>firstValueFrom(obs$)</code> do if <code>obs$</code> completes without emitting?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">resolves to undefined</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">resolves to null</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">rejects with EmptyError</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">hangs forever</button>
+        <div class="quiz-explain">firstValueFrom/lastValueFrom reject with EmptyError on an empty stream — unlike the deprecated toPromise(), which ambiguously resolved to undefined.</div>
+      </div>
+      </div>
+      <div class="lang-block" data-lang="ru">
       <h2 id="quiz">Тест</h2>
 
       <div class="quiz">
@@ -792,11 +1515,12 @@ export class QuotesComponent implements OnDestroy {
         <button class="quiz-option" onclick="checkAnswer(this, false)">зависает навсегда</button>
         <div class="quiz-explain">firstValueFrom/lastValueFrom отклоняются с EmptyError на пустом потоке — в отличие от устаревшего toPromise(), который неоднозначно разрешался в undefined.</div>
       </div>
+      </div>
     </section>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="guards.html" class="btn-nav">← Гарды (Guards)</a>
+      <a href="auth.html" class="btn-nav">← <span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span></a>
       <a href="ngrx.html" class="btn-nav">NgRx →</a>
     </div>
   </main>

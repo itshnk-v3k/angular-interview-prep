@@ -57,13 +57,15 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Основы JavaScript</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> ›
+      <span><span data-lang="en">JavaScript Core</span><span data-lang="ru">Основы JavaScript</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Основы JavaScript</h1>
-      <p class="page-desc">Фундамент языка, который на собеседованиях уровня senior проверяют особенно дотошно:
-        типы, массивы и объекты, прототипы, замыкания, цикл событий, промисы и <code>this</code>.</p>
+      <h1><span data-lang="en">JavaScript Core</span><span data-lang="ru">Основы JavaScript</span></h1>
+      <p class="page-desc"><span data-lang="en">The foundation of the language, which senior-level interviews probe especially thoroughly:
+        types, arrays and objects, prototypes, closures, the event loop, promises and <code>this</code>.</span><span data-lang="ru">Фундамент языка, который на собеседованиях уровня senior проверяют особенно дотошно:
+        типы, массивы и объекты, прототипы, замыкания, цикл событий, промисы и <code>this</code>.</span></p>
       <button class="btn-done" data-page="js-core" onclick="markDone('js-core')">✓ Отметить как пройдено</button>
     </div>
 
@@ -71,6 +73,650 @@
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
 
+    <div class="lang-block" data-lang="en">
+    <!-- ============================= DATA TYPES ============================= -->
+    <section data-searchable>
+      <h2 id="data-types-en">Data types</h2>
+      <p>JavaScript has <strong>8 data types</strong>: 7 primitives plus <code>object</code>. Primitives are
+        immutable and compared by value; objects are mutable and compared by reference.</p>
+
+      <div class="card">
+        <p class="definition"><strong>number</strong> — a double-precision number (64-bit IEEE-754 floating point). Covers integers and fractions, as well as <code>NaN</code>, <code>Infinity</code>, <code>-Infinity</code>. Remember <code>0.1 + 0.2 !== 0.3</code>.</p>
+        <p class="definition"><strong>bigInt</strong> — arbitrary-precision integers with the <code>n</code> suffix (<code>9007199254740993n</code>). Use it when values exceed <code>Number.MAX_SAFE_INTEGER</code> (e.g. order IDs, satoshis).</p>
+        <p class="definition"><strong>string</strong> — an immutable sequence of UTF-16 code units. Any "mutation" returns a new string.</p>
+        <p class="definition"><strong>boolean</strong> — <code>true</code> / <code>false</code>.</p>
+        <p class="definition"><strong>undefined</strong> — a variable that is declared but has not been assigned a value. The default "absence of value" in JS.</p>
+        <p class="definition"><strong>null</strong> — the deliberate, explicit absence of any object value. You assign it intentionally.</p>
+        <p class="definition"><strong>object</strong> — the only reference type: plain objects, arrays, functions, Date, Map, Set — everything that is not a primitive.</p>
+        <p class="definition"><strong>symbol</strong> — a unique, immutable identifier. Used for object keys without collisions and for well-known protocol hooks (<code>Symbol.iterator</code>).</p>
+      </div>
+
+      <div class="warn">
+        <p><strong>Classic gotcha:</strong> <code>typeof null === 'object'</code>. This is a historical bug from the very first JS implementation (the type tag for objects was <code>0</code>, and <code>null</code> was the null pointer <code>0x00</code>). Fixing it without breaking the entire web is impossible, so it stays.</p>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-javascript">typeof 42;            // "number"
+typeof 9007199254740993n; // "bigint"
+typeof "BTCUSD";      // "string"
+typeof true;          // "boolean"
+typeof undefined;     // "undefined"
+typeof null;          // "object"  ← historical bug
+typeof {};            // "object"
+typeof Symbol('id');  // "symbol"
+typeof function(){};  // "function" (a callable object)</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== PRIMITIVES VS REFERENCE ===================== -->
+    <section data-searchable>
+      <h2 id="primitives-vs-reference-en">Primitives vs reference types</h2>
+      <p class="definition"><strong>Primitive</strong> — copied <em>by value</em>. When assigned to a new variable, the value is duplicated; both variables are independent.</p>
+      <p class="definition"><strong>Reference type</strong> — copied <em>by pointer</em>. When assigned, the reference is copied, not the data. Both variables point to the same object in memory.</p>
+
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Aspect</th><th>Primitive (number, string…)</th><th>Reference (object, array)</th></tr></thead>
+          <tbody>
+            <tr><td>How it is stored</td><td>The value itself</td><td>A pointer to heap memory</td></tr>
+            <tr><td>Copy semantics</td><td>By value (independent copy)</td><td>By reference (shared)</td></tr>
+            <tr><td>Comparison</td><td><code>===</code> compares value</td><td><code>===</code> compares identity</td></tr>
+            <tr><td>Mutability</td><td>Immutable</td><td>Mutable</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-javascript">// Primitive — copied by value
+let a = 10;
+let b = a;     // b gets its own copy
+b = 20;
+console.log(a); // 10 — unaffected
+
+// Reference — copied by pointer (the mutation problem)
+const order1 = { symbol: 'EURUSD', qty: 100 };
+const order2 = order1;      // same object!
+order2.qty = 500;
+console.log(order1.qty);    // 500 — surprise, both changed
+
+// Identity vs equality
+console.log({} === {});     // false — different references
+const r = {}; console.log(r === r); // true — same reference</code></pre>
+      </div>
+
+      <h3 id="copy-solutions-en">Solutions — how to make real copies</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-javascript">const order = { symbol: 'EURUSD', qty: 100, meta: { source: 'API' } };
+
+// 1. Spread — SHALLOW copy (nested objects still shared)
+const copy1 = { ...order };
+copy1.meta.source = 'WS';   // ⚠️ also changes order.meta.source
+
+// 2. Object.assign — also SHALLOW
+const copy2 = Object.assign({}, order);
+
+// 3. structuredClone — DEEP copy (modern, handles nested, Map, Set, Date)
+const copy3 = structuredClone(order);
+copy3.meta.source = 'WS';   // ✅ order.meta.source unchanged</code></pre>
+      </div>
+      <div class="tip"><p><strong>Why this matters in Angular:</strong> OnPush change detection and NgRx reducers rely on <em>new references</em>. Spread is enough for shallow updates; use <code>structuredClone</code> when you need to copy nested state.</p></div>
+    </section>
+
+    <!-- ========================= ARRAY METHODS ========================= -->
+    <section data-searchable>
+      <h2 id="array-methods-en">Array methods</h2>
+      <p>Understanding which methods <strong>mutate</strong> an array and which return a <strong>new array</strong> or
+        a <strong>value</strong> is arguably the most practically important JS skill for Angular performance.</p>
+
+      <h3>Mutating methods <span class="badge mutates">mutates</span></h3>
+      <p>They change the original array in place and are dangerous with OnPush / immutable state.</p>
+
+      <div class="card">
+        <h4><code>push(...items)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>push</strong> — adds one or more elements to the end of the array.</p>
+        <ul><li><strong>Returns:</strong> the new <code>length</code> (a number)</li><li><strong>Parameters:</strong> the elements to add</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [1, 2]; const len = a.push(3); // a = [1,2,3], len = 3</code></pre></div>
+        <div class="danger"><p><strong>Pitfall:</strong> <code>this.orders.push(o)</code> keeps the same reference — OnPush will not re-render.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>pop()</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>pop</strong> — removes and returns the last element.</p>
+        <ul><li><strong>Returns:</strong> the removed element (or <code>undefined</code> if the array is empty)</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [1, 2, 3]; const last = a.pop(); // a = [1,2], last = 3</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>shift()</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>shift</strong> — removes and returns the first element; reindexes the rest.</p>
+        <ul><li><strong>Returns:</strong> the removed element</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [1, 2, 3]; const first = a.shift(); // a = [2,3], first = 1</code></pre></div>
+        <div class="warn"><p><strong>Pitfall:</strong> O(n) — all remaining elements are reindexed. Avoid in hot loops.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>unshift(...items)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>unshift</strong> — adds elements to the beginning of the array.</p>
+        <ul><li><strong>Returns:</strong> the new length</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [2, 3]; a.unshift(0, 1); // a = [0,1,2,3]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>splice(start, deleteCount, ...items)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>splice</strong> — removes/replaces/inserts elements at any position. The Swiss Army knife of mutations.</p>
+        <ul><li><strong>Returns:</strong> an array of removed elements</li><li><strong>Parameters:</strong> start index, count to delete, elements to insert</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [1, 2, 3, 4];
+const removed = a.splice(1, 2, 'x'); // a = [1,'x',4], removed = [2,3]</code></pre></div>
+        <div class="warn"><p><strong>Do not confuse</strong> it with <code>slice</code> (does not mutate, copies a segment).</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>sort(compareFn?)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>sort</strong> — sorts the array in place. Without a comparator, elements are coerced to strings and compared by UTF-16.</p>
+        <ul><li><strong>Returns:</strong> the same (now sorted) array</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[10, 2, 1].sort();              // [1, 10, 2] ← string sort! gotcha
+[10, 2, 1].sort((a, b) => a - b); // [1, 2, 10] ← numeric
+// Immutable alternative (ES2023): array.toSorted((a,b) => a-b)</code></pre></div>
+        <div class="danger"><p><strong>Pitfall:</strong> the default sort is lexicographic — for numbers always pass a comparator.</p></div>
+      </div>
+
+      <div class="card">
+        <h4><code>reverse()</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>reverse</strong> — reverses the array in place. (Immutable variant: <code>toReversed()</code>.)</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const a = [1, 2, 3]; a.reverse(); // a = [3,2,1]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>fill(value, start?, end?)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>fill</strong> — fills a range with a static value.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">new Array(3).fill(0);     // [0,0,0]
+[1,2,3,4].fill(9, 1, 3);  // [1,9,9,4]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>copyWithin(target, start, end?)</code> <span class="badge mutates">mutates</span></h4>
+        <p class="definition"><strong>copyWithin</strong> — copies a segment of the array to another position within the same array, overwriting.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[1,2,3,4,5].copyWithin(0, 3); // [4,5,3,4,5]</code></pre></div>
+      </div>
+
+      <h3>Non-mutating — return a new array <span class="badge new-arr">new array</span></h3>
+
+      <div class="card">
+        <h4><code>map(fn)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>map</strong> — creates a new array by transforming each element with a function.</p>
+        <ul><li><strong>Returns:</strong> a new array of the same length</li><li><strong>Parameters:</strong> <code>(element, index, array)</code></li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const prices = [100, 200];
+const withTax = prices.map(p => p * 1.2); // [120, 240]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>filter(fn)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>filter</strong> — creates a new array of only the elements that pass the predicate.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">orders.filter(o => o.status === 'pending');</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>slice(start?, end?)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>slice</strong> — returns a shallow copy of a segment (end is exclusive). A common immutable-copy idiom: <code>arr.slice()</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[1,2,3,4].slice(1, 3);  // [2,3]
+[1,2,3,4].slice(-2);    // [3,4] — last 2</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>concat(...arrs)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>concat</strong> — combines arrays/values into a new array.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[1,2].concat([3,4], 5); // [1,2,3,4,5]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>flat(depth?)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>flat</strong> — flattens nested arrays up to <code>depth</code> (default 1). Use <code>Infinity</code> for a full flatten.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[1,[2,[3,[4]]]].flat(Infinity); // [1,2,3,4]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>flatMap(fn)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>flatMap</strong> — runs map, then flattens one level. More efficient than <code>map().flat()</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[1,2,3].flatMap(n => [n, n * 2]); // [1,2,2,4,3,6]</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>Array.from(iterable, mapFn?)</code> <span class="badge new-arr">new array</span></h4>
+        <p class="definition"><strong>Array.from</strong> — creates a new array from an iterable or array-like object (NodeList, Set, string) with an optional mapping function.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">Array.from('abc');                       // ['a','b','c']
+Array.from(new Set([1,1,2]));            // [1,2] — dedupe
+Array.from({ length: 3 }, (_, i) => i);  // [0,1,2]</code></pre></div>
+      </div>
+
+      <h3>Non-mutating — return a value <span class="badge pure">pure</span></h3>
+
+      <div class="card">
+        <h4><code>reduce(fn, seed?)</code> &amp; <code>reduceRight</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>reduce</strong> — folds the array into a single accumulated value from left to right. <strong>reduceRight</strong> does the same from right to left.</p>
+        <ul><li><strong>Parameters:</strong> <code>(accumulator, element, index, array)</code> and an initial value</li></ul>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const pnl = trades.reduce((sum, t) => sum + t.pnl, 0);
+// group orders by symbol → Record<string, Order[]>
+const bySymbol = orders.reduce((acc, o) => {
+  (acc[o.symbol] ??= []).push(o);
+  return acc;
+}, {});</code></pre></div>
+        <div class="warn"><p><strong>Pitfall:</strong> always pass an initial value — <code>reduce</code> on an empty array without one throws an error.</p></div>
+      </div>
+
+      <div class="card">
+        <h4>Search: <code>find</code>, <code>findIndex</code>, <code>findLast</code>, <code>findLastIndex</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>find</strong> — returns the first element that satisfies the predicate (or <code>undefined</code>). <strong>findIndex</strong> returns its index (or <code>-1</code>). <strong>findLast / findLastIndex</strong> search from the end.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">orders.find(o => o.id === 42);
+orders.findIndex(o => o.status === 'filled');
+orders.findLast(o => o.side === 'BUY');</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Predicates: <code>some</code>, <code>every</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>some</strong> — <code>true</code> if at least one element passes. <strong>every</strong> — <code>true</code> if all pass (true by definition for an empty array).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">orders.some(o => o.status === 'error'); // any failures?
+orders.every(o => o.qty > 0);           // all valid?</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4>Lookup: <code>includes</code>, <code>indexOf</code>, <code>lastIndexOf</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>includes</strong> — <code>true</code>/<code>false</code> for the presence of an element (handles <code>NaN</code>). <strong>indexOf / lastIndexOf</strong> — first/last index or <code>-1</code> (uses <code>===</code>, misses <code>NaN</code>).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">['BUY','SELL'].includes('BUY'); // true
+[NaN].includes(NaN);            // true
+[NaN].indexOf(NaN);             // -1 ← gotcha</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>join(sep?)</code>, <code>at(index)</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>join</strong> — joins elements into a string with a separator. <strong>at</strong> — returns the element at an index, supporting negative values (<code>arr.at(-1)</code> = last).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">['a','b','c'].join('-'); // 'a-b-c'
+[10,20,30].at(-1);       // 30</code></pre></div>
+      </div>
+
+      <div class="card">
+        <h4><code>forEach(fn)</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>forEach</strong> — runs a function for each element for its side effects. Returns <code>undefined</code> — cannot be chained, cannot <code>break</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">orders.forEach(o => console.log(o.id)); // returns undefined</code></pre></div>
+        <div class="tip"><p>Need to break early? Use a <code>for...of</code> loop or <code>some()</code>.</p></div>
+      </div>
+
+      <div class="card">
+        <h4>Iterators: <code>entries</code>, <code>keys</code>, <code>values</code> <span class="badge pure">pure</span></h4>
+        <p class="definition"><strong>entries / keys / values</strong> — return iterator objects of <code>[index, value]</code> pairs, indices, or values respectively. They pair well with <code>for...of</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">for (const [i, val] of ['a','b'].entries()) {
+  console.log(i, val); // 0 'a' / 1 'b'
+}</code></pre></div>
+      </div>
+
+      <h3 id="mutability-angular-en">Why mutability matters in Angular</h3>
+      <div class="danger">
+        <p><strong>Wrong</strong> — the same array reference, OnPush misses the change:</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">this.orders.push(newOrder); // mutation — reference unchanged, UI not updated</code></pre></div>
+      </div>
+      <div class="success">
+        <p><strong>Right</strong> — a new reference, OnPush detects it:</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">this.orders = [...this.orders, newOrder]; // new array → CD runs → UI updates</code></pre></div>
+      </div>
+      <p>The same rule governs <strong>NgRx reducers</strong>: never mutate state, always return a new object:</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">on(addOrder, (state, { order }) => ({
+  ...state,
+  orders: [...state.orders, order], // new array, new state object
+}));</code></pre></div>
+    </section>
+
+    <!-- ========================= OBJECT METHODS ========================= -->
+    <section data-searchable>
+      <h2 id="object-methods-en">Object methods</h2>
+      <div class="card">
+        <p class="definition"><strong>Object.keys(obj)</strong> — an array of own enumerable string keys.</p>
+        <p class="definition"><strong>Object.values(obj)</strong> — an array of own enumerable values.</p>
+        <p class="definition"><strong>Object.entries(obj)</strong> — an array of <code>[key, value]</code> pairs. Pairs with destructuring in <code>for...of</code>.</p>
+        <p class="definition"><strong>Object.assign(target, ...sources)</strong> — copies own enumerable properties into target (shallow). Returns target.</p>
+        <p class="definition"><strong>Object.freeze(obj)</strong> — makes an object immutable (shallow). Further writes are silently ignored (throw in strict mode).</p>
+        <p class="definition"><strong>Object.isFrozen(obj)</strong> — a boolean of whether the object is frozen.</p>
+        <p class="definition"><strong>Object.create(proto)</strong> — creates a new object with the given prototype.</p>
+        <p class="definition"><strong>Object.defineProperty(obj, key, descriptor)</strong> — defines a property with fine-grained control (<code>writable</code>, <code>enumerable</code>, <code>configurable</code>, getters/setters).</p>
+        <p class="definition"><strong>Object.getPrototypeOf(obj)</strong> — returns the prototype. Preferred over <code>__proto__</code>.</p>
+        <p class="definition"><strong>structuredClone(obj)</strong> — a deep clone with support for nested objects, arrays, Map, Set, Date (but not functions/DOM).</p>
+        <p class="definition"><strong>obj.hasOwnProperty(key)</strong> — true only for own (not inherited) properties. Safer: <code>Object.hasOwn(obj, key)</code>.</p>
+        <p class="definition"><strong>key in obj</strong> — true if the property exists on the object <em>or anywhere up the prototype chain</em>.</p>
+        <p class="definition"><strong>Optional chaining <code>?.</code></strong> — short-circuits to <code>undefined</code> instead of throwing when a link is null/undefined.</p>
+        <p class="definition"><strong>Nullish coalescing <code>??</code></strong> — returns the right side only when the left is <code>null</code> or <code>undefined</code> (unlike <code>||</code>, it preserves <code>0</code>, <code>''</code>, <code>false</code>).</p>
+      </div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const quote = { symbol: 'EURUSD', bid: 1.07, ask: 1.0702 };
+Object.keys(quote);    // ['symbol','bid','ask']
+Object.entries(quote); // [['symbol','EURUSD'], ['bid',1.07], ['ask',1.0702]]
+
+const spread = quote?.ask ?? 0;   // 1.0702 (?. + ??)
+const depth = quote?.book?.level1; // undefined, no throw
+
+const frozen = Object.freeze({ rate: 1.07 });
+frozen.rate = 2; // ignored (throws in strict mode)
+Object.isFrozen(frozen); // true</code></pre></div>
+      <div class="tip"><p><strong><code>??</code> vs <code>||</code>:</strong> <code>price ?? 100</code> preserves a real <code>0</code>; <code>price || 100</code> would incorrectly replace <code>0</code> with <code>100</code>.</p></div>
+    </section>
+
+    <!-- ========================= PROTOTYPES ========================= -->
+    <section data-searchable>
+      <h2 id="prototypes-en">Prototypes and the prototype chain</h2>
+      <p class="definition"><strong>A prototype</strong> — every object has a hidden <code>[[Prototype]]</code> reference to another object. When you read a property, JS walks <em>up</em> this chain until it finds the property or reaches <code>null</code>.</p>
+
+      <h3>The chain visualized</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const arr = [1, 2, 3];
+// arr → Array.prototype → Object.prototype → null
+//        (map, filter…)    (hasOwnProperty…)
+Object.getPrototypeOf(arr) === Array.prototype;            // true
+Object.getPrototypeOf(Array.prototype) === Object.prototype; // true
+Object.getPrototypeOf(Object.prototype);                  // null</code></pre></div>
+
+      <h3>Accessing and setting the prototype</h3>
+      <p><code>__proto__</code> works, but it is a legacy accessor — prefer <strong><code>Object.getPrototypeOf()</code></strong> / <code>Object.setPrototypeOf()</code>. Create an object with a chosen prototype via <code>Object.create(proto)</code>.</p>
+
+      <h3><code>hasOwnProperty</code> vs <code>in</code></h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">const o = { a: 1 };
+'a' in o;                 // true  (own)
+'toString' in o;          // true  (inherited from Object.prototype)
+o.hasOwnProperty('a');    // true
+o.hasOwnProperty('toString'); // false ← only own properties</code></pre></div>
+
+      <h3><code>instanceof</code></h3>
+      <p class="definition"><strong>instanceof</strong> — checks whether a constructor's <code>.prototype</code> appears anywhere in the object's prototype chain.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">[] instanceof Array;  // true
+[] instanceof Object; // true (Array.prototype's chain includes Object.prototype)</code></pre></div>
+
+      <h3>ES6 <code>class</code> — syntactic sugar over prototypes</h3>
+      <p><code>class</code> is syntactic sugar over the prototype mechanism. <code>extends</code> builds the prototype chain, <code>super()</code> calls the parent constructor (required in a subclass before using <code>this</code>), <code>static</code> members live on the class itself, and <code>#field</code> declares a truly private field.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">// --- Prototype function pattern ---
+function Instrument(symbol) { this.symbol = symbol; }
+Instrument.prototype.describe = function () { return 'Instr: ' + this.symbol; };
+
+// --- Equivalent class syntax ---
+class Instrument2 {
+  #internalId = Math.random();        // truly private
+  static exchange = 'NASDAQ';         // on the class, not instances
+  constructor(symbol) { this.symbol = symbol; }
+  describe() { return 'Instr: ' + this.symbol; }
+}
+class Stock extends Instrument2 {
+  constructor(symbol, sector) {
+    super(symbol);                    // required before using `this`
+    this.sector = sector;
+  }
+}</code></pre></div>
+    </section>
+
+    <!-- =================== SPREAD / REST / DESTRUCTURING =================== -->
+    <section data-searchable>
+      <h2 id="spread-rest-destructuring-en">Spread, rest and destructuring</h2>
+      <p class="definition"><strong>Spread <code>...</code></strong> — expands an iterable or object into individual elements or properties.</p>
+      <p class="definition"><strong>Rest <code>...</code></strong> — collects the remaining elements/arguments into a single array/object. Same syntax, opposite direction.</p>
+      <p class="definition"><strong>Destructuring</strong> — unpacks values from arrays or properties from objects into individual variables.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">// Spread — arrays & objects
+const merged = [...[1, 2], ...[3, 4]];          // [1,2,3,4]
+const updated = { ...order, status: 'filled' };  // override one field
+
+// Rest params
+function sum(...nums) { return nums.reduce((a, b) => a + b, 0); }
+
+// Array destructuring (with rest)
+const [first, second, ...others] = [10, 20, 30, 40]; // others = [30,40]
+
+// Object destructuring (rename + default)
+const { name, age: userAge = 25 } = { name: 'EURUSD' }; // userAge = 25
+
+// Nested destructuring
+const { meta: { source } } = { meta: { source: 'WS' } }; // source = 'WS'
+
+// In function params (a senior-favourite pattern)
+function place({ symbol, qty = 1, side = 'BUY' }) { /* ... */ }
+place({ symbol: 'BTCUSD', qty: 5 });</code></pre></div>
+    </section>
+
+    <!-- =================== CLOSURES & HOISTING =================== -->
+    <section data-searchable>
+      <h2 id="closures-hoisting-en">Closures and hoisting</h2>
+
+      <h3>var vs let vs const and the TDZ</h3>
+      <p class="definition"><strong>Hoisting</strong> — declarations are conceptually lifted to the top of their scope before execution. <code>var</code> is hoisted and initialized to <code>undefined</code>; <code>let</code>/<code>const</code> are hoisted but <em>not</em> initialized, creating a <strong>temporal dead zone (TDZ)</strong> — accessing them before declaration throws an error.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">console.log(a); // undefined — var hoisted & initialized
+var a = 1;
+
+console.log(b); // ❌ ReferenceError — TDZ
+let b = 2;</code></pre></div>
+
+      <h3>Closures</h3>
+      <p class="definition"><strong>A closure</strong> — a function that remembers and can access variables from its outer scope even after the outer function has finished.</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">// 1. Counter factory
+function makeCounter() {
+  let count = 0;                 // private, captured
+  return () => ++count;
+}
+const next = makeCounter();
+next(); next(); // 1, 2
+
+// 2. Private state (module pattern)
+const priceStore = (() => {
+  let price = 0;                 // not accessible from outside
+  return {
+    set: (p) => { price = p; },
+    get: () => price,
+  };
+})();
+
+// 3. Memoization
+function memoize(fn) {
+  const cache = new Map();        // captured across calls
+  return (n) => cache.has(n) ? cache.get(n) : (cache.set(n, fn(n)), cache.get(n));
+}</code></pre></div>
+
+      <div class="card">
+        <h4>The classic loop gotcha</h4>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">// ❌ var — all callbacks share ONE i, prints 3, 3, 3
+for (var i = 0; i < 3; i++) setTimeout(() => console.log(i), 0);
+
+// ✅ let — block-scoped i, fresh binding each iteration → 0, 1, 2
+for (let i = 0; i < 3; i++) setTimeout(() => console.log(i), 0);
+
+// ✅ IIFE fix for var
+for (var j = 0; j < 3; j++) ((k) => setTimeout(() => console.log(k), 0))(j);</code></pre></div>
+      </div>
+      <div class="tip"><p><strong>Angular context:</strong> services use closures to encapsulate private state — for example, a <code>BehaviorSubject</code> captured in a class field and accessible only through public methods.</p></div>
+    </section>
+
+    <!-- =================== EVENT LOOP =================== -->
+    <section data-searchable>
+      <h2 id="event-loop-en">The event loop</h2>
+      <p class="definition"><strong>The call stack</strong> — a LIFO stack that executes synchronous code one frame at a time.</p>
+      <p class="definition"><strong>Web APIs</strong> — browser-provided facilities (<code>setTimeout</code>, <code>fetch</code>, DOM events) that run <em>outside</em> the stack and queue callbacks when they complete.</p>
+      <p class="definition"><strong>The microtask queue</strong> — holds <code>Promise.then</code>, <code>queueMicrotask</code>, <code>MutationObserver</code> callbacks. It is drained completely <em>before</em> the next macrotask and after each one.</p>
+      <p class="definition"><strong>The macrotask queue</strong> — holds <code>setTimeout</code>/<code>setInterval</code> callbacks, I/O, UI events. One macrotask runs per loop tick.</p>
+
+      <h3>Walkthrough — why the order is 1, 4, 3, 2</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">console.log('1');
+setTimeout(() => console.log('2'), 0);
+Promise.resolve().then(() => console.log('3'));
+console.log('4');
+// Output: 1, 4, 3, 2</code></pre></div>
+      <ol>
+        <li><code>console.log('1')</code> runs synchronously → <strong>1</strong>.</li>
+        <li><code>setTimeout</code> hands its callback to the Web API; the callback is queued as a <em>macrotask</em>.</li>
+        <li><code>Promise.resolve().then</code> queues its callback as a <em>microtask</em>.</li>
+        <li><code>console.log('4')</code> runs synchronously → <strong>4</strong>.</li>
+        <li>The stack is now empty. The event loop drains <em>all microtasks first</em> → <strong>3</strong>.</li>
+        <li>Only then does it take one macrotask → <strong>2</strong>.</li>
+      </ol>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Microtask queue</th><th>Macrotask queue</th></tr></thead>
+          <tbody>
+            <tr><td><code>Promise.then/catch/finally</code></td><td><code>setTimeout</code> / <code>setInterval</code></td></tr>
+            <tr><td><code>queueMicrotask()</code></td><td><code>setImmediate</code> (Node)</td></tr>
+            <tr><td><code>MutationObserver</code></td><td>I/O, <code>requestAnimationFrame</code>*</td></tr>
+            <tr><td><code>await</code> continuations</td><td>UI / message events</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong>Angular context:</strong> Zone.js patches all these async APIs so that Angular knows when an async task completes and can run change detection.</p></div>
+    </section>
+
+    <!-- =================== PROMISES & ASYNC/AWAIT =================== -->
+    <section data-searchable>
+      <h2 id="promises-en">Promises and async/await</h2>
+      <p>A Promise goes through states: <strong>pending → fulfilled</strong> (resolved with a value) <strong>or rejected</strong> (with a reason). Once settled, it never changes again.</p>
+
+      <p class="definition"><strong>.then(onFulfilled)</strong> — runs when the promise resolves, receives the value, and returns a <em>new</em> promise (which is what enables chaining).</p>
+      <p class="definition"><strong>.catch(onRejected)</strong> — runs when the promise (or any earlier step) rejects.</p>
+      <p class="definition"><strong>.finally(fn)</strong> — always runs on settlement, receives no arguments. Ideal for cleanup, such as hiding a spinner.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">fetchOrder(42)
+  .then(order => order.symbol)      // returns a value → next .then gets it
+  .then(symbol => fetchQuote(symbol)) // returns a promise → awaited
+  .then(quote => console.log(quote.bid))
+  .catch(err => console.error('failed:', err))
+  .finally(() => hideSpinner());</code></pre></div>
+
+      <h3>async / await</h3>
+      <p>An <code>async</code> function is equivalent to a <code>.then</code> chain but reads like synchronous code. <code>await</code> pauses <em>only the current async function</em> — the rest of the program keeps running. Wrap it in <code>try/catch</code> for error handling (in TS the caught error has type <code>unknown</code>, so you must narrow it).</p>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">async function loadDashboard(): Promise&lt;void&gt; {
+  try {
+    const order = await fetchOrder(42);
+    const quote = await fetchQuote(order.symbol);
+    render(quote);
+  } catch (err: unknown) {                 // unknown, not any
+    if (err instanceof Error) console.error(err.message);
+  } finally {
+    hideSpinner();
+  }
+}</code></pre></div>
+
+      <h3>Promise combinators</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th></th><th>Promise.all</th><th>Promise.allSettled</th><th>Promise.race</th><th>Promise.any</th></tr></thead>
+          <tbody>
+            <tr><td>Waits for</td><td>All to resolve</td><td>All to settle</td><td>The first to settle</td><td>The first to resolve</td></tr>
+            <tr><td>Rejects if</td><td>Any rejects</td><td>Never</td><td>The first rejects</td><td>All reject</td></tr>
+            <tr><td>Use case</td><td>Parallel, all required</td><td>Parallel, optional</td><td>Race with a timeout</td><td>First success wins</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tip"><p><strong><code>firstValueFrom</code> (RxJS)</strong> — turns an Observable into a Promise so you can <code>await</code> Angular HTTP calls in <code>async</code> functions. Fully covered on the RxJS page.</p></div>
+    </section>
+
+    <!-- =================== THIS / CALL / APPLY / BIND =================== -->
+    <section data-searchable>
+      <h2 id="this-en">this, call, apply, bind</h2>
+      <p><code>this</code> is determined by <em>how a function is called</em>, not where it is defined (except for arrow functions).</p>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Context</th><th>What <code>this</code> equals</th></tr></thead>
+          <tbody>
+            <tr><td>Global function</td><td><code>window</code> (non-strict mode) / <code>undefined</code> (strict)</td></tr>
+            <tr><td>Object method</td><td>The object before the dot</td></tr>
+            <tr><td>Arrow function</td><td>Inherited from the surrounding lexical scope (it has no own <code>this</code>)</td></tr>
+            <tr><td>Class method</td><td>The instance</td></tr>
+            <tr><td>DOM event handler</td><td>The element that fired the event</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="definition"><strong>call(thisArg, ...args)</strong> — immediately invokes the function with the given <code>this</code> and arguments passed individually.</p>
+      <p class="definition"><strong>apply(thisArg, argsArray)</strong> — the same as <code>call</code>, but arguments are passed as an array.</p>
+      <p class="definition"><strong>bind(thisArg, ...args)</strong> — returns a <em>new</em> function with <code>this</code> bound permanently; it does not invoke the function itself.</p>
+
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-javascript">function greet(greeting) { return greeting + ', ' + this.symbol; }
+const ctx = { symbol: 'EURUSD' };
+
+greet.call(ctx, 'Hi');        // 'Hi, EURUSD'
+greet.apply(ctx, ['Hello']);  // 'Hello, EURUSD'
+const bound = greet.bind(ctx);
+bound('Hey');                 // 'Hey, EURUSD'</code></pre></div>
+
+      <div class="tip"><p><strong>Arrow functions</strong> have no <code>this</code> of their own — they inherit it lexically. That is exactly why they are used for class methods in Angular and RxJS callbacks: <code>this</code> stays the component instance instead of becoming <code>undefined</code>.</p></div>
+    </section>
+
+    <!-- =================== Q&A =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — interview questions</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. What is the difference between <code>==</code> and <code>===</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p><code>===</code> (strict equality) compares value <em>and</em> type without coercion. <code>==</code> (loose equality) first coerces the operands to a common type, which produces surprises like <code>0 == ''</code> → <code>true</code>, <code>null == undefined</code> → <code>true</code>, <code>[] == false</code> → <code>true</code>. <strong>Always use <code>===</code></strong>, except for the idiomatic <code>x == null</code> to catch both null and undefined.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. What is the temporal dead zone (TDZ)?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>The gap between entering a scope and the point where a <code>let</code>/<code>const</code> variable is declared. The variable is hoisted but not initialized, so any access in that gap throws a <code>ReferenceError</code>. The TDZ exists to catch use-before-declaration errors that <code>var</code> silently allowed (returning <code>undefined</code>).</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Why is <code>typeof null === 'object'</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A bug from the original 1995 JS engine. Values were tagged with a type bit pattern; objects used the tag <code>0</code>, and <code>null</code> was represented as the null pointer <code>0x00</code>, which also read as tag <code>0</code>. Fixing it would break too much existing code, so it remains a quirk of the language.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. What is the output of <code>setTimeout(fn, 0)</code> vs <code>Promise.resolve().then(fn)</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>The Promise callback runs first. <code>Promise.then</code> schedules a <strong>microtask</strong>; <code>setTimeout</code> schedules a <strong>macrotask</strong>. After the synchronous code finishes, the event loop drains the entire microtask queue before taking any macrotask — so the promise callback always wins, even with a <code>0</code> ms timeout.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. What is a closure? Give a practical example.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer"><p>A function bundled together with references to its surrounding lexical scope — it retains access to outer variables even after the outer function has finished. Practical uses: private state (a counter factory or the module pattern), memoization caches, and event-handler factories. In Angular, a service often closes over a private <code>BehaviorSubject</code> and exposes only read methods.</p></div>
+      </div>
+    </section>
+
+    <!-- =================== QUIZ =================== -->
+    <section data-searchable>
+      <h2 id="quiz-en">Quiz</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Which array method <strong>mutates</strong> the original array?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">map()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">filter()</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">sort()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">slice()</button>
+        <div class="quiz-explain">sort() (as well as reverse, splice, push, pop, shift, unshift, fill, copyWithin) mutate in place. map, filter, slice return new arrays.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. What does <code>[10, 2, 1].sort()</code> return?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">[1, 2, 10]</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">[1, 10, 2]</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">[10, 2, 1]</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">[2, 1, 10]</button>
+        <div class="quiz-explain">The default sort coerces elements to strings — "10" &lt; "2" lexicographically. Pass a comparator: sort((a,b) => a-b).</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. What will be printed? <code>console.log(1); setTimeout(()=>console.log(2)); Promise.resolve().then(()=>console.log(3)); console.log(4);</code></div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">1, 2, 3, 4</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">1, 4, 3, 2</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">1, 4, 2, 3</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">1, 3, 4, 2</button>
+        <div class="quiz-explain">First synchronously (1, 4), then microtasks (Promise → 3), then macrotasks (setTimeout → 2).</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. What correctly updates an array so that OnPush detects the change?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">this.orders.push(o)</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">this.orders.splice(0, 0, o)</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">this.orders = [...this.orders, o]</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">this.orders[this.orders.length] = o</button>
+        <div class="quiz-explain">OnPush checks references. Only assigning a completely new array creates a new reference that change detection can see.</div>
+      </div>
+    </section>
+    </div>
+
+    <div class="lang-block" data-lang="ru">
     <!-- ============================= DATA TYPES ============================= -->
     <section data-searchable>
       <h2 id="data-types">Типы данных</h2>
@@ -711,10 +1357,11 @@ bound('Hey');                 // 'Hey, EURUSD'</code></pre></div>
         <div class="quiz-explain">OnPush проверяет ссылки. Только присваивание совершенно нового массива создаёт новую ссылку, которую видит обнаружение изменений.</div>
       </div>
     </section>
+    </div>
 
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
-      <a href="../index.html" class="btn-nav">← Главная</a>
+      <a href="../index.html" class="btn-nav">← <span data-lang="en">Dashboard</span><span data-lang="ru">Главная</span></a>
       <a href="typescript.html" class="btn-nav">TypeScript →</a>
     </div>
   </main>

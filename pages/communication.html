@@ -57,21 +57,520 @@
 
   <main class="main-content">
     <nav class="breadcrumb">
-      <a href="../index.html">Главная</a> › <span>Общение с клиентом</span>
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> › <span><span data-lang="en">Client Communication</span><span data-lang="ru">Общение с клиентом</span></span>
     </nav>
 
     <div class="page-header">
-      <h1>Общение с клиентом</h1>
-      <p class="page-desc">Фразы, скрипты и формулировки, которые senior-инженеры используют в работе
+      <h1><span data-lang="en">Client Communication</span><span data-lang="ru">Общение с клиентом</span></h1>
+      <p class="page-desc"><span data-lang="en">Phrases, scripts and wording that senior engineers use when working
+        with clients in FinTech: how to introduce yourself, explain technical concepts to non-technical
+        stakeholders, report a delay, propose a solution and confidently answer tough
+        behavioral questions.</span><span data-lang="ru">Фразы, скрипты и формулировки, которые senior-инженеры используют в работе
         с клиентами в FinTech: как представить себя, объяснить технические концепции нетехническим
         стейкхолдерам, сообщить о задержке, предложить решение и уверенно отвечать на сложные
-        поведенческие вопросы.</p>
+        поведенческие вопросы.</span></p>
       <button class="btn-done" data-page="communication" onclick="markDone('communication')">✓ Отметить как пройдено</button>
     </div>
 
     <div class="search-bar">
       <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
     </div>
+
+    <div class="lang-block" data-lang="en">
+
+    <!-- ============================= INTRO NOTE ============================= -->
+    <section data-searchable>
+      <h2 id="how-to-use-en">How to use this page</h2>
+      <p>For a senior position in FinTech, <strong>how you communicate is judged just as carefully as how you write code</strong>.
+        Clients trade real money on your software; they need to trust that you speak clearly, calmly and honestly.
+        Each card below gives you three things: <strong>when</strong> the situation arises, a <strong>ready-made
+        script</strong> you can adapt word for word, and <strong>delivery tips</strong>.</p>
+
+      <div class="tip">
+        <p><strong>If English is not your native language:</strong> rehearse each script out loud until it sounds
+          natural, and keep your sentences short. Short sentences are easier to say, easier to understand,
+          and they sound more confident than long ones. A clear, simple sentence said calmly always beats a complex
+          sentence said nervously. Record yourself once and listen back — you'll notice the words you
+          rush through.</p>
+      </div>
+      <div class="success">
+        <p><strong>A universal structure for any message to a client:</strong> <em>Situation → Impact → Action →
+          Next step.</em> Say what happened, what it means for them, what you're doing about it, and when they'll
+          hear from you again. This four-beat rhythm works equally well for delays,
+          incidents, proposals and status updates.</p>
+      </div>
+    </section>
+
+    <!-- ============================= 1. SELF-INTRODUCTION ============================= -->
+    <section data-searchable>
+      <h2 id="self-intro-en">1. Self-introduction</h2>
+      <p class="definition"><strong>A self-introduction</strong> is a 30–60 second statement you give at the start of
+        an interview, at the kickoff of a client project, or at your first standup in a new team. Its goal is to convey your role,
+        depth of experience and one or two strengths relevant to the audience, without rambling.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>The start of an interview ("Tell me about yourself"), a first call with a new client, or introducing yourself
+          to a trading desk you'll be building a system for. Tune it to the audience: lead with what matters to
+          <em>this</em> audience — for a FinTech client that's reliability and front-end performance.</p>
+
+        <h4>Ready-made script</h4>
+        <div class="success">
+          <p>"Hi, I'm a front-end engineer focused on Angular. For the past few years I've built
+            data-intensive trading and dashboard interfaces — real-time order books, charts and portfolio
+            views — where performance and correctness really matter. My strengths are Angular architecture,
+            state management with RxJS and NgRx, and keeping complex UIs fast under heavy real-time data using
+            techniques like OnPush change detection and virtual scrolling. I enjoy working close to the
+            business so the interface actually reflects how traders work. I'm looking to bring that experience
+            to a team building serious financial software."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Structure: <strong>role → focus area → 2–3 strengths → motivation</strong>. Don't try to
+            list every technology you know.</li>
+          <li>Tie each strength to a FinTech outcome ("fast under a stream of real-time data") rather than just to a buzzword.</li>
+          <li>End on intent — on what you want — so the conversation has a natural next step.</li>
+        </ul>
+        <div class="tip">
+          <p><strong>Rehearsal tip:</strong> Say it out loud five times until you can deliver it without
+            reading from a page. Keep your sentences short. If English isn't your native language, write out the text,
+            mark where you'll breathe, and slow down — a calm pace reads as maturity. Avoid
+            filler words like "um, basically, you know"; a short pause beats a filler word.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 2. EXPLAIN TECHNICAL TO NON-TECHNICAL ============================= -->
+    <section data-searchable>
+      <h2 id="explain-nontech-en">2. Explaining a technical concept to a non-technical stakeholder</h2>
+      <p class="definition"><strong>Explaining through analogy</strong> is translating a technical idea into a familiar
+        real-world picture, so the business stakeholder grasps the <em>why</em> and the <em>impact</em>,
+        without getting into implementation details.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>A product owner or client asks "why is this work needed?" or "why does this take so long?" —
+          for example, when you need to justify performance work (OnPush change detection), a refactor,
+          or adding caching. They care about outcomes (speed, cost, risk), not mechanisms.</p>
+
+        <h4>Ready-made script — explaining a performance optimization</h4>
+        <div class="success">
+          <p>"Right now, every time a single price updates, the application re-checks the entire screen to see
+            what changed — a bit like re-reading a whole 300-page book just to find one updated sentence. With
+            a trading screen receiving hundreds of updates per second, that wastes a lot of effort and the UI
+            starts to lag. The change I'm proposing tells the app exactly which parts of the screen each
+            update affects, so it only re-reads the relevant page. The result: the same screen stays smooth
+            under heavy market data, and traders see prices update without delay. It's invisible to users —
+            they just notice the app feels faster and never freezes during volatile markets."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Start with <strong>the problem in plain words</strong>, then the <strong>analogy</strong>, then
+            the <strong>business outcome</strong>. Always end on the impact, not the technique.</li>
+          <li>Pick analogies from the client's world (a book, a checklist, a warehouse) and use no more than one per concept —
+            too many analogies confuse.</li>
+          <li>Avoid jargon entirely, or explain it in one phrase ("change detection — how the app
+            decides what to repaint").</li>
+        </ul>
+        <div class="warn">
+          <p><strong>Avoid:</strong> "We need to switch ChangeDetectionStrategy to OnPush to cut down on
+            dirty-checking cycles." A non-technical stakeholder hears noise and tunes out. Start with the picture and the benefit.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 3. REPORTING A DELAY ============================= -->
+    <section data-searchable>
+      <h2 id="report-delay-en">3. Reporting a task delay</h2>
+      <p class="definition"><strong>A delay report</strong> is a proactive message that you won't make
+        an agreed date. You send it <em>as soon as you realize it</em>, never on the day of the deadline itself.
+        Trust is built on early, honest warnings.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>A feature, fix or integration won't be ready by the promised date. The worst possible move is to stay silent until
+          the deadline has passed. The professional move is to flag the problem in advance, together with a plan.</p>
+
+        <h4>Ready-made script</h4>
+        <div class="success">
+          <p>"I want to give you an early heads-up on the order-history export feature. <strong>Cause:</strong>
+            while integrating it, I found the reporting API returns trades in an inconsistent format for older
+            accounts, which corrupts the export. <strong>Impact:</strong> shipping it as-is would produce wrong
+            numbers in client statements, so I don't want to release it on Thursday as planned.
+            <strong>New ETA:</strong> I expect it ready and validated by Tuesday. <strong>Mitigation:</strong>
+            in the meantime, the existing manual export still works, and I've added a check so no incorrect
+            export can be generated. I'll send you a confirmation the moment the fix is verified."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Follow the order: <strong>take ownership → cause → impact → new ETA → mitigation
+            during the delay</strong>.</li>
+          <li>"Take ownership" means no blame and no excuses. State the cause factually, not defensively.</li>
+          <li>Always offer a workaround or a temporary solution — it shows you're managing the problem,
+            not just reporting it.</li>
+          <li>Name a date you're confident you can beat. Missing the <em>revised</em> date hurts
+            trust far more.</li>
+        </ul>
+        <div class="warn">
+          <p><strong>Avoid:</strong> vague hedges like "it might slip a little, not sure exactly when."
+            Stakeholders need a concrete date they can plan around, even if it's later than they hoped.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 4. PROPOSING A SOLUTION WITH TRADEOFFS ============================= -->
+    <section data-searchable>
+      <h2 id="propose-solution-en">4. Proposing a technical solution with a tradeoff analysis</h2>
+      <p class="definition">The <strong>"options and recommendation" format</strong> is presenting two viable
+        paths with their tradeoffs, and then a clear recommendation with reasoning. It shows maturity: you've
+        considered the alternatives and can defend the decision.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>A design decision needs sign-off — for example, how to deliver real-time price updates, or whether to build
+          your own chart instead of using a library. Decision-makers want to see that you weighed the
+          options rather than just picking the first idea.</p>
+
+        <h4>Ready-made script — real-time price stream</h4>
+        <div class="success">
+          <p>"For live prices, I see two solid options. <strong>Option A — WebSockets:</strong> the server pushes
+            updates instantly, so prices feel truly live and we use less bandwidth under load. The tradeoff is more
+            infrastructure complexity and reconnection logic to handle. <strong>Option B — HTTP polling:</strong>
+            simpler to build and to operate, works through any firewall, but updates lag by the polling interval and
+            it scales poorly with many users. <strong>My recommendation is Option A, WebSockets</strong>, because
+            for a trading screen, stale prices are a real financial risk to the user, and the latency difference is
+            the whole point of the product. The extra reconnection work is well-understood, and I'd add a polling
+            fallback so we degrade gracefully if the socket drops."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Structure: <strong>Option A (pro / con) → Option B (pro / con) → recommendation → reasoning
+            tied to the business goal</strong>.</li>
+          <li>State the recommendation <em>confidently</em> — "My recommendation is…", not "maybe we could…".</li>
+          <li>Tie the reasoning to what matters here (the financial risk of stale data), and acknowledge the downside
+            of your own choice plus how you'll manage it. Acknowledging the tradeoff builds trust.</li>
+        </ul>
+        <div class="tip">
+          <p><strong>Tip:</strong> Two options is the sweet spot. One option looks like you didn't research;
+            five options push the decision back onto the stakeholder, who wanted <em>you</em> to give the recommendation.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 5. THE EXPERIENCE QUESTION ============================= -->
+    <section data-searchable>
+      <h2 id="experience-question-en">5. How to answer "Why don't you have 5 years of experience?"</h2>
+      <p class="definition"><strong>Reframing</strong> is answering a question about a perceived gap by shifting the
+        conversation from <em>number of years</em> to <em>depth, impact and ownership</em>, confidently and without a defensive
+        tone.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>An interviewer or client probes your maturity or total tenure. The trap is to start apologizing or making excuses.
+          The goal is to briefly acknowledge the fact and redirect to evidence of capability.</p>
+
+        <h4>Ready-made script</h4>
+        <div class="success">
+          <p>"That's fair to ask. I'd point to the <em>depth</em> of what I've worked on rather than the headcount of
+            years. I've owned complex, real-time trading interfaces end to end — architecture, performance under heavy
+            data, and production support when something broke. I've made the hard calls on state management and change
+            detection that usually separate senior work from junior work, and I've mentored others through them. I
+            learn deliberately and fast, and I measure myself by the problems I can own independently — which is what
+            I've been doing. So while the year count may be shorter than some, the responsibility and the results
+            line up with the level."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Acknowledge the question in one short sentence ("That's fair to ask"), then <strong>move to the
+            evidence</strong>: ownership, complexity, production duties, mentoring.</li>
+          <li>Use concrete senior signals — owning systems end to end, making architectural decisions,
+            handling incidents.</li>
+          <li>Tone matters more than words here: calm, even, unhurried. Defensiveness is heard in the <em>delivery</em>,
+            not just the content.</li>
+        </ul>
+        <div class="warn">
+          <p><strong>Avoid:</strong> apologizing ("I know it's a bit…"), inflating your credentials, or attacking the question itself
+            ("years don't matter at all"). Acknowledge, then redirect to depth.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 6. TECHNICAL DEBT ============================= -->
+    <section data-searchable>
+      <h2 id="tech-debt-en">6. Explaining technical debt to a manager</h2>
+      <p class="definition"><strong>The business framing of tech debt</strong> is describing accumulated "cut corners" not as
+        a complaint about code quality, but as a <em>business cost</em>: risk, slower delivery, and a concrete proposal
+        to pay it down gradually.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>You need time and buy-in to refactor or upgrade something that isn't a visible feature.
+          Managers fund work that can be justified in terms of risk and speed, not internal
+          elegance.</p>
+
+        <h4>Ready-made script</h4>
+        <div class="success">
+          <p>"I want to flag some technical debt in the order-entry module and frame it in business terms.
+            <strong>The risk:</strong> the validation logic has grown tangled, so each change there has a real chance
+            of introducing a bug in a place where users place live trades. <strong>The velocity cost:</strong> what
+            should be a one-day change now takes three, because we have to re-test the whole module by hand every
+            time. <strong>The proposal:</strong> I'd like to spend roughly two days restructuring it and adding
+            automated tests. That doesn't add a visible feature, but it removes a category of trading bugs and roughly
+            halves the time for every future change in that area. I'd suggest doing it before the next batch of
+            order-entry work, so that work goes faster and safer."</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Translate debt into <strong>risk + velocity cost</strong>, then into a <strong>time-boxed,
+            proposed paydown</strong> (stating the benefit).</li>
+          <li>Quantify where you can: "takes three days instead of one", "halves the time of future changes".
+            Numbers convince managers.</li>
+          <li>Tie the timing to upcoming work — paying down debt right before related features sells the easiest.</li>
+        </ul>
+        <div class="tip">
+          <p><strong>Tip:</strong> Never call it "ugly code" or "the previous developer's mess".
+            Frame it as a normal, expected cost of fast delivery that's now worth paying down — neutrally
+            and with an eye on the future.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 7. CLARIFYING BEFORE ESTIMATING ============================= -->
+    <section data-searchable>
+      <h2 id="clarify-estimate-en">7. Clarifying questions before estimating</h2>
+      <p class="definition"><strong>Clarifying before estimating</strong> is the set of questions you ask before
+        committing to a timeline, so your estimate rests on scope and constraints rather than on guesswork. These questions are a signal
+        of maturity, not of slowness.</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>A client or manager asks "how long will this take?" when the requirement isn't yet fully defined.
+          A senior engineer doesn't blurt out a number; they first clarify the scope, then commit.</p>
+
+        <h4>Ready-made script</h4>
+        <div class="success">
+          <p>"Happy to estimate — let me ask a few things first so the number is reliable. (1) What exactly does
+            'done' look like — is it a working prototype or production-ready with tests and error handling? (2) Are
+            there edge cases that matter here, like how it should behave when the market feed disconnects? (3) Does
+            this need to integrate with the existing order service, or is it standalone? (4) Are there design or
+            regulatory constraints I should know about? (5) How firm is the deadline — is this a hard date or a
+            target? Once I have those, I'll come back with an estimate I can stand behind, including any risks that
+            could move it."</p>
+        </div>
+
+        <h4>Delivery tips — what to ask before committing</h4>
+        <ul>
+          <li><strong>Definition of done:</strong> prototype vs production-ready (tests, error handling, monitoring).</li>
+          <li><strong>Edge cases:</strong> failure scenarios, empty states, connection drops — especially in trading flows.</li>
+          <li><strong>Dependencies:</strong> other teams, APIs, services, approvals you'll be waiting on.</li>
+          <li><strong>Constraints:</strong> design system, browser support, security or regulatory rules.</li>
+          <li><strong>Deadline firmness:</strong> a hard regulatory date vs a soft target changes how you scope your estimate.</li>
+        </ul>
+        <div class="tip">
+          <p><strong>Tip:</strong> Offer a <em>range</em> with stated assumptions ("3–5 days, assuming the
+            order API is ready") and promise a tighter number after a short spike, if there are many unknowns. A confident
+            range beats a precise guess that turns out wrong.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= 8. SAYING NO ============================= -->
+    <section data-searchable>
+      <h2 id="saying-no-en">8. How to say "no" / push back professionally</h2>
+      <p class="definition"><strong>Constructive pushback</strong> is declining a request or disagreeing with a plan
+        while preserving the relationship and the shared goal. The pattern: <em>acknowledge → explain the constraint → propose
+        an alternative</em>. You never just say "no".</p>
+
+      <div class="card">
+        <h4>When it's used</h4>
+        <p>You're asked to cut a corner that creates real risk, to add scope without moving the date, or to take a technical path
+          you believe is wrong. Staying silent and agreeing undermines trust later; a blunt "no" sounds
+          uncooperative. The skill is to push back while staying on the same team.</p>
+
+        <h4>Ready-made script — refusing to skip testing for a deadline</h4>
+        <div class="success">
+          <p>"I understand the pressure to ship by Friday, and I want to hit that date too.
+            <strong>The constraint:</strong> if we skip testing on the order-submission flow, we risk a bug where a
+            trade is sent twice or with the wrong amount — and in this product that's real money and real trust.
+            <strong>The alternative:</strong> I'd suggest we ship the lower-risk parts on Friday as planned, and hold
+            just the order-submission piece until Monday with proper testing. That keeps most of the value on time and
+            protects the part where a mistake is expensive. Would that split work for you?"</p>
+        </div>
+
+        <h4>Delivery tips</h4>
+        <ul>
+          <li>Structure: <strong>acknowledge their goal → explain the constraint in terms of risk → propose a concrete
+            alternative → invite agreement</strong>.</li>
+          <li>Show that you share the goal ("I want to hit that date too") before you push back — that
+            keeps you on the same side.</li>
+          <li>Always bring an alternative. "No, and here's a better path" lands very differently from "no".</li>
+          <li>End with a question that collaboratively hands the decision back ("Would that split work?").</li>
+        </ul>
+        <div class="warn">
+          <p><strong>Avoid:</strong> "That's a bad idea" or "I can't do that". Both shut down the conversation.
+            Replace the value judgment with a concrete risk, and always pair the pushback with a way forward.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== Q&A — BEHAVIORAL =================== -->
+    <section data-searchable>
+      <h2 id="qa-en">Q&amp;A — Behavioral interview questions</h2>
+      <p>Many of these are best answered with the <strong>STAR</strong> method:
+        <strong>S</strong>ituation, <strong>T</strong>ask, <strong>A</strong>ction, <strong>R</strong>esult.
+        Briefly set the context, state your area of responsibility, describe
+        what <em>you specifically</em> did, and end with a concrete result. Keep the Situation short and spend most
+        of the time on the Action and the Result.</p>
+
+      <div class="qa-block">
+        <div class="qa-question">1. Tell me about a conflict you had in a team.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p><strong>(Situation)</strong> On a trading dashboard, a colleague and I disagreed about how to manage shared
+            state — he wanted local component state, I argued for a central store. <strong>(Task)</strong>
+            We needed a single approach before starting the order-book and positions views, which both
+            read the same data. <strong>(Action)</strong> Instead of pushing my opinion,
+            I suggested we each write out the data flows and failure scenarios. Once we listed them, it became clear that
+            several views shared state and would drift out of sync with local state. I also
+            acknowledged he was right that a full store would be overkill for the simpler widgets, so we
+            drew a boundary: shared trading data in the store, isolated UI state local.
+            <strong>(Result)</strong> We reached agreement without it becoming personal, the architecture held up as the
+            app grew, and that "write out the data flows" habit became how the team settled subsequent
+            design disputes.</p>
+          <p><em>Why it works:</em> shows that you separate the person from the problem, listen, acknowledge where someone is right,
+            and arrive at a principled decision.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Describe a time you missed a deadline.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p><strong>(Situation)</strong> I committed to shipping a trade-export feature by Thursday.
+            <strong>(Task)</strong> Halfway through, I discovered the reporting API returned inconsistent data for
+            older accounts, which would have led to incorrect client statements. <strong>(Action)</strong> As soon as
+            I realized it, I flagged the problem to my manager right away rather than waiting — I named the cause, the impact,
+            a revised date of the following Tuesday, and a temporary manual workaround with a guard so a bad export
+            couldn't be generated. Then I fixed the data normalization and added a test for it.
+            <strong>(Result)</strong> We shipped a correct export on Tuesday, as I'd promised, not a single incorrect
+            statement went out, and the manager later said an early, structured warning was exactly
+            how they want problems raised.</p>
+          <p><em>Why it works:</em> takes ownership of the miss, emphasizes early honest communication
+            and a clean recovery — no excuses.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. How do you resolve a disagreement with a more experienced developer?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p>I start with curiosity rather than confrontation — they may know context I don't. I ask them to
+            walk me through their reasoning, then I voice my concern as a concrete risk or tradeoff,
+            not as "you're wrong". For example, when a senior developer wanted to fetch prices with polling and I thought
+            we needed WebSockets, I asked what drove the choice (operational simplicity), acknowledged it was reasonable, and
+            showed the latency risk to traders with a small measurement. We settled on WebSockets with polling as a
+            fallback. If we still disagreed, I'd defer to their decision on a reversible matter and
+            come back with data — but I'd push harder on anything that puts user funds at risk.
+            The goal is the best decision for the product, not winning.</p>
+          <p><em>Why it works:</em> shows respect, evidence-based reasoning and sound judgment
+            about when to defer and when to stand firm.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. How do you prioritize when everything is urgent?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p>I make the urgency explicit rather than guessing. First I sort by <strong>impact and risk</strong>: in FinTech,
+            anything touching money movement, data correctness or a production outage outranks everything else. Then
+            I look at <strong>dependencies</strong> — whatever unblocks other people or other work moves
+            higher. If two genuine top priorities collide, I don't decide silently; I bring it to the product owner with
+            a tradeoff: "I can finish A or B today, but not both — A protects live trades, B is a cosmetic
+            fix; I plan to do A first, agreed?" That turns an impossible "everything now" into a clear decision
+            someone owns. I also communicate the resulting order, so no one is surprised that something is waiting.</p>
+          <p><em>Why it works:</em> shows a concrete framework (impact/risk, dependencies) plus the maturity
+            to escalate tradeoffs rather than quietly dropping something.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Tell me about a production incident you handled.</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p><strong>(Situation)</strong> During volatile market hours, the live-price panel froze for users, while
+            the rest of the app worked. <strong>(Task)</strong> As the front-end owner, I had to quickly restore
+            prices and find the cause. <strong>(Action)</strong> First I stabilized the situation: I confirmed the problem
+            was on the client and not in the feed, and rolled the UI back to the last working build to stop
+            the bleeding. Then I reproduced the problem and found we were repainting the entire
+            table on every tick under high load, which eventually choked the main thread. I fixed it with
+            OnPush change detection and trackBy so only changed rows updated, and added throttling on the incoming stream. <strong>(Result)</strong>
+            Prices stayed smooth in the next volatile session, and I wrote a short post-incident note
+            so the team knew the cause and the protection we added.</p>
+          <p><em>Why it works:</em> shows the right instinct — stabilize first, then
+            diagnose, fix it properly, then share the learnings.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">6. How do you give feedback in code review?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p>I review the code, not the person, and I clearly separate the severity of comments. I distinguish <strong>blocking</strong>
+            issues (a real bug, a security or correctness risk — for trading code, anything that could send an
+            order incorrectly) from <strong>suggestions</strong> and <strong>nitpicks</strong>, and I label which is which,
+            so the author knows what must be changed. I phrase comments as questions or reasoning,
+            not commands — "What happens here if the socket reconnects mid-update?" instead of "this is
+            wrong". I also note what I genuinely like, so the review isn't only criticism. For anything
+            subjective, I say it's a preference and defer. And if a comment thread goes back and forth more
+            than twice, I take a quick call — text amplifies friction.</p>
+          <p><em>Why it works:</em> shows empathy, prioritizing real risks, and that you treat
+            review as collaborative quality rather than gatekeeping.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">7. Why do you want to work in FinTech?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p>Two reasons. First, the <strong>high engineering bar</strong> — real-time data, low
+            latency, correctness and reliability all matter at once, because users make financial
+            decisions based on what my interface shows. That pressure makes me a better engineer; sloppy
+            work simply isn't acceptable. Second, <strong>tangible impact</strong> — when I make a trading screen
+            faster or prevent an incorrect order from being sent, it has a direct, measurable effect on real people's
+            money. I love building software where quality visibly matters, and I enjoy the data-intensive,
+            performance-sensitive front-end work that this field demands.</p>
+          <p><em>Why it works:</em> connects personal motivation to the real challenges and stakes of the domain, rather than
+            to generic enthusiasm.</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">8. Where do you see yourself in the future and how do you keep learning?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+        <div class="qa-answer">
+          <p>I want to keep growing as a front-end engineer who owns the architecture of complex, data-intensive
+            products and can mentor others — increasingly becoming the person the team trusts on hard decisions
+            about performance and state management. As for learning, I work deliberately: I follow the
+            Angular and RxJS release notes and rebuild a small feature on every major shift (Signals is a recent
+            example), I read other people's code in review and in open source to see patterns I wouldn't arrive at
+            myself, and when I hit something I don't understand, I dig until I can explain it
+            simply — being able to explain it to a non-technical stakeholder is my test for whether I've really
+            understood it. I'd want a role where the problems are hard enough to keep pulling me forward.</p>
+          <p><em>Why it works:</em> shows a realistic growth direction plus a concrete, ongoing
+            learning habit, rather than a vague "I love learning".</p>
+        </div>
+      </div>
+    </section>
+
+    </div>
+
+    <div class="lang-block" data-lang="ru">
 
     <!-- ============================= INTRO NOTE ============================= -->
     <section data-searchable>
@@ -624,10 +1123,12 @@
       </div>
     </section>
 
+    </div>
+
     <!-- =================== PAGE NAV =================== -->
     <div class="page-nav">
       <a href="live-coding.html" class="btn-nav">← Live Coding</a>
-      <a href="cheatsheet.html" class="btn-nav">Шпаргалка →</a>
+      <a href="cheatsheet.html" class="btn-nav"><span data-lang="en">Cheatsheet</span><span data-lang="ru">Шпаргалка</span> →</a>
     </div>
   </main>
 
