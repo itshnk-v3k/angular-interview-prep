@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Гарды роутера (Guards) — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+    </div>
+    <nav>
+      <a href="../index.html">🏠 Главная</a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html">Основы JS</a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html">Основы Angular</a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html">Внедрение зависимостей</a>
+      <a href="forms.html">Формы</a>
+      <a href="routing.html">Маршрутизация</a>
+      <a href="guards.html">Гарды (Guards)</a>
+      <div class="nav-section">RxJS и состояние</div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section">API платформы</div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html">HTTP и интерцепторы</a>
+      <div class="nav-section">Инженерия</div>
+      <a href="architecture.html">Архитектура</a>
+      <a href="solid-dry.html">SOLID и DRY</a>
+      <div class="nav-section">Практика</div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html">Общение с клиентом</a>
+      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+    </nav>
+    <div class="sidebar-progress">
+      Прогресс: <span id="progress-count">0</span> / 19
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Главная</a> › <span>Гарды (Guards)</span>
+    </nav>
+
+    <div class="page-header">
+      <h1>Гарды роутера (Guards)</h1>
+      <p class="page-desc">Защита маршрутов: <code>CanActivate</code>, <code>CanActivateChild</code>,
+        <code>CanDeactivate</code>, <code>CanMatch</code> и <code>Resolve</code> — функциональные и
+        классовые гарды с теорией и примерами на торговой платформе.</p>
+      <button class="btn-done" data-page="guards" onclick="markDone('guards')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== ЧТО ТАКОЕ ГАРД ===================== -->
+    <section data-searchable>
+      <h2 id="what">Что такое гард</h2>
+      <p class="definition"><strong>Гард (route guard)</strong> — функция или класс, которые роутер
+        вызывает перед навигацией, чтобы решить, разрешить переход, отменить его или перенаправить
+        пользователя. Это центральная точка для авторизации, проверки прав и предотвращения потери
+        несохранённых данных.</p>
+
+      <h3>Типы гардов</h3>
+      <div class="table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th>Гард</th><th>Когда срабатывает</th><th>Типичный сценарий</th></tr></thead>
+          <tbody>
+            <tr><td><code>CanActivate</code></td><td>Перед входом на маршрут</td><td>Требуется аутентификация</td></tr>
+            <tr><td><code>CanActivateChild</code></td><td>Перед входом на дочерний маршрут</td><td>Защита всей секции (например, <code>/admin/*</code>)</td></tr>
+            <tr><td><code>CanDeactivate</code></td><td>Перед уходом с маршрута</td><td>Предупреждение о несохранённой форме заявки</td></tr>
+            <tr><td><code>CanMatch</code></td><td>Перед сопоставлением маршрута (и ленивой загрузкой)</td><td>Feature-флаги, A/B, роли до загрузки чанка</td></tr>
+            <tr><td><code>Resolve</code></td><td>Перед активацией — предзагрузка данных</td><td>Загрузить инструмент до отрисовки страницы</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Что может вернуть гард</h3>
+      <p>Любой гард может вернуть синхронное значение либо асинхронный поток — роутер дождётся его:</p>
+      <ul>
+        <li><code>boolean</code> — <code>true</code> разрешает переход, <code>false</code> отменяет.</li>
+        <li><code>UrlTree</code> — отменяет переход и выполняет <strong>редирект</strong> по этому URL.</li>
+        <li><code>Observable&lt;boolean | UrlTree&gt;</code> или <code>Promise&lt;...&gt;</code> — для асинхронных проверок (HTTP, состояние стора).</li>
+      </ul>
+      <div class="tip"><p><strong>Совет:</strong> возвращайте <code>UrlTree</code> вместо ручного вызова
+        <code>router.navigate()</code> внутри гарда — так навигация остаётся атомарной, без «мигания» промежуточного маршрута.</p></div>
+
+      <div class="warn"><p><strong>Современный подход:</strong> начиная с Angular 14 предпочтительны
+        <strong>функциональные гарды</strong> (<code>CanActivateFn</code> и т.д.) — это просто функции,
+        использующие <code>inject()</code>. Классовые гарды (<code>implements CanActivate</code>) считаются
+        устаревшими; <code>CanLoad</code> заменён на <code>CanMatch</code>.</p></div>
+    </section>
+
+    <!-- ===================== CanActivate ===================== -->
+    <section data-searchable>
+      <h2 id="can-activate">CanActivate</h2>
+      <p class="definition"><strong>CanActivate</strong> — гард, который запрещает или разрешает
+        <em>вход</em> на маршрут. Возвращает <code>boolean</code> или <code>UrlTree</code> (редирект).</p>
+
+      <h3>Функциональный гард (рекомендуется)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from './auth.service';
+
+export const authGuard: CanActivateFn = (route, state) =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated()) {
+    return true;
+  }
+  // Отменяем переход и редиректим на /login, сохраняя адрес возврата
+  return router.createUrlTree(['/login'], {
+    queryParams: { returnUrl: state.url },
+  });
+};</code></pre>
+      </div>
+
+      <h3>Проверка ролей (фабрика гардов)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+
+// Параметризуемый гард: roleGuard('TRADER')
+export function roleGuard(required: string): CanActivateFn {
+  return () =&gt; {
+    const auth = inject(AuthService);
+    const router = inject(Router);
+    return auth.hasRole(required) ? true : router.createUrlTree(['/forbidden']);
+  };
+}</code></pre>
+      </div>
+
+      <h3>Асинхронная проверка через стор</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { map } from 'rxjs';
+
+export const sessionGuard: CanActivateFn = () =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  // isAuthenticated$ — Observable&lt;boolean&gt;
+  return auth.isAuthenticated$.pipe(
+    map(ok =&gt; ok ? true : router.createUrlTree(['/login'])),
+  );
+};</code></pre>
+      </div>
+
+      <h3>Классовый гард (устаревший стиль)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class AuthGuard implements CanActivate {
+  constructor(private auth: AuthService, private router: Router) {}
+
+  canActivate(): boolean | UrlTree {
+    return this.auth.isAuthenticated() ? true : this.router.createUrlTree(['/login']);
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== CanActivateChild ===================== -->
+    <section data-searchable>
+      <h2 id="can-activate-child">CanActivateChild</h2>
+      <p class="definition"><strong>CanActivateChild</strong> — то же, что <code>CanActivate</code>, но
+        срабатывает перед входом на <em>каждый дочерний</em> маршрут. Удобно защищать целую секцию
+        приложения одним гардом, навешанным на родителя.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanActivateChildFn } from '@angular/router';
+
+export const adminAreaGuard: CanActivateChildFn = (childRoute, state) =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.hasRole('ADMIN') ? true : router.createUrlTree(['/forbidden']);
+};
+
+// В конфигурации роутов гард на родителе защищает все вложенные пути:
+const routes: Routes = [
+  {
+    path: 'admin',
+    canActivateChild: [adminAreaGuard],
+    children: [
+      { path: 'users', component: UsersComponent },
+      { path: 'audit', component: AuditComponent },
+    ],
+  },
+];</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== CanDeactivate ===================== -->
+    <section data-searchable>
+      <h2 id="can-deactivate">CanDeactivate</h2>
+      <p class="definition"><strong>CanDeactivate</strong> — гард, который запрещает или разрешает
+        <em>уход</em> с маршрута. Главный сценарий — предупредить пользователя о несохранённых
+        изменениях (например, наполовину заполненная заявка на сделку).</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanDeactivateFn } from '@angular/router';
+
+// Контракт, который реализуют компоненты с «грязной» формой
+export interface CanComponentDeactivate {
+  canDeactivate: () =&gt; boolean | Observable&lt;boolean&gt;;
+}
+
+export const pendingChangesGuard: CanDeactivateFn&lt;CanComponentDeactivate&gt; =
+  (component) =&gt; component.canDeactivate ? component.canDeactivate() : true;</code></pre>
+      </div>
+
+      <p>Компонент сам решает, можно ли уходить:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">@Component({ /* ... */ })
+export class OrderTicketComponent implements CanComponentDeactivate {
+  form = inject(FormBuilder).group({ symbol: [''], quantity: [0] });
+
+  canDeactivate(): boolean {
+    // Если форма не тронута или уже сохранена — уходить можно без вопросов
+    if (this.form.pristine) return true;
+    return confirm('Заявка не сохранена. Покинуть страницу?');
+  }
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Подводный камень:</strong> <code>CanDeactivate</code> не перехватывает
+        закрытие вкладки или обновление страницы. Для этого нужен отдельный слушатель
+        <code>beforeunload</code> на уровне браузера.</p></div>
+    </section>
+
+    <!-- ===================== CanMatch ===================== -->
+    <section data-searchable>
+      <h2 id="can-match">CanMatch (и устаревший CanLoad)</h2>
+      <p class="definition"><strong>CanMatch</strong> — гард, который решает, <em>подходит</em> ли маршрут
+        вообще. Если он возвращает <code>false</code>, роутер ведёт себя так, будто этого маршрута нет, и
+        пробует следующий. Срабатывает <em>до</em> ленивой загрузки чанка, поэтому экономит трафик.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { CanMatchFn, Route } from '@angular/router';
+
+export const featureFlagGuard = (flag: string): CanMatchFn =&gt; {
+  return () =&gt; inject(FeatureFlagsService).isEnabled(flag);
+};
+
+const routes: Routes = [
+  {
+    path: 'analytics',
+    canMatch: [featureFlagGuard('advancedAnalytics')],
+    loadComponent: () =&gt; import('./analytics.component').then(c =&gt; c.AnalyticsComponent),
+  },
+  // Фолбэк, если фича выключена — тот же путь ведёт на заглушку
+  { path: 'analytics', component: ComingSoonComponent },
+];</code></pre>
+      </div>
+      <div class="tip"><p><strong>CanMatch vs CanActivate:</strong> <code>CanMatch</code> можно использовать
+        для выбора <em>разных компонентов</em> на одном пути (по роли, флагу), а также чтобы вообще не грузить
+        ленивый модуль. <code>CanActivate</code> запускается уже после сопоставления маршрута.</p></div>
+      <div class="warn"><p><strong>Устаревшее:</strong> <code>CanLoad</code> заменён на <code>CanMatch</code>.
+        В новых проектах используйте только <code>CanMatch</code>.</p></div>
+    </section>
+
+    <!-- ===================== Resolve ===================== -->
+    <section data-searchable>
+      <h2 id="resolve">Resolve</h2>
+      <p class="definition"><strong>Resolve</strong> — гард предзагрузки данных: роутер ждёт, пока резолвер
+        получит данные, и только потом активирует компонент. Это убирает «мигание» пустого экрана и
+        состояние загрузки внутри компонента.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { ResolveFn } from '@angular/router';
+
+export const instrumentResolver: ResolveFn&lt;Instrument&gt; = (route) =&gt; {
+  const service = inject(InstrumentService);
+  const symbol = route.paramMap.get('symbol')!;
+  return service.getOne(symbol); // Observable&lt;Instrument&gt;
+};
+
+const routes: Routes = [
+  {
+    path: 'instruments/:symbol',
+    component: InstrumentComponent,
+    resolve: { instrument: instrumentResolver },
+  },
+];</code></pre>
+      </div>
+      <p>В компоненте готовые данные доступны из <code>ActivatedRoute</code>:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">export class InstrumentComponent {
+  private route = inject(ActivatedRoute);
+  // Данные уже загружены резолвером — без спиннера и без undefined
+  instrument = this.route.snapshot.data['instrument'] as Instrument;
+}</code></pre>
+      </div>
+      <div class="warn"><p><strong>Подводный камень:</strong> тяжёлый резолвер задерживает <em>всю</em>
+        навигацию — пользователь видит «зависание». Для долгих запросов лучше показать страницу сразу и
+        грузить данные внутри компонента (скелетон), а резолвер оставить для быстрых критичных данных.</p></div>
+    </section>
+
+    <!-- ===================== Порядок ===================== -->
+    <section data-searchable>
+      <h2 id="order">Порядок выполнения</h2>
+      <p>При навигации роутер выполняет гарды в строгом порядке. Если любой из них вернёт <code>false</code>
+        или <code>UrlTree</code>, навигация прерывается, а остальные не запускаются:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-text">CanDeactivate (уход с текущего маршрута)
+   ↓
+CanMatch (сопоставление маршрута, до ленивой загрузки)
+   ↓
+CanActivate (вход на маршрут)
+   ↓
+CanActivateChild (вход на дочерние маршруты)
+   ↓
+Resolve (предзагрузка данных)
+   ↓
+Активация компонента</code></pre>
+      </div>
+      <div class="tip"><p>Гарды одного типа на одном маршруте выполняются в порядке их перечисления в
+        массиве (<code>canActivate: [a, b]</code> → сначала <code>a</code>). Если все возвращают потоки,
+        роутер ждёт их завершения.</p></div>
+    </section>
+
+    <!-- ===================== Регистрация ===================== -->
+    <section data-searchable>
+      <h2 id="register">Регистрация в конфигурации роутов</h2>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Копировать</button>
+        <pre><code class="language-typescript">import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  {
+    path: 'orders',
+    canActivate: [authGuard, roleGuard('TRADER')],
+    canDeactivate: [pendingChangesGuard],
+    component: OrdersComponent,
+  },
+  {
+    path: 'instruments/:symbol',
+    canActivate: [authGuard],
+    resolve: { instrument: instrumentResolver },
+    component: InstrumentComponent,
+  },
+  {
+    path: 'admin',
+    canMatch: [featureFlagGuard('adminPanel')],
+    canActivateChild: [adminAreaGuard],
+    loadChildren: () =&gt; import('./admin/admin.routes').then(m =&gt; m.ADMIN_ROUTES),
+  },
+];</code></pre>
+      </div>
+    </section>
+
+    <!-- ===================== Q&A ===================== -->
+    <section data-searchable>
+      <h2 id="qa">Вопросы и ответы</h2>
+
+      <div class="qa-block">
+        <div class="qa-question">1. В чём разница между <code>CanActivate</code> и <code>CanMatch</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>CanMatch</code> срабатывает на этапе <em>сопоставления</em> маршрута — до ленивой загрузки чанка — и при <code>false</code> роутер считает, что маршрут не подходит, и пробует следующий. <code>CanActivate</code> запускается уже после сопоставления, перед активацией компонента. Поэтому <code>CanMatch</code> используют для feature-флагов, ролей и выбора разных компонентов на одном пути, а также чтобы вообще не грузить ленивый код.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">2. Почему лучше вернуть <code>UrlTree</code>, а не вызвать <code>router.navigate()</code> внутри гарда?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Возврат <code>UrlTree</code> делает редирект частью текущей навигации — она отменяется и сразу заменяется новой, атомарно. Ручной <code>navigate()</code> запускает <em>вторую</em> навигацию параллельно с отменой первой, что может вызвать гонки и кратковременное «мигание» исходного маршрута.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">3. Как сделать гард, защищающий от потери несохранённой формы?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p>Использовать <code>CanDeactivate</code>. Объявляют интерфейс с методом <code>canDeactivate()</code>, который реализует компонент; функциональный гард просто делегирует вызов этому методу. Компонент возвращает <code>true</code>, если форма <code>pristine</code> или сохранена, иначе спрашивает подтверждение. Важно: закрытие/обновление вкладки этим гардом не ловится — нужен <code>beforeunload</code>.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">4. Что может возвращать гард и как роутер это обрабатывает?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>boolean</code> (<code>true</code> — разрешить, <code>false</code> — отменить), <code>UrlTree</code> (отменить и сделать редирект), либо <code>Observable</code>/<code>Promise</code> этих значений для асинхронных проверок. Роутер дожидается завершения потока/промиса, прежде чем продолжить навигацию.</p></div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-question">5. Зачем нужен <code>Resolve</code>, если можно загрузить данные в <code>ngOnInit</code>?</div>
+        <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+        <div class="qa-answer"><p><code>Resolve</code> гарантирует, что данные готовы <em>до</em> отрисовки компонента — нет промежуточного пустого/загрузочного состояния и нет <code>undefined</code> в шаблоне. Это удобно для критичных данных (карточка инструмента по символу). Минус — задержка всей навигации, поэтому для долгих запросов лучше показывать страницу сразу со скелетоном, а резолвер оставлять для быстрых данных.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== Quiz ===================== -->
+    <section data-searchable>
+      <h2 id="quiz">Тест</h2>
+
+      <div class="quiz">
+        <div class="quiz-q">1. Какой гард срабатывает <strong>до</strong> ленивой загрузки модуля?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">CanMatch</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Resolve</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanDeactivate</button>
+        <div class="quiz-explain">CanMatch проверяется на этапе сопоставления маршрута, до загрузки чанка, поэтому при false ленивый код не скачивается.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">2. Чтобы отменить переход и сразу перенаправить пользователя, гард должен вернуть…</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">false</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">null</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">UrlTree</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">void</button>
+        <div class="quiz-explain">UrlTree отменяет текущую навигацию и атомарно заменяет её редиректом. Создаётся через router.createUrlTree([...]) или parseUrl.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">3. Какой современный API предпочтителен для гардов в Angular 14+?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Классы с implements CanActivate</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Функциональные гарды (CanActivateFn) с inject()</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanLoad-классы</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">@HostListener на компоненте</button>
+        <div class="quiz-explain">Функциональные гарды — это простые функции, использующие inject(). Классовые гарды и CanLoad считаются устаревшими.</div>
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">4. Какой гард используют, чтобы предупредить о несохранённых изменениях формы?</div>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanActivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">Resolve</button>
+        <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">CanDeactivate</button>
+        <button class="quiz-option" onclick="checkAnswer(this, false)">CanMatch</button>
+        <div class="quiz-explain">CanDeactivate срабатывает при уходе с маршрута и позволяет компоненту запросить подтверждение, если форма «грязная».</div>
+      </div>
+    </section>
+
+    <!-- ===================== PAGE NAV ===================== -->
+    <div class="page-nav">
+      <a href="routing.html" class="btn-nav">← Маршрутизация</a>
+      <a href="rxjs.html" class="btn-nav">RxJS →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -130,7 +130,7 @@ function reflectDoneButton(pageId, isDone) {
 
 /* All page ids, in sidebar order — single source of truth for progress. */
 var ALL_PAGES = [
-  'js-core', 'typescript', 'angular-core', 'signals', 'di', 'forms', 'routing',
+  'js-core', 'typescript', 'angular-core', 'signals', 'di', 'forms', 'routing', 'guards',
   'rxjs', 'ngrx', 'websocket', 'canvas', 'workers', 'http',
   'architecture', 'solid-dry', 'live-coding', 'communication', 'cheatsheet'
 ];
