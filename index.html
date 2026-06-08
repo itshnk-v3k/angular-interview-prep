@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-lang="ru">
 <head>
+  <script>(function(){try{var l=localStorage.getItem('lang');if(l==='en')document.documentElement.setAttribute('data-lang','en');}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Подготовка к Senior Angular Interview</title>
+  <title>Senior Angular Interview Prep</title>
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -11,21 +12,34 @@
     <!-- Top bar -->
     <div class="dash-topbar">
       <span class="dash-brand">⚡ Angular Prep</span>
+      <button class="lang-toggle" onclick="toggleLang()" title="Switch language / Сменить язык">
+        <span class="lang-ru">RU</span><span class="sep">/</span><span class="lang-en">EN</span>
+      </button>
     </div>
 
     <!-- Hero -->
     <header class="dash-hero">
-      <h1>Полный справочник <span>Senior Angular Developer</span></h1>
-      <p class="dash-sub">Финтех • Trading Platform • Real-time системы</p>
-      <p>Справочник для подготовки к собеседованию на позицию Senior Angular Developer —
-        JavaScript, TypeScript, Angular, RxJS, NgRx, Signals и архитектура, с определениями,
-        кодом, вопросами и тестами.</p>
+      <h1>
+        <span data-lang="en">Senior Angular Developer <span>Reference</span></span>
+        <span data-lang="ru">Полный справочник <span>Senior Angular Developer</span></span>
+      </h1>
+      <p class="dash-sub">
+        <span data-lang="en">FinTech • Trading Platform • Real-time systems</span>
+        <span data-lang="ru">Финтех • Trading Platform • Real-time системы</span>
+      </p>
+      <p>
+        <span data-lang="en">An interview-prep reference for Senior Angular Developer — JavaScript, TypeScript, Angular, RxJS, NgRx, Signals and architecture, with definitions, code, Q&amp;A and quizzes.</span>
+        <span data-lang="ru">Справочник для подготовки к собеседованию на позицию Senior Angular Developer — JavaScript, TypeScript, Angular, RxJS, NgRx, Signals и архитектура, с определениями, кодом, вопросами и тестами.</span>
+      </p>
     </header>
 
     <!-- Stats / progress bar -->
     <section class="stats-bar">
       <div class="label">
-        <span><strong id="dash-done">0</strong> из <strong id="dash-total">19</strong> тем пройдено</span>
+        <span>
+          <span data-lang="en"><strong id="dash-done">0</strong> of <strong id="dash-total">20</strong> topics completed</span>
+          <span data-lang="ru"><strong>0</strong> из <strong>20</strong> тем пройдено</span>
+        </span>
         <span id="dash-pct">0%</span>
       </div>
       <div class="progress-track">
@@ -37,155 +51,163 @@
     <section class="card-grid">
 
       <a class="topic-card" data-page="js-core" href="pages/js-core.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🟨</span>
-        <h3>Основы JavaScript</h3>
-        <p>Типы данных, массивы и объекты, прототипы, замыкания, event loop, промисы, <code>this</code>.</p>
-        <div class="topic-meta"><span>~25 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">JavaScript Core</span><span data-lang="ru">Основы JavaScript</span></h3>
+        <p><span data-lang="en">Data types, arrays &amp; objects, prototypes, closures, the event loop, promises, <code>this</code>.</span><span data-lang="ru">Типы данных, массивы и объекты, прототипы, замыкания, event loop, промисы, <code>this</code>.</span></p>
+        <div class="topic-meta"><span>~25 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="typescript" href="pages/typescript.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🔷</span>
         <h3>TypeScript</h3>
-        <p>Дженерики, utility-типы, type vs interface, размеченные объединения, type guards, декораторы.</p>
-        <div class="topic-meta"><span>~20 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">Generics, utility types, type vs interface, discriminated unions, type guards, decorators.</span><span data-lang="ru">Дженерики, utility-типы, type vs interface, размеченные объединения, type guards, декораторы.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="angular-core" href="pages/angular-core.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🅰️</span>
-        <h3>Основы Angular</h3>
-        <p>Хуки жизненного цикла, change detection, OnPush, standalone, <code>@if/@for/@defer</code>, пайпы.</p>
-        <div class="topic-meta"><span>~30 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Angular Core</span><span data-lang="ru">Основы Angular</span></h3>
+        <p><span data-lang="en">Lifecycle hooks, change detection, OnPush, standalone, <code>@if/@for/@defer</code>, pipes.</span><span data-lang="ru">Хуки жизненного цикла, change detection, OnPush, standalone, <code>@if/@for/@defer</code>, пайпы.</span></p>
+        <div class="topic-meta"><span>~30 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="signals" href="pages/signals.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">📡</span>
         <h3>Angular Signals</h3>
-        <p><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>toSignal</code>, <code>input</code>, <code>model</code> — и когда использовать вместо RxJS.</p>
-        <div class="topic-meta"><span>~18 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en"><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>toSignal</code>, <code>input</code>, <code>model</code> — and when to use them over RxJS.</span><span data-lang="ru"><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>toSignal</code>, <code>input</code>, <code>model</code> — и когда использовать вместо RxJS.</span></p>
+        <div class="topic-meta"><span>~18 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="di" href="pages/di.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">💉</span>
-        <h3>Внедрение зависимостей</h3>
-        <p>Дерево инжекторов, <code>providedIn</code>, типы провайдеров, <code>InjectionToken</code>, DI-декораторы.</p>
-        <div class="topic-meta"><span>~18 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Dependency Injection</span><span data-lang="ru">Внедрение зависимостей</span></h3>
+        <p><span data-lang="en">Injector tree, <code>providedIn</code>, provider types, <code>InjectionToken</code>, DI decorators.</span><span data-lang="ru">Дерево инжекторов, <code>providedIn</code>, типы провайдеров, <code>InjectionToken</code>, DI-декораторы.</span></p>
+        <div class="topic-meta"><span>~18 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="forms" href="pages/forms.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">📝</span>
-        <h3>Формы в Angular</h3>
-        <p>Template-driven vs reactive, FormGroup/Array, валидаторы, асинхронные валидаторы, valueChanges.</p>
-        <div class="topic-meta"><span>~18 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Angular Forms</span><span data-lang="ru">Формы в Angular</span></h3>
+        <p><span data-lang="en">Template-driven vs reactive, FormGroup/Array, validators, async validators, value changes.</span><span data-lang="ru">Template-driven vs reactive, FormGroup/Array, валидаторы, асинхронные валидаторы, valueChanges.</span></p>
+        <div class="topic-meta"><span>~18 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="routing" href="pages/routing.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🧭</span>
-        <h3>Маршрутизация</h3>
-        <p>Конфигурация, навигация, ActivatedRoute, ленивая загрузка, гарды, BreakpointObserver.</p>
-        <div class="topic-meta"><span>~20 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Router</span><span data-lang="ru">Маршрутизация</span></h3>
+        <p><span data-lang="en">Configuration, navigation, ActivatedRoute, lazy loading, guards, BreakpointObserver.</span><span data-lang="ru">Конфигурация, навигация, ActivatedRoute, ленивая загрузка, гарды, BreakpointObserver.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="guards" href="pages/guards.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🛡️</span>
-        <h3>Гарды роутера</h3>
-        <p>CanActivate, CanActivateChild, CanDeactivate, CanMatch, Resolve — функциональные и классовые гарды.</p>
-        <div class="topic-meta"><span>~18 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Route Guards</span><span data-lang="ru">Гарды роутера</span></h3>
+        <p><span data-lang="en">CanActivate, CanActivateChild, CanDeactivate, CanMatch, Resolve — functional &amp; class guards.</span><span data-lang="ru">CanActivate, CanActivateChild, CanDeactivate, CanMatch, Resolve — функциональные и классовые гарды.</span></p>
+        <div class="topic-meta"><span>~18 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
+      </a>
+
+      <a class="topic-card" data-page="auth" href="pages/auth.html">
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
+        <span class="icon">🔐</span>
+        <h3><span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span></h3>
+        <p><span data-lang="en">Login/logout, JWT access &amp; refresh tokens, storage, interceptor, silent refresh with rotation.</span><span data-lang="ru">Вход/выход, JWT access- и refresh-токены, хранение, интерцептор, тихое обновление с ротацией.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="rxjs" href="pages/rxjs.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🔁</span>
         <h3>RxJS</h3>
-        <p>Observable, cold vs hot, все четыре Subject, <code>pipe()</code>, все операторы, утечки памяти.</p>
-        <div class="topic-meta"><span>~40 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">Observables, cold vs hot, all four Subjects, <code>pipe()</code>, every operator, memory leaks.</span><span data-lang="ru">Observable, cold vs hot, все четыре Subject, <code>pipe()</code>, все операторы, утечки памяти.</span></p>
+        <div class="topic-meta"><span>~40 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="ngrx" href="pages/ngrx.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🗃️</span>
         <h3>NgRx Store</h3>
-        <p>Actions, reducers, effects, selectors, EntityAdapter, SignalStore — Redux для Angular.</p>
-        <div class="topic-meta"><span>~25 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">Actions, reducers, effects, selectors, EntityAdapter, SignalStore — Redux for Angular.</span><span data-lang="ru">Actions, reducers, effects, selectors, EntityAdapter, SignalStore — Redux для Angular.</span></p>
+        <div class="topic-meta"><span>~25 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="websocket" href="pages/websocket.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🔌</span>
         <h3>WebSocket</h3>
-        <p>Full-duplex стриминг, RxJS <code>webSocket()</code>, переподключение, производительность на 20k инструментов.</p>
-        <div class="topic-meta"><span>~20 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">Full-duplex streaming, RxJS <code>webSocket()</code>, reconnection, 20k-instrument performance.</span><span data-lang="ru">Full-duplex стриминг, RxJS <code>webSocket()</code>, переподключение, производительность на 20k инструментов.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="canvas" href="pages/canvas.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">📈</span>
-        <h3>Canvas и графики</h3>
-        <p>Canvas vs SVG vs WebGL, API рисования, свечной график, производительность рендеринга.</p>
-        <div class="topic-meta"><span>~18 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Canvas &amp; Charts</span><span data-lang="ru">Canvas и графики</span></h3>
+        <p><span data-lang="en">Canvas vs SVG vs WebGL, drawing API, a candlestick chart, rendering performance.</span><span data-lang="ru">Canvas vs SVG vs WebGL, API рисования, свечной график, производительность рендеринга.</span></p>
+        <div class="topic-meta"><span>~18 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="workers" href="pages/workers.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">⚙️</span>
         <h3>SW + WebWorker</h3>
-        <p>ServiceWorker vs WebWorker, стратегии кэширования, вычисления вне основного потока.</p>
-        <div class="topic-meta"><span>~15 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">ServiceWorker vs WebWorker, caching strategies, off-main-thread indicator calculation.</span><span data-lang="ru">ServiceWorker vs WebWorker, стратегии кэширования, вычисления вне основного потока.</span></p>
+        <div class="topic-meta"><span>~15 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="http" href="pages/http.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🌐</span>
-        <h3>HTTP и интерцепторы</h3>
-        <p>HTTP-методы, идемпотентность, HttpClient, интерцепторы (класс + функциональные), обработка ошибок.</p>
-        <div class="topic-meta"><span>~20 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></h3>
+        <p><span data-lang="en">HTTP methods, idempotency, HttpClient, interceptors (class + functional), error handling.</span><span data-lang="ru">HTTP-методы, идемпотентность, HttpClient, интерцепторы (класс + функциональные), обработка ошибок.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="architecture" href="pages/architecture.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🏛️</span>
-        <h3>Архитектура и паттерны</h3>
-        <p>Smart/dumb, MVVM, паттерны GoF, принципы ООП, Facade, Repository, Nx-монорепозиторий.</p>
-        <div class="topic-meta"><span>~25 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Architecture &amp; Patterns</span><span data-lang="ru">Архитектура и паттерны</span></h3>
+        <p><span data-lang="en">Smart/dumb, MVVM, GoF patterns, OOP principles, Facade, Repository, Nx monorepo.</span><span data-lang="ru">Smart/dumb, MVVM, паттерны GoF, принципы ООП, Facade, Repository, Nx-монорепозиторий.</span></p>
+        <div class="topic-meta"><span>~25 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="solid-dry" href="pages/solid-dry.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">🧱</span>
-        <h3>SOLID и DRY</h3>
-        <p>SOLID, DRY, KISS, YAGNI, WET — каждый принцип с примерами «плохо» и «хорошо» на Angular.</p>
-        <div class="topic-meta"><span>~20 мин</span><span class="topic-start">Начать →</span></div>
+        <h3>SOLID &amp; DRY</h3>
+        <p><span data-lang="en">SOLID, DRY, KISS, YAGNI, WET — each with bad vs good Angular examples.</span><span data-lang="ru">SOLID, DRY, KISS, YAGNI, WET — каждый принцип с примерами «плохо» и «хорошо» на Angular.</span></p>
+        <div class="topic-meta"><span>~20 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="live-coding" href="pages/live-coding.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">⌨️</span>
         <h3>Live Coding</h3>
-        <p>14 задач с собеседований — debounce, throttle, deep clone, простой store и другие.</p>
-        <div class="topic-meta"><span>~35 мин</span><span class="topic-start">Начать →</span></div>
+        <p><span data-lang="en">14 interview coding tasks — debounce, throttle, deep clone, a simple store, and more.</span><span data-lang="ru">14 задач с собеседований — debounce, throttle, deep clone, простой store и другие.</span></p>
+        <div class="topic-meta"><span>~35 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="communication" href="pages/communication.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">💬</span>
-        <h3>Общение с клиентом</h3>
-        <p>Скрипты для самопрезентации, объяснения концепций, отчёта о задержках и аргументации.</p>
-        <div class="topic-meta"><span>~15 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Client Communication</span><span data-lang="ru">Общение с клиентом</span></h3>
+        <p><span data-lang="en">Scripts for intros, explaining concepts, reporting delays, pushing back professionally.</span><span data-lang="ru">Скрипты для самопрезентации, объяснения концепций, отчёта о задержках и аргументации.</span></p>
+        <div class="topic-meta"><span>~15 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
       <a class="topic-card" data-page="cheatsheet" href="pages/cheatsheet.html">
-        <span class="done-pill">ПРОЙДЕНО</span>
+        <span class="done-pill"><span data-lang="en">DONE</span><span data-lang="ru">ПРОЙДЕНО</span></span>
         <span class="icon">⚡</span>
-        <h3>Шпаргалка</h3>
-        <p>Одна плотная страница для печати — всё необходимое для 30-минутного повторения перед интервью.</p>
-        <div class="topic-meta"><span>~10 мин</span><span class="topic-start">Начать →</span></div>
+        <h3><span data-lang="en">Cheatsheet</span><span data-lang="ru">Шпаргалка</span></h3>
+        <p><span data-lang="en">One dense, printable page — everything you need for a 30-minute pre-interview review.</span><span data-lang="ru">Одна плотная страница для печати — всё необходимое для 30-минутного повторения перед интервью.</span></p>
+        <div class="topic-meta"><span>~10 <span data-lang="en">min</span><span data-lang="ru">мин</span></span><span class="topic-start"><span data-lang="en">Start →</span><span data-lang="ru">Начать →</span></span></div>
       </a>
 
     </section>

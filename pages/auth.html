@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru">
+<head>
+  <script>(function(){try{var l=localStorage.getItem('lang');if(l==='en')document.documentElement.setAttribute('data-lang','en');}catch(e){}})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth: Login, Logout &amp; Tokens — Angular Interview Prep</title>
+  <link rel="stylesheet" href="../styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>⚡ Angular Prep</span>
+      <button class="lang-toggle" onclick="toggleLang()" title="Switch language / Сменить язык">
+        <span class="lang-ru">RU</span><span class="sep">/</span><span class="lang-en">EN</span>
+      </button>
+    </div>
+    <nav>
+      <a href="../index.html"><span data-lang="en">🏠 Dashboard</span><span data-lang="ru">🏠 Главная</span></a>
+      <div class="nav-section">JavaScript</div>
+      <a href="js-core.html"><span data-lang="en">JS Core</span><span data-lang="ru">Основы JS</span></a>
+      <div class="nav-section">TypeScript</div>
+      <a href="typescript.html">TypeScript</a>
+      <div class="nav-section">Angular</div>
+      <a href="angular-core.html"><span data-lang="en">Angular Core</span><span data-lang="ru">Основы Angular</span></a>
+      <a href="signals.html">Signals</a>
+      <a href="di.html"><span data-lang="en">Dependency Injection</span><span data-lang="ru">Внедрение зависимостей</span></a>
+      <a href="forms.html"><span data-lang="en">Forms</span><span data-lang="ru">Формы</span></a>
+      <a href="routing.html"><span data-lang="en">Router</span><span data-lang="ru">Маршрутизация</span></a>
+      <a href="guards.html"><span data-lang="en">Guards</span><span data-lang="ru">Гарды (Guards)</span></a>
+      <a href="auth.html"><span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span></a>
+      <div class="nav-section"><span data-lang="en">RxJS &amp; State</span><span data-lang="ru">RxJS и состояние</span></div>
+      <a href="rxjs.html">RxJS</a>
+      <a href="ngrx.html">NgRx</a>
+      <div class="nav-section"><span data-lang="en">Platform APIs</span><span data-lang="ru">API платформы</span></div>
+      <a href="websocket.html">WebSocket</a>
+      <a href="canvas.html">Canvas</a>
+      <a href="workers.html">SW + WebWorker</a>
+      <a href="http.html"><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></a>
+      <div class="nav-section"><span data-lang="en">Engineering</span><span data-lang="ru">Инженерия</span></div>
+      <a href="architecture.html"><span data-lang="en">Architecture</span><span data-lang="ru">Архитектура</span></a>
+      <a href="solid-dry.html"><span data-lang="en">SOLID &amp; DRY</span><span data-lang="ru">SOLID и DRY</span></a>
+      <div class="nav-section"><span data-lang="en">Practice</span><span data-lang="ru">Практика</span></div>
+      <a href="live-coding.html">Live Coding</a>
+      <a href="communication.html"><span data-lang="en">Client Comms</span><span data-lang="ru">Общение с клиентом</span></a>
+      <a href="cheatsheet.html"><span data-lang="en">⚡ Cheatsheet</span><span data-lang="ru">⚡ Шпаргалка</span></a>
+    </nav>
+    <div class="sidebar-progress">
+      <span data-lang="en">Progress</span><span data-lang="ru">Прогресс</span>: <span id="progress-count">0</span> / 20
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="breadcrumb">
+      <a href="../index.html"><span data-lang="en">Home</span><span data-lang="ru">Главная</span></a> ›
+      <span><span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span></span>
+    </nav>
+
+    <div class="page-header">
+      <h1><span data-lang="en">Auth: Login, Logout &amp; Tokens</span><span data-lang="ru">Аутентификация: вход, выход и токены</span></h1>
+      <p class="page-desc">
+        <span data-lang="en">Login/logout flows, JWT access &amp; refresh tokens, where to store them, attaching tokens via an interceptor, silent refresh with rotation, and clean logout.</span>
+        <span data-lang="ru">Потоки входа и выхода, JWT access- и refresh-токены, где их хранить, добавление токена через интерцептор, «тихое» обновление с ротацией и корректный выход.</span>
+      </p>
+      <button class="btn-done" data-page="auth" onclick="markDone('auth')">✓ Отметить как пройдено</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Поиск по странице... (Ctrl+K)" oninput="filterContent(this.value)">
+    </div>
+
+    <!-- ===================== ENGLISH ===================== -->
+    <div class="lang-block" data-lang="en">
+
+      <section data-searchable>
+        <h2 id="flow">Authentication flow</h2>
+        <p class="definition"><strong>Authentication</strong> — the process of proving who the user is (login), after which the server issues <em>tokens</em> the client attaches to every protected request.</p>
+        <p>A typical token-based (stateless) flow on a trading platform:</p>
+        <ol>
+          <li>User submits credentials → <code>POST /auth/login</code>.</li>
+          <li>Server returns an <strong>access token</strong> (short-lived) and a <strong>refresh token</strong> (long-lived).</li>
+          <li>Client stores the tokens and attaches the access token to every API call (<code>Authorization: Bearer …</code>).</li>
+          <li>When the access token expires, the client silently exchanges the refresh token for a new pair.</li>
+          <li>On logout the client discards the tokens and (ideally) revokes the refresh token server-side.</li>
+        </ol>
+        <div class="tip"><p><strong>Stateless:</strong> a JWT is self-contained — the server validates the signature and expiry without a session lookup, which scales well for real-time systems.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="tokens">Access vs Refresh tokens</h2>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th></th><th>Access token</th><th>Refresh token</th></tr></thead>
+            <tbody>
+              <tr><td>Purpose</td><td>Authorize each API request</td><td>Obtain a new access token</td></tr>
+              <tr><td>Lifetime</td><td>Short (5–15 min)</td><td>Long (days / weeks)</td></tr>
+              <tr><td>Sent with</td><td>Every protected request</td><td>Only to the refresh endpoint</td></tr>
+              <tr><td>If stolen</td><td>Limited damage (expires soon)</td><td>Severe — mint new access tokens</td></tr>
+              <tr><td>Storage</td><td>In memory (preferred)</td><td>httpOnly cookie (preferred)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A <strong>JWT</strong> has three parts — <code>header.payload.signature</code>. The payload carries claims such as <code>sub</code> (user id), <code>exp</code> (expiry), and roles. Never trust the payload without verifying the signature, and never put secrets in it — it is only Base64-encoded, not encrypted.</p>
+      </section>
+
+      <section data-searchable>
+        <h2 id="storage">Where to store tokens</h2>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th>Storage</th><th>Survives reload</th><th>XSS exposure</th><th>CSRF exposure</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td>In-memory (variable / signal)</td><td>❌</td><td>Low</td><td>None</td><td>Best for access token</td></tr>
+              <tr><td>httpOnly cookie</td><td>✅</td><td>None (JS can't read)</td><td>Needs CSRF protection</td><td>Best for refresh token</td></tr>
+              <tr><td>localStorage</td><td>✅</td><td>High (any XSS reads it)</td><td>None</td><td>Convenient, risky</td></tr>
+              <tr><td>sessionStorage</td><td>Per-tab</td><td>High</td><td>None</td><td>Slightly safer than localStorage</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warn"><p><strong>Pitfall:</strong> putting a long-lived refresh token in <code>localStorage</code> means a single XSS can exfiltrate it and impersonate the user indefinitely. Prefer an httpOnly, <code>Secure</code>, <code>SameSite</code> cookie for the refresh token and keep the access token in memory.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="login">Login</h2>
+        <p class="definition"><strong>Login</strong> — exchange credentials for tokens, then persist the auth state (current user + access token) for the app.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">interface AuthTokens { accessToken: string; refreshToken: string; }
+interface Credentials { email: string; password: string; }
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private http = inject(HttpClient);
+  private router = inject(Router);
+
+  // Access token kept in memory; survives via silent refresh, not storage
+  private accessToken: string | null = null;
+  readonly user = signal&lt;User | null&gt;(null);
+
+  login(creds: Credentials): Observable&lt;User&gt; {
+    return this.http.post&lt;{ tokens: AuthTokens; user: User }&gt;('/auth/login', creds).pipe(
+      tap(({ tokens, user }) =&gt; {
+        this.accessToken = tokens.accessToken; // in memory
+        this.user.set(user);
+        // refreshToken is set by the server as an httpOnly cookie — JS never sees it
+      }),
+      map(({ user }) =&gt; user),
+    );
+  }
+
+  getAccessToken(): string | null { return this.accessToken; }
+  isAuthenticated(): boolean { return this.accessToken !== null; }
+}</code></pre></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="attach">Attaching the token (interceptor)</h2>
+        <p class="definition"><strong>Auth interceptor</strong> — a functional <code>HttpInterceptorFn</code> that clones every outgoing request and adds the <code>Authorization</code> header.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const token = inject(AuthService).getAccessToken();
+  // Don't attach the token to the login/refresh calls themselves
+  const isAuthCall = req.url.includes('/auth/');
+  const authReq = token &amp;&amp; !isAuthCall
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+  return next(authReq);
+};
+
+// Register:
+// provideHttpClient(withInterceptors([authInterceptor, refreshInterceptor]))</code></pre></div>
+        <div class="danger"><p><strong>Pitfall:</strong> <code>HttpRequest</code> is immutable — you must <code>req.clone()</code>. Mutating <code>req.headers</code> directly does nothing.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="refresh">Silent refresh &amp; rotation</h2>
+        <p class="definition"><strong>Silent refresh</strong> — when a request fails with <code>401</code>, exchange the refresh token for a new access token and retry the original request, without the user noticing.</p>
+        <p class="definition"><strong>Rotation</strong> — each refresh returns a <em>new</em> refresh token and invalidates the old one, so a leaked refresh token is usable only once.</p>
+        <p>The hard part is concurrency: if five requests fail with <code>401</code> at once, you must refresh <strong>once</strong> and let the others wait for the result.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class TokenRefreshService {
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  // Shared in-flight refresh so concurrent 401s wait for one call
+  private refresh$: Observable&lt;string&gt; | null = null;
+
+  refreshToken(): Observable&lt;string&gt; {
+    if (!this.refresh$) {
+      this.refresh$ = this.http.post&lt;{ accessToken: string }&gt;('/auth/refresh', {}).pipe(
+        map(res =&gt; res.accessToken),
+        tap(token =&gt; this.auth.setAccessToken(token)),
+        shareReplay(1),                 // share the single result
+        finalize(() =&gt; (this.refresh$ = null)), // allow the next cycle
+      );
+    }
+    return this.refresh$;
+  }
+}
+
+export const refreshInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const refresher = inject(TokenRefreshService);
+  return next(req).pipe(
+    catchError((err: HttpErrorResponse) =&gt; {
+      if (err.status === 401 &amp;&amp; !req.url.includes('/auth/')) {
+        return refresher.refreshToken().pipe(
+          switchMap(token =&gt; next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }))),
+          catchError(e =&gt; { inject(AuthService).logout(); return throwError(() =&gt; e); }),
+        );
+      }
+      return throwError(() =&gt; err);
+    }),
+  );
+};</code></pre></div>
+        <div class="tip"><p><strong>Why <code>shareReplay(1)</code>:</strong> it multicasts the single refresh call to all waiting requests, so the refresh endpoint is hit once even under a burst of parallel 401s.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="logout">Logout &amp; cleanup</h2>
+        <p class="definition"><strong>Logout</strong> — discard local auth state and revoke the refresh token server-side so it cannot be reused.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code class="language-typescript">logout(): void {
+  // Ask the server to revoke the refresh token / clear the httpOnly cookie
+  this.http.post('/auth/logout', {}).subscribe({ complete: () =&gt; {} });
+  this.accessToken = null;
+  this.user.set(null);
+  this.router.navigateByUrl('/login');
+}</code></pre></div>
+        <div class="warn"><p><strong>Pitfall:</strong> clearing the client token alone does not log the user out everywhere — a stolen refresh token stays valid until the server revokes it. Always revoke server-side and rely on rotation.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="security">Security notes</h2>
+        <ul>
+          <li><strong>XSS</strong> is the main threat to in-browser tokens — sanitize output, use Angular's built-in escaping, and avoid <code>bypassSecurityTrust*</code> unless you must.</li>
+          <li><strong>CSRF</strong> matters when tokens live in cookies — use <code>SameSite=Strict/Lax</code> and an anti-CSRF token for state-changing requests.</li>
+          <li>Always serve over <strong>HTTPS</strong>; mark cookies <code>Secure</code>.</li>
+          <li>Keep access tokens short-lived; never log them.</li>
+        </ul>
+      </section>
+
+      <section data-searchable>
+        <h2 id="qa">Q&amp;A</h2>
+        <div class="qa-block">
+          <div class="qa-question">1. Why use two tokens instead of one long-lived token?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+          <div class="qa-answer"><p>A short-lived access token limits the damage if it leaks (it expires in minutes), while a long-lived refresh token — kept in a more protected place (httpOnly cookie) and rotated on each use — lets the user stay logged in without re-entering credentials. One long-lived token would combine wide exposure with long validity, the worst of both.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">2. Where should the refresh token live and why?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+          <div class="qa-answer"><p>In an httpOnly, <code>Secure</code>, <code>SameSite</code> cookie. JavaScript cannot read httpOnly cookies, so an XSS cannot exfiltrate the refresh token. The access token, by contrast, is best kept in memory and re-obtained via silent refresh.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">3. How do you avoid multiple refresh calls when several requests get 401 at once?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+          <div class="qa-answer"><p>Share a single in-flight refresh Observable (e.g. cached with <code>shareReplay(1)</code> and reset on <code>finalize</code>). All concurrent 401s subscribe to the same refresh; once it emits the new token, each retries its original request.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">4. What is token rotation?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+          <div class="qa-answer"><p>Each refresh issues a brand-new refresh token and invalidates the previous one. If an attacker replays an old refresh token after it has been rotated, the server detects reuse and can revoke the whole token family — limiting the value of a stolen token to a single use.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">5. Why must the interceptor clone the request?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Show answer</button>
+          <div class="qa-answer"><p><code>HttpRequest</code> is immutable. You cannot mutate its headers in place; <code>req.clone({ setHeaders })</code> returns a new request with the <code>Authorization</code> header added, which you pass to <code>next()</code>.</p></div>
+        </div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="quiz">Quiz</h2>
+        <div class="quiz">
+          <div class="quiz-q">1. Which token is sent with every protected API request?</div>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Access token</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Refresh token</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Both tokens</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Neither — cookies only</button>
+          <div class="quiz-explain">The short-lived access token goes in the Authorization header of each request; the refresh token is sent only to the refresh endpoint.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">2. Safest place for a refresh token in the browser?</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">localStorage</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">sessionStorage</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">httpOnly cookie</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">A global JS variable</button>
+          <div class="quiz-explain">JS cannot read httpOnly cookies, so XSS cannot steal the refresh token. Pair with Secure + SameSite.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">3. On a 401, the refresh interceptor should…</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Immediately log the user out</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Refresh the token (once) and retry the request</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Retry the request unchanged</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Reload the page</button>
+          <div class="quiz-explain">Exchange the refresh token for a new access token, retry the original request, and only log out if the refresh itself fails.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">4. What does token rotation protect against?</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Slow network requests</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">CORS errors</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Reuse of a stolen refresh token</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Expired access tokens</button>
+          <div class="quiz-explain">Each refresh invalidates the previous refresh token, so a stolen one is good for at most a single use and reuse is detectable.</div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ===================== РУССКИЙ ===================== -->
+    <div class="lang-block" data-lang="ru">
+
+      <section data-searchable>
+        <h2 id="flow-ru">Поток аутентификации</h2>
+        <p class="definition"><strong>Аутентификация</strong> — процесс подтверждения личности пользователя (вход), после которого сервер выдаёт <em>токены</em>, прикрепляемые клиентом к каждому защищённому запросу.</p>
+        <p>Типичный поток на основе токенов (stateless) на торговой платформе:</p>
+        <ol>
+          <li>Пользователь отправляет учётные данные → <code>POST /auth/login</code>.</li>
+          <li>Сервер возвращает <strong>access-токен</strong> (короткоживущий) и <strong>refresh-токен</strong> (долгоживущий).</li>
+          <li>Клиент сохраняет токены и добавляет access-токен к каждому вызову API (<code>Authorization: Bearer …</code>).</li>
+          <li>Когда access-токен истекает, клиент «тихо» обменивает refresh-токен на новую пару.</li>
+          <li>При выходе клиент удаляет токены и (в идеале) отзывает refresh-токен на сервере.</li>
+        </ol>
+        <div class="tip"><p><strong>Stateless:</strong> JWT самодостаточен — сервер проверяет подпись и срок действия без обращения к сессии, что хорошо масштабируется для real-time систем.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="tokens-ru">Access- и refresh-токены</h2>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th></th><th>Access-токен</th><th>Refresh-токен</th></tr></thead>
+            <tbody>
+              <tr><td>Назначение</td><td>Авторизация каждого запроса</td><td>Получение нового access-токена</td></tr>
+              <tr><td>Время жизни</td><td>Короткое (5–15 мин)</td><td>Долгое (дни / недели)</td></tr>
+              <tr><td>Отправляется</td><td>С каждым защищённым запросом</td><td>Только на эндпоинт обновления</td></tr>
+              <tr><td>Если украден</td><td>Урон ограничен (скоро истечёт)</td><td>Опасно — выпуск новых access-токенов</td></tr>
+              <tr><td>Хранение</td><td>В памяти (предпочтительно)</td><td>httpOnly cookie (предпочтительно)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>JWT</strong> состоит из трёх частей — <code>header.payload.signature</code>. В payload лежат claims: <code>sub</code> (id пользователя), <code>exp</code> (срок), роли. Никогда не доверяйте payload без проверки подписи и не кладите туда секреты — это лишь Base64, а не шифрование.</p>
+      </section>
+
+      <section data-searchable>
+        <h2 id="storage-ru">Где хранить токены</h2>
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead><tr><th>Хранилище</th><th>Переживает перезагрузку</th><th>Уязвимость к XSS</th><th>Уязвимость к CSRF</th><th>Вывод</th></tr></thead>
+            <tbody>
+              <tr><td>В памяти (переменная / signal)</td><td>❌</td><td>Низкая</td><td>Нет</td><td>Лучше для access-токена</td></tr>
+              <tr><td>httpOnly cookie</td><td>✅</td><td>Нет (JS не читает)</td><td>Нужна защита от CSRF</td><td>Лучше для refresh-токена</td></tr>
+              <tr><td>localStorage</td><td>✅</td><td>Высокая (любой XSS прочитает)</td><td>Нет</td><td>Удобно, но рискованно</td></tr>
+              <tr><td>sessionStorage</td><td>На вкладку</td><td>Высокая</td><td>Нет</td><td>Чуть безопаснее localStorage</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warn"><p><strong>Подводный камень:</strong> долгоживущий refresh-токен в <code>localStorage</code> означает, что одна XSS-атака уведёт его и позволит выдавать себя за пользователя сколь угодно долго. Предпочитайте httpOnly-cookie с флагами <code>Secure</code> и <code>SameSite</code> для refresh-токена, а access-токен держите в памяти.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="login-ru">Вход (login)</h2>
+        <p class="definition"><strong>Login</strong> — обмен учётных данных на токены и сохранение состояния аутентификации (текущий пользователь + access-токен).</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">interface AuthTokens { accessToken: string; refreshToken: string; }
+interface Credentials { email: string; password: string; }
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private http = inject(HttpClient);
+  private router = inject(Router);
+
+  // Access token kept in memory; survives via silent refresh, not storage
+  private accessToken: string | null = null;
+  readonly user = signal&lt;User | null&gt;(null);
+
+  login(creds: Credentials): Observable&lt;User&gt; {
+    return this.http.post&lt;{ tokens: AuthTokens; user: User }&gt;('/auth/login', creds).pipe(
+      tap(({ tokens, user }) =&gt; {
+        this.accessToken = tokens.accessToken; // in memory
+        this.user.set(user);
+        // refreshToken is set by the server as an httpOnly cookie — JS never sees it
+      }),
+      map(({ user }) =&gt; user),
+    );
+  }
+
+  getAccessToken(): string | null { return this.accessToken; }
+  isAuthenticated(): boolean { return this.accessToken !== null; }
+}</code></pre></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="attach-ru">Добавление токена (интерцептор)</h2>
+        <p class="definition"><strong>Auth-интерцептор</strong> — функциональный <code>HttpInterceptorFn</code>, который клонирует каждый исходящий запрос и добавляет заголовок <code>Authorization</code>.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const token = inject(AuthService).getAccessToken();
+  // Don't attach the token to the login/refresh calls themselves
+  const isAuthCall = req.url.includes('/auth/');
+  const authReq = token &amp;&amp; !isAuthCall
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+  return next(authReq);
+};
+
+// Register:
+// provideHttpClient(withInterceptors([authInterceptor, refreshInterceptor]))</code></pre></div>
+        <div class="danger"><p><strong>Подводный камень:</strong> <code>HttpRequest</code> неизменяем — нужно вызывать <code>req.clone()</code>. Прямое изменение <code>req.headers</code> ничего не даёт.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="refresh-ru">Тихое обновление и ротация</h2>
+        <p class="definition"><strong>Тихое обновление (silent refresh)</strong> — когда запрос завершается с <code>401</code>, клиент обменивает refresh-токен на новый access-токен и повторяет исходный запрос незаметно для пользователя.</p>
+        <p class="definition"><strong>Ротация</strong> — каждое обновление возвращает <em>новый</em> refresh-токен и аннулирует старый, поэтому утёкший refresh-токен можно использовать лишь один раз.</p>
+        <p>Сложность — в параллельности: если пять запросов одновременно получили <code>401</code>, обновить токен нужно <strong>один раз</strong>, а остальные должны дождаться результата.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">@Injectable({ providedIn: 'root' })
+export class TokenRefreshService {
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  // Shared in-flight refresh so concurrent 401s wait for one call
+  private refresh$: Observable&lt;string&gt; | null = null;
+
+  refreshToken(): Observable&lt;string&gt; {
+    if (!this.refresh$) {
+      this.refresh$ = this.http.post&lt;{ accessToken: string }&gt;('/auth/refresh', {}).pipe(
+        map(res =&gt; res.accessToken),
+        tap(token =&gt; this.auth.setAccessToken(token)),
+        shareReplay(1),                 // share the single result
+        finalize(() =&gt; (this.refresh$ = null)), // allow the next cycle
+      );
+    }
+    return this.refresh$;
+  }
+}
+
+export const refreshInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const refresher = inject(TokenRefreshService);
+  return next(req).pipe(
+    catchError((err: HttpErrorResponse) =&gt; {
+      if (err.status === 401 &amp;&amp; !req.url.includes('/auth/')) {
+        return refresher.refreshToken().pipe(
+          switchMap(token =&gt; next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }))),
+          catchError(e =&gt; { inject(AuthService).logout(); return throwError(() =&gt; e); }),
+        );
+      }
+      return throwError(() =&gt; err);
+    }),
+  );
+};</code></pre></div>
+        <div class="tip"><p><strong>Зачем <code>shareReplay(1)</code>:</strong> он мультикастит единственный вызов обновления всем ожидающим запросам, поэтому эндпоинт обновления вызывается один раз даже при всплеске параллельных 401.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="logout-ru">Выход и очистка</h2>
+        <p class="definition"><strong>Logout</strong> — удалить локальное состояние аутентификации и отозвать refresh-токен на сервере, чтобы его нельзя было переиспользовать.</p>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Копировать</button><pre><code class="language-typescript">logout(): void {
+  // Ask the server to revoke the refresh token / clear the httpOnly cookie
+  this.http.post('/auth/logout', {}).subscribe({ complete: () =&gt; {} });
+  this.accessToken = null;
+  this.user.set(null);
+  this.router.navigateByUrl('/login');
+}</code></pre></div>
+        <div class="warn"><p><strong>Подводный камень:</strong> очистка только клиентского токена не разлогинивает пользователя везде — украденный refresh-токен остаётся валидным, пока сервер его не отзовёт. Всегда отзывайте на сервере и полагайтесь на ротацию.</p></div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="security-ru">Заметки по безопасности</h2>
+        <ul>
+          <li><strong>XSS</strong> — главная угроза для токенов в браузере: экранируйте вывод, используйте встроенную защиту Angular и избегайте <code>bypassSecurityTrust*</code> без крайней необходимости.</li>
+          <li><strong>CSRF</strong> важен, когда токены в cookie — используйте <code>SameSite=Strict/Lax</code> и анти-CSRF токен для запросов, меняющих состояние.</li>
+          <li>Всегда отдавайте по <strong>HTTPS</strong>; помечайте cookie флагом <code>Secure</code>.</li>
+          <li>Держите access-токены короткоживущими; никогда не логируйте их.</li>
+        </ul>
+      </section>
+
+      <section data-searchable>
+        <h2 id="qa-ru">Вопросы и ответы</h2>
+        <div class="qa-block">
+          <div class="qa-question">1. Зачем два токена вместо одного долгоживущего?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+          <div class="qa-answer"><p>Короткоживущий access-токен ограничивает ущерб при утечке (истекает за минуты), а долгоживущий refresh-токен — в более защищённом месте (httpOnly-cookie) и с ротацией при каждом использовании — позволяет оставаться в системе без повторного ввода пароля. Один долгоживущий токен сочетал бы широкую открытость с долгим сроком — худший вариант.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">2. Где должен жить refresh-токен и почему?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+          <div class="qa-answer"><p>В httpOnly-cookie с флагами <code>Secure</code> и <code>SameSite</code>. JavaScript не может прочитать httpOnly-cookie, поэтому XSS не уведёт refresh-токен. Access-токен же лучше держать в памяти и заново получать тихим обновлением.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">3. Как избежать нескольких вызовов обновления, когда сразу несколько запросов получают 401?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+          <div class="qa-answer"><p>Разделять один «в полёте» Observable обновления (например, закэшированный через <code>shareReplay(1)</code> и сбрасываемый в <code>finalize</code>). Все параллельные 401 подписываются на одно обновление; как только оно отдаёт новый токен, каждый повторяет свой исходный запрос.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">4. Что такое ротация токенов?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+          <div class="qa-answer"><p>Каждое обновление выдаёт совершенно новый refresh-токен и аннулирует предыдущий. Если злоумышленник повторно использует старый refresh-токен после ротации, сервер замечает повтор и может отозвать всё «семейство» токенов — ценность украденного токена ограничивается одним использованием.</p></div>
+        </div>
+        <div class="qa-block">
+          <div class="qa-question">5. Почему интерцептор обязан клонировать запрос?</div>
+          <button class="qa-toggle" onclick="toggleAnswer(this)">Показать ответ</button>
+          <div class="qa-answer"><p><code>HttpRequest</code> неизменяем. Изменить заголовки на месте нельзя; <code>req.clone({ setHeaders })</code> возвращает новый запрос с добавленным заголовком <code>Authorization</code>, который передаётся в <code>next()</code>.</p></div>
+        </div>
+      </section>
+
+      <section data-searchable>
+        <h2 id="quiz-ru">Тест</h2>
+        <div class="quiz">
+          <div class="quiz-q">1. Какой токен отправляется с каждым защищённым запросом к API?</div>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Access-токен</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Refresh-токен</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Оба токена</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Никакой — только cookie</button>
+          <div class="quiz-explain">Короткоживущий access-токен идёт в заголовке Authorization каждого запроса; refresh-токен отправляется только на эндпоинт обновления.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">2. Самое безопасное место для refresh-токена в браузере?</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">localStorage</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">sessionStorage</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">httpOnly cookie</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Глобальная JS-переменная</button>
+          <div class="quiz-explain">JS не может читать httpOnly-cookie, поэтому XSS не украдёт refresh-токен. В паре с Secure + SameSite.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">3. При 401 refresh-интерцептор должен…</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Сразу разлогинить пользователя</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">Обновить токен (один раз) и повторить запрос</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Повторить запрос без изменений</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">Перезагрузить страницу</button>
+          <div class="quiz-explain">Обменять refresh-токен на новый access-токен, повторить исходный запрос и разлогинивать только если само обновление не удалось.</div>
+        </div>
+        <div class="quiz">
+          <div class="quiz-q">4. От чего защищает ротация токенов?</div>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">От медленных запросов</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">От ошибок CORS</button>
+          <button class="quiz-option" data-correct="true" onclick="checkAnswer(this, true)">От переиспользования украденного refresh-токена</button>
+          <button class="quiz-option" onclick="checkAnswer(this, false)">От истёкших access-токенов</button>
+          <div class="quiz-explain">Каждое обновление аннулирует предыдущий refresh-токен, поэтому украденный годен максимум для одного использования, а повтор обнаруживается.</div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="page-nav">
+      <a href="guards.html" class="btn-nav">← <span data-lang="en">Guards</span><span data-lang="ru">Гарды (Guards)</span></a>
+      <a href="rxjs.html" class="btn-nav">RxJS →</a>
+    </div>
+  </main>
+
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script src="../js/app.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-lang="ru">
 <head>
+  <script>(function(){try{var l=localStorage.getItem('lang');if(l==='en')document.documentElement.setAttribute('data-lang','en');}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TypeScript — Angular Interview Prep</title>
@@ -15,38 +16,42 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <span>⚡ Angular Prep</span>
+      <button class="lang-toggle" onclick="toggleLang()" title="Switch language / Сменить язык">
+        <span class="lang-ru">RU</span><span class="sep">/</span><span class="lang-en">EN</span>
+      </button>
     </div>
     <nav>
-      <a href="../index.html">🏠 Главная</a>
+      <a href="../index.html"><span data-lang="en">🏠 Dashboard</span><span data-lang="ru">🏠 Главная</span></a>
       <div class="nav-section">JavaScript</div>
-      <a href="js-core.html">Основы JS</a>
+      <a href="js-core.html"><span data-lang="en">JS Core</span><span data-lang="ru">Основы JS</span></a>
       <div class="nav-section">TypeScript</div>
       <a href="typescript.html">TypeScript</a>
       <div class="nav-section">Angular</div>
-      <a href="angular-core.html">Основы Angular</a>
+      <a href="angular-core.html"><span data-lang="en">Angular Core</span><span data-lang="ru">Основы Angular</span></a>
       <a href="signals.html">Signals</a>
-      <a href="di.html">Внедрение зависимостей</a>
-      <a href="forms.html">Формы</a>
-      <a href="routing.html">Маршрутизация</a>
-      <a href="guards.html">Гарды (Guards)</a>
-      <div class="nav-section">RxJS и состояние</div>
+      <a href="di.html"><span data-lang="en">Dependency Injection</span><span data-lang="ru">Внедрение зависимостей</span></a>
+      <a href="forms.html"><span data-lang="en">Forms</span><span data-lang="ru">Формы</span></a>
+      <a href="routing.html"><span data-lang="en">Router</span><span data-lang="ru">Маршрутизация</span></a>
+      <a href="guards.html"><span data-lang="en">Guards</span><span data-lang="ru">Гарды (Guards)</span></a>
+      <a href="auth.html"><span data-lang="en">Auth &amp; Tokens</span><span data-lang="ru">Аутентификация и токены</span></a>
+      <div class="nav-section"><span data-lang="en">RxJS &amp; State</span><span data-lang="ru">RxJS и состояние</span></div>
       <a href="rxjs.html">RxJS</a>
       <a href="ngrx.html">NgRx</a>
-      <div class="nav-section">API платформы</div>
+      <div class="nav-section"><span data-lang="en">Platform APIs</span><span data-lang="ru">API платформы</span></div>
       <a href="websocket.html">WebSocket</a>
       <a href="canvas.html">Canvas</a>
       <a href="workers.html">SW + WebWorker</a>
-      <a href="http.html">HTTP и интерцепторы</a>
-      <div class="nav-section">Инженерия</div>
-      <a href="architecture.html">Архитектура</a>
-      <a href="solid-dry.html">SOLID и DRY</a>
-      <div class="nav-section">Практика</div>
+      <a href="http.html"><span data-lang="en">HTTP &amp; Interceptors</span><span data-lang="ru">HTTP и интерцепторы</span></a>
+      <div class="nav-section"><span data-lang="en">Engineering</span><span data-lang="ru">Инженерия</span></div>
+      <a href="architecture.html"><span data-lang="en">Architecture</span><span data-lang="ru">Архитектура</span></a>
+      <a href="solid-dry.html"><span data-lang="en">SOLID &amp; DRY</span><span data-lang="ru">SOLID и DRY</span></a>
+      <div class="nav-section"><span data-lang="en">Practice</span><span data-lang="ru">Практика</span></div>
       <a href="live-coding.html">Live Coding</a>
-      <a href="communication.html">Общение с клиентом</a>
-      <a href="cheatsheet.html">⚡ Шпаргалка</a>
+      <a href="communication.html"><span data-lang="en">Client Comms</span><span data-lang="ru">Общение с клиентом</span></a>
+      <a href="cheatsheet.html"><span data-lang="en">⚡ Cheatsheet</span><span data-lang="ru">⚡ Шпаргалка</span></a>
     </nav>
     <div class="sidebar-progress">
-      Прогресс: <span id="progress-count">0</span> / 19
+      <span data-lang="en">Progress</span><span data-lang="ru">Прогресс</span>: <span id="progress-count">0</span> / 20
     </div>
   </aside>
 

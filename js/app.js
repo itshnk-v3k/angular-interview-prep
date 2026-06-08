@@ -11,7 +11,45 @@ function toggleAnswer(btn) {
   var answer = btn.nextElementSibling;
   if (!answer) return;
   var open = answer.classList.toggle('open');
-  btn.textContent = open ? 'Скрыть ответ' : 'Показать ответ';
+  btn.textContent = open ? t('Hide answer', 'Скрыть ответ') : t('Show answer', 'Показать ответ');
+}
+
+/* -------------------------------------------------------------------------
+   i18n — EN/RU language toggle (persist in localStorage key "lang")
+   ------------------------------------------------------------------------- */
+function currentLang() {
+  return document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'ru';
+}
+function t(en, ru) { return currentLang() === 'en' ? en : ru; }
+
+function setLang(lang) {
+  lang = lang === 'en' ? 'en' : 'ru';
+  document.documentElement.setAttribute('data-lang', lang);
+  document.documentElement.setAttribute('lang', lang);
+  try { localStorage.setItem('lang', lang); } catch (e) { /* noop */ }
+  applyLangStrings();
+}
+function toggleLang() { setLang(currentLang() === 'en' ? 'ru' : 'en'); }
+
+function applyStoredLang() {
+  var l = 'ru';
+  try { l = localStorage.getItem('lang') || 'ru'; } catch (e) { /* noop */ }
+  l = l === 'en' ? 'en' : 'ru';
+  document.documentElement.setAttribute('data-lang', l);
+  document.documentElement.setAttribute('lang', l);
+}
+
+/* Re-apply JS-rendered strings (search placeholder, done button) for current language. */
+function applyLangStrings() {
+  var search = document.getElementById('search');
+  if (search) search.placeholder = t('Search on this page... (Ctrl+K)', 'Поиск по странице... (Ctrl+K)');
+
+  var btn = document.querySelector('.btn-done[data-page]');
+  if (btn) {
+    var id = btn.dataset.page, done = false;
+    try { done = localStorage.getItem('done_' + id) === 'true'; } catch (e) { /* noop */ }
+    reflectDoneButton(id, done);
+  }
 }
 
 /* -------------------------------------------------------------------------
@@ -52,7 +90,7 @@ function copyCode(btn) {
 
   var done = function () {
     var original = btn.textContent;
-    btn.textContent = '✓ Скопировано!';
+    btn.textContent = t('✓ Copied!', '✓ Скопировано!');
     btn.classList.add('copied');
     setTimeout(function () {
       btn.textContent = original;
@@ -125,12 +163,14 @@ function reflectDoneButton(pageId, isDone) {
             document.querySelector('.btn-done');
   if (!btn) return;
   btn.classList.toggle('done', isDone);
-  btn.textContent = isDone ? '✓ Пройдено — нажмите, чтобы отменить' : '✓ Отметить как пройдено';
+  btn.textContent = isDone
+    ? t('✓ Done — click to undo', '✓ Пройдено — нажмите, чтобы отменить')
+    : t('✓ Mark as done', '✓ Отметить как пройдено');
 }
 
 /* All page ids, in sidebar order — single source of truth for progress. */
 var ALL_PAGES = [
-  'js-core', 'typescript', 'angular-core', 'signals', 'di', 'forms', 'routing', 'guards',
+  'js-core', 'typescript', 'angular-core', 'signals', 'di', 'forms', 'routing', 'guards', 'auth',
   'rxjs', 'ngrx', 'websocket', 'canvas', 'workers', 'http',
   'architecture', 'solid-dry', 'live-coding', 'communication', 'cheatsheet'
 ];
@@ -268,7 +308,7 @@ function toggleHint(btn) {
   var body = btn.nextElementSibling;
   if (!body) return;
   var open = body.classList.toggle('open');
-  btn.textContent = (open ? '▼ ' : '▶ ') + (btn.dataset.label || 'Подсказка');
+  btn.textContent = (open ? '▼ ' : '▶ ') + t('Hint', 'Подсказка');
 }
 
 /* -------------------------------------------------------------------------
@@ -326,11 +366,13 @@ window.addEventListener('scroll', function () {
    Init on load
    ------------------------------------------------------------------------- */
 (function init() {
+  applyStoredLang();
   document.addEventListener('DOMContentLoaded', function () {
     highlightActiveLink();
     updateSidebarProgress();
     updateDashboardProgress();
     decorateCodeBlocks();
+    applyLangStrings();
 
     // Reflect done state of the current page button
     var btn = document.querySelector('.btn-done[data-page]');
